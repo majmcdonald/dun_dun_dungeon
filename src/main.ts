@@ -3,7 +3,7 @@ import { Input } from './engine/input';
 import { startLoop } from './engine/loop';
 import { Renderer } from './engine/renderer';
 import { SceneManager, type GameContext } from './engine/scene';
-import { TestScene } from './scenes/TestScene';
+import { BattleScene } from './scenes/BattleScene';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 
@@ -14,7 +14,7 @@ const game: GameContext = {
   scenes: new SceneManager(),
 };
 
-game.scenes.switchTo(new TestScene(game));
+game.scenes.switchTo(new BattleScene(game));
 
 startLoop({
   update: (dt) => game.scenes.update(dt),
