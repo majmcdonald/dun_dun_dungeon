@@ -1,6 +1,6 @@
 # Autobattler Game — Design & Development Plan
 
-Status: Phase 1 complete. Phase 2 next.
+Status: Phase 2 complete. Phase 3 next.
 
 ## Confirmed Decisions
 
@@ -53,6 +53,20 @@ Done: Knight (Slash, Shield Bash, Iron Guard) and Slime (Bounce) sprites approve
 
 **Phase 2 — Full Combat System**
 Scale to 1–9 enemies, formation (front/back, reorder UI), targeting rules incl. taunt-style equipment effects, equipment-break-on-KO, VFX system for special skills. Art: enemy variety needed to test this phase. Test encounters only need to be winnable.
+
+Phase 2 design:
+- Abilities are tagged `skill` or `spell`. A spell that heals, buffs, or grants a barrier is a *defensive* spell.
+- Targeting = side (enemy / ally / self) + selector + area.
+  - Selectors: front, back (last position), random, lowest HP%, highest HP%, lowest total HP, highest total HP, enemy that last attacked the caster, enemy with most damage dealt, enemy that has cast a spell, enemy that has cast a defensive spell.
+  - No valid target → fall back to the front unit of that side. Ties → front-most (lowest position).
+  - Area (single / row / column / all) expands around the selected target. Enemy grid: row = same row, column = same column. Party side: row = that member only, column = whole party.
+- Taunt (equipment): redirects every single-target attack from opponents to the taunter. Area attacks unaffected.
+- New effects: heal (Magic Power), stat buff (flat, timed, refreshes rather than stacks). Barrier unchanged.
+- Equipment core: 5 slots with stat bonuses and taunt flag; KO breaks one random worn piece; slot icons on party cards. Test gear hard-coded; inventory/rarity/enchantments in Phase 3.
+- Screens: pre-battle screen shows the enemy types to be faced (types, not counts), party order, and equipped abilities with FIGHT and UPDATE PARTY. UPDATE PARTY opens the party screen (drag cards to reorder now; equipment/skill swap in Phase 3); leaving it starts the battle. Equipment icons show hover tooltips (slot, item, stat bonuses, special effects).
+- Test content: party Knight (Taunt Helm), Mage (Fireball — area row around lowest total HP, VFX; Arcane Bolt — most damage), Cleric (Heal — lowest HP% ally, VFX; Blessing — +DEF all allies, VFX; Smite — cast defensive). Enemies: Slime (front), Bat (random), Archer (back), Orc (Cleave — column around highest total HP; Charge — highest HP%), Shaman (Mend — heal lowest HP% ally; Hex — cast a spell). Encounter: front Slime×3, mid Bat/Orc/Bat, back Archer/Shaman/Archer.
+
+Done: engine targeting/areas/taunt/heal/buff/equipment-break with tests; Mage, Cleric, Bat, Archer, Orc, Shaman sprites approved (after an independent art review); Fireball/Heal/Blessing VFX, equipment icons with tooltips, pre-battle and party screens approved. Test encounter tuned only to be winnable while allowing KOs (Slime ATK 12, Bat ATK 9).
 
 **Phase 3 — Roster, Skills, Equipment**
 All 10–15 characters (stats, starting skills, class tags), full skill library (shared/tag/class-unique) with synergy system, equipment system (5 slots, rarities, enchanted passives), inventory/swap UI. Balancing pass 1: stat budgets per rarity, skill power per cooldown second, class HP/damage baselines. Art: portraits/sprites for full roster, equipment icons.

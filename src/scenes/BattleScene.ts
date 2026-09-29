@@ -1,15 +1,18 @@
+import { BUFF_ICON } from '../art/icons';
 import { PALETTE } from '../art/palette';
 import { spriteCanvas, TRANSPARENT, type SpriteDef } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
 import { Battle } from '../combat/battle';
-import { KNIGHT, SLIME } from '../combat/data';
-import type { BattleEvent, Combatant } from '../combat/types';
-import { seededRng } from '../engine/random';
+import { TEST_ENCOUNTER } from '../combat/data';
+import type { BattleEvent, Combatant, EquipSlot } from '../combat/types';
 import { NATIVE_HEIGHT, NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
+import { drawBackground } from '../ui/background';
 import { CHAR_ADVANCE, drawText, textWidth } from '../ui/font';
+import { drawEquipmentIcons, drawEquipmentTooltip, hoveredSlot } from '../ui/partyCard';
+import { VFX } from '../vfx/effects';
+import { PreBattleScene } from './PreBattleScene';
 
-const WALL_H = 40;
 const SIDEBAR_W = 152;
 const FIELD_CENTER_X = SIDEBAR_W + (NATIVE_WIDTH - SIDEBAR_W) / 2;
 const ROW_TOPS = [52, 126, 200];
@@ -33,6 +36,8 @@ const MERGE_WINDOW = 0.25;
 const FLOAT_RISE_PER_SEC = 32;
 const POP_TIME = 0.1;
 const RESULT_DELAY = 1.0;
+const NOTICE_TIME = 1.5;
+const NOTICE_RISE_PER_SEC = 10;
 
 interface SpriteSet {
   idle: HTMLCanvasElement;
@@ -53,16 +58,37 @@ interface FloatText {
   damage: number;
   absorbed: number;
   barrier: number;
+  heal: number;
   age: number;
   pop: number;
 }
+
+interface ActiveVfx {
+  id: string;
+  target: string;
+  age: number;
+  seed: number;
+}
+
+interface Notice {
+  target: string;
+  text: string;
+  age: number;
+}
+
+type FloatAmounts = Partial<Pick<FloatText, 'damage' | 'absorbed' | 'barrier' | 'heal'>>;
 
 export class BattleScene implements Scene {
   private battle!: Battle;
   private anims = new Map<string, Anim>();
   private floats: FloatText[] = [];
+  private vfx: ActiveVfx[] = [];
+  private notices: Notice[] = [];
+  private brokenThisBattle = new Map<string, Set<EquipSlot>>();
+  private vfxSeed = 0;
   private endedFor = 0;
   private sprites = new Map<string, SpriteSet>();
+  private buffIcon = spriteCanvas(BUFF_ICON, 'idle');
 
   constructor(private game: GameContext) {
     for (const [id, def] of Object.entries(SPRITES)) {
@@ -80,19 +106,22 @@ export class BattleScene implements Scene {
   }
 
   private start(): void {
-    this.battle = new Battle([KNIGHT, KNIGHT, KNIGHT], Array.from({ length: 9 }, () => SLIME));
+    this.battle = new Battle(this.game.state.party, TEST_ENCOUNTER);
     this.anims.clear();
     for (const c of this.battle.combatants) {
       this.anims.set(c.uid, { attack: 0, flash: 0, death: 0, lastFired: c.slots.map(() => -Infinity) });
     }
     this.floats = [];
+    this.vfx = [];
+    this.notices = [];
+    this.brokenThisBattle.clear();
     this.endedFor = 0;
   }
 
   update(dt: number): void {
     const clicks = this.game.input.consumeClicks();
     if (this.battle.result && this.endedFor >= RESULT_DELAY && clicks.length > 0) {
-      this.start();
+      this.game.scenes.switchTo(new PreBattleScene(this.game));
       return;
     }
 
@@ -101,6 +130,10 @@ export class BattleScene implements Scene {
       f.pop = Math.max(0, f.pop - dt);
     }
     this.floats = this.floats.filter((f) => f.age < FLOAT_TIME);
+    for (const v of this.vfx) v.age += dt;
+    this.vfx = this.vfx.filter((v) => v.age < VFX[v.id].duration);
+    for (const n of this.notices) n.age += dt;
+    this.notices = this.notices.filter((n) => n.age < NOTICE_TIME);
     for (const event of this.battle.tick(dt)) this.handle(event);
 
     for (const anim of this.anims.values()) {
@@ -119,7 +152,12 @@ export class BattleScene implements Scene {
         const actor = this.battle.get(event.actor);
         const anim = this.anim(actor.uid);
         anim.attack = ATTACK_TIME;
-        anim.lastFired[actor.slots.findIndex((s) => s.def.id === event.skill)] = this.battle.elapsed;
+        const slotIndex = actor.slots.findIndex((s) => s.def.id === event.skill);
+        anim.lastFired[slotIndex] = this.battle.elapsed;
+        const vfx = actor.slots[slotIndex].def.vfx;
+        if (vfx) {
+          for (const target of event.targets) this.vfx.push({ id: vfx, target, age: 0, seed: ++this.vfxSeed });
+        }
         break;
       }
       case 'damage':
@@ -129,6 +167,22 @@ export class BattleScene implements Scene {
       case 'barrier':
         this.float(event.target, { barrier: event.amount });
         break;
+      case 'heal':
+        if (event.amount > 0) this.float(event.target, { heal: event.amount });
+        break;
+      case 'equipmentBroken': {
+        const state = this.game.state;
+        const member = state.party[this.battle.get(event.target).position];
+        const item = member.equipment[event.slot];
+        const equipment = { ...member.equipment };
+        delete equipment[event.slot];
+        state.party = state.party.map((m) => (m === member ? { ...m, equipment } : m));
+        if (!this.brokenThisBattle.has(event.target)) this.brokenThisBattle.set(event.target, new Set());
+        this.brokenThisBattle.get(event.target)!.add(event.slot);
+        this.notices.push({ target: event.target, text: `${item?.name ?? event.slot} BROKE`, age: 0 });
+        break;
+      }
+      case 'buff':
       case 'death':
       case 'end':
         break;
@@ -141,12 +195,13 @@ export class BattleScene implements Scene {
     return a;
   }
 
-  private float(target: string, add: Partial<Pick<FloatText, 'damage' | 'absorbed' | 'barrier'>>): void {
+  private float(target: string, add: FloatAmounts): void {
     const existing = this.floats.find((f) => f.target === target && f.age < MERGE_WINDOW);
     if (existing) {
       existing.damage += add.damage ?? 0;
       existing.absorbed += add.absorbed ?? 0;
       existing.barrier += add.barrier ?? 0;
+      existing.heal += add.heal ?? 0;
       existing.age = 0;
       existing.pop = POP_TIME;
       return;
@@ -156,6 +211,7 @@ export class BattleScene implements Scene {
       damage: add.damage ?? 0,
       absorbed: add.absorbed ?? 0,
       barrier: add.barrier ?? 0,
+      heal: add.heal ?? 0,
       age: 0,
       pop: 0,
     });
@@ -168,12 +224,22 @@ export class BattleScene implements Scene {
     party.forEach((c) => this.drawCard(ctx, c));
 
     for (const c of this.battle.combatants) this.drawCombatant(ctx, c);
+    for (const v of this.vfx) this.drawVfx(ctx, v);
     for (const f of this.floats) this.drawFloat(ctx, f);
+    for (const n of this.notices) this.drawNotice(ctx, n);
 
     const time = `TIME ${this.battle.elapsed.toFixed(1)}`;
     drawText(ctx, time, FIELD_CENTER_X - textWidth(time) / 2, 16, PALETTE.sand);
 
-    if (this.battle.result && this.endedFor >= RESULT_DELAY) this.drawResult(ctx, this.battle.result === 'victory');
+    if (this.battle.result && this.endedFor >= RESULT_DELAY) {
+      this.drawResult(ctx, this.battle.result === 'victory');
+      return;
+    }
+    const pointer = this.game.input.pointer;
+    for (const c of party) {
+      const slot = hoveredSlot(pointer, cardIconOrigin(c));
+      if (slot) drawEquipmentTooltip(ctx, slot, c.equipment[slot], pointer);
+    }
   }
 
   private spriteSet(c: Combatant): SpriteSet {
@@ -197,11 +263,31 @@ export class BattleScene implements Scene {
     ctx.globalAlpha = alpha;
     ctx.drawImage(img, x + lunge, y);
     ctx.globalAlpha = 1;
-    if (c.hp <= 0 || c.side === 'party') return;
+    if (c.hp <= 0) return;
+    if (c.buffs.length > 0) ctx.drawImage(this.buffIcon, x - 9, y + 23);
+    if (c.side === 'party') return;
 
-    drawBar(ctx, x, y + 34, 32, 3, c.hp / c.def.stats.hp, PALETTE.green);
+    drawBar(ctx, x, y + 34, 32, 3, c.hp / c.maxHp, PALETTE.green);
     const slot = c.slots[0];
     if (slot) drawBar(ctx, x, y + 38, 32, 2, slot.timer / slot.def.cooldown, PALETTE.gold);
+  }
+
+  private visualCenter(c: Combatant): { cx: number; cy: number } {
+    const { x, y } = slotPosition(c);
+    return { cx: x + 16, cy: y + Math.round((this.spriteSet(c).topRow + 31) / 2) };
+  }
+
+  private drawVfx(ctx: CanvasRenderingContext2D, v: ActiveVfx): void {
+    const def = VFX[v.id];
+    const { cx, cy } = this.visualCenter(this.battle.get(v.target));
+    def.draw(ctx, v.age / def.duration, cx, cy, v.seed);
+  }
+
+  private drawNotice(ctx: CanvasRenderingContext2D, n: Notice): void {
+    const target = this.battle.get(n.target);
+    const { x, y } = slotPosition(target);
+    const top = y + this.spriteSet(target).topRow - 20 - n.age * NOTICE_RISE_PER_SEC;
+    drawText(ctx, n.text, x + 16 - textWidth(n.text) / 2, top, PALETTE.hotRed);
   }
 
   private drawFloat(ctx: CanvasRenderingContext2D, f: FloatText): void {
@@ -209,6 +295,7 @@ export class BattleScene implements Scene {
     if (f.damage > 0) segments.push({ text: `-${f.damage}`, color: PALETTE.red });
     if (f.absorbed > 0) segments.push({ text: `(${f.absorbed})`, color: PALETTE.cyan });
     if (f.barrier > 0) segments.push({ text: `+${f.barrier}`, color: PALETTE.cyan });
+    if (f.heal > 0) segments.push({ text: `+${f.heal}`, color: PALETTE.green });
     if (segments.length === 0) return;
 
     const target = this.battle.get(f.target);
@@ -239,10 +326,12 @@ export class BattleScene implements Scene {
     const inner = cx + 5;
     const innerW = CARD_W - 10;
     drawText(ctx, c.def.name, inner, cy + 5, alive ? PALETTE.white : PALETTE.slate);
-    const hp = `${c.hp}/${c.def.stats.hp}`;
+    const icons = cardIconOrigin(c);
+    drawEquipmentIcons(ctx, c.equipment, icons.x, icons.y, !alive, this.brokenThisBattle.get(c.uid));
+    const hp = `${c.hp}/${c.maxHp}`;
     drawText(ctx, hp, inner + innerW - textWidth(hp), cy + 5, alive ? PALETTE.green : PALETTE.slate);
-    drawBar(ctx, inner, cy + 15, innerW, 4, c.hp / c.def.stats.hp, PALETTE.green);
-    if (c.barrier) drawBar(ctx, inner, cy + 20, innerW, 1, c.barrier.amount / c.def.stats.hp, PALETTE.cyan, false);
+    drawBar(ctx, inner, cy + 15, innerW, 4, c.hp / c.maxHp, PALETTE.green);
+    if (c.barrier) drawBar(ctx, inner, cy + 20, innerW, 1, c.barrier.amount / c.maxHp, PALETTE.cyan, false);
 
     const anim = this.anim(c.uid);
     for (let i = 0; i < SKILL_SLOTS; i++) {
@@ -252,7 +341,8 @@ export class BattleScene implements Scene {
         drawText(ctx, '- EMPTY -', inner, rowY, PALETTE.night, null);
         continue;
       }
-      drawText(ctx, slot.def.name, inner, rowY, alive ? PALETTE.lightGray : PALETTE.slate);
+      const nameColor = !alive ? PALETTE.slate : slot.def.category === 'spell' ? PALETTE.cyan : PALETTE.lightGray;
+      drawText(ctx, slot.def.name, inner, rowY, nameColor);
       const barX = inner + 70;
       const barW = innerW - 70;
       const justFired = !this.battle.result && this.battle.elapsed - anim.lastFired[i] < FIRE_HIGHLIGHT;
@@ -282,7 +372,7 @@ export class BattleScene implements Scene {
 
     const title = victory ? 'VICTORY' : 'DEFEAT';
     drawText(ctx, title, (NATIVE_WIDTH - textWidth(title)) / 2, by + 14, accent);
-    const hint = 'CLICK TO FIGHT AGAIN';
+    const hint = 'CLICK TO CONTINUE';
     drawText(ctx, hint, (NATIVE_WIDTH - textWidth(hint)) / 2, by + 32, PALETTE.gray);
   }
 }
@@ -291,6 +381,10 @@ export class BattleScene implements Scene {
 function slotPosition(c: Combatant): { x: number; y: number } {
   if (c.side === 'party') return { x: PARTY_X, y: ROW_TOPS[c.position] };
   return { x: ENEMY_COLUMN_X[Math.floor(c.position / 3)], y: ROW_TOPS[c.position % 3] };
+}
+
+function cardIconOrigin(c: Combatant): { x: number; y: number } {
+  return { x: CARD_X + 5 + 44, y: ROW_TOPS[c.position] + CARD_OFFSET_Y + 4 };
 }
 
 function firstOpaqueRow(def: SpriteDef): number {
@@ -318,55 +412,3 @@ function drawBar(
   ctx.fillStyle = color;
   ctx.fillRect(x, y, Math.ceil(Math.max(0, Math.min(1, ratio)) * w), h);
 }
-
-function drawBackground(ctx: CanvasRenderingContext2D): void {
-  ctx.fillStyle = PALETTE.darkBrown;
-  ctx.fillRect(0, 0, NATIVE_WIDTH, NATIVE_HEIGHT);
-
-  ctx.fillStyle = PALETTE.deepBrown;
-  ctx.fillRect(0, 0, NATIVE_WIDTH, WALL_H);
-  ctx.fillStyle = PALETTE.black;
-  for (let y = 0; y < WALL_H; y += 10) {
-    ctx.fillRect(0, y, NATIVE_WIDTH, 1);
-    const offset = (y / 10) % 2 === 0 ? 0 : 12;
-    for (let x = offset; x < NATIVE_WIDTH; x += 24) ctx.fillRect(x, y, 1, 10);
-  }
-  ctx.fillStyle = PALETTE.brown;
-  ctx.fillRect(0, WALL_H, NATIVE_WIDTH, 1);
-
-  for (const s of DIRT_SPECKS) {
-    ctx.fillStyle = s.color;
-    ctx.fillRect(s.x, s.y, s.w, s.h);
-  }
-}
-
-interface Speck {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  color: string;
-}
-
-// Fixed seed: scattered-looking dirt that stays identical every frame.
-const DIRT_SPECKS: Speck[] = (() => {
-  const rng = seededRng(1337);
-  const colors = [PALETTE.brown, PALETTE.brown, PALETTE.deepBrown, PALETTE.deepBrown, PALETTE.rust];
-  const sizes = [
-    [1, 1],
-    [1, 1],
-    [2, 1],
-    [1, 2],
-    [2, 2],
-  ];
-  return Array.from({ length: 160 }, () => {
-    const [w, h] = sizes[Math.floor(rng() * sizes.length)];
-    return {
-      x: Math.floor(rng() * NATIVE_WIDTH),
-      y: WALL_H + 3 + Math.floor(rng() * (NATIVE_HEIGHT - WALL_H - 5)),
-      w,
-      h,
-      color: colors[Math.floor(rng() * colors.length)],
-    };
-  });
-})();

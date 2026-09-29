@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { TRANSPARENT } from './sprite';
+import { BUFF_ICON, EQUIP_ICONS } from './icons';
+import { TRANSPARENT, type SpriteDef } from './sprite';
 import { SPRITES } from './sprites';
 
-describe.each(Object.entries(SPRITES))('%s sprite', (_name, def) => {
+const ALL: Record<string, SpriteDef> = {
+  ...SPRITES,
+  ...Object.fromEntries(Object.entries(EQUIP_ICONS).map(([slot, def]) => [`icon:${slot}`, def])),
+  'icon:buff': BUFF_ICON,
+};
+
+describe.each(Object.entries(ALL))('%s', (_name, def) => {
   it.each(Object.keys(def.frames))('frame "%s" matches declared size and legend', (frame) => {
     const rows = def.frames[frame];
     expect(rows).toHaveLength(def.height);

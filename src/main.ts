@@ -3,7 +3,8 @@ import { Input } from './engine/input';
 import { startLoop } from './engine/loop';
 import { Renderer } from './engine/renderer';
 import { SceneManager, type GameContext } from './engine/scene';
-import { BattleScene } from './scenes/BattleScene';
+import { createState } from './game/state';
+import { PreBattleScene } from './scenes/PreBattleScene';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 
@@ -12,9 +13,10 @@ const game: GameContext = {
   input: new Input(canvas),
   assets: new Assets(),
   scenes: new SceneManager(),
+  state: createState(),
 };
 
-game.scenes.switchTo(new BattleScene(game));
+game.scenes.switchTo(new PreBattleScene(game));
 
 startLoop({
   update: (dt) => game.scenes.update(dt),

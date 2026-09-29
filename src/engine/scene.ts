@@ -1,3 +1,4 @@
+import type { GameState } from '../game/state';
 import type { Assets } from './assets';
 import type { Input } from './input';
 import type { Renderer } from './renderer';
@@ -7,6 +8,7 @@ export interface GameContext {
   input: Input;
   assets: Assets;
   scenes: SceneManager;
+  state: GameState;
 }
 
 export interface Scene {

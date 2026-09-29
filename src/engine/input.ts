@@ -9,6 +9,7 @@ export interface PointerState {
 export class Input {
   readonly pointer: PointerState = { x: 0, y: 0, down: false };
   private clicks: { x: number; y: number }[] = [];
+  private presses: { x: number; y: number }[] = [];
   private keysPressed = new Set<string>();
 
   constructor(private canvas: HTMLCanvasElement) {
@@ -16,6 +17,9 @@ export class Input {
     canvas.addEventListener('pointerdown', (e) => {
       this.updatePointer(e);
       this.pointer.down = true;
+      this.presses.push({ x: this.pointer.x, y: this.pointer.y });
+      // Keeps pointermove flowing to the canvas while dragging outside it.
+      canvas.setPointerCapture(e.pointerId);
     });
     window.addEventListener('pointerup', (e) => {
       if (!this.pointer.down) return;
@@ -30,6 +34,12 @@ export class Input {
     const clicks = this.clicks;
     this.clicks = [];
     return clicks;
+  }
+
+  consumePresses(): { x: number; y: number }[] {
+    const presses = this.presses;
+    this.presses = [];
+    return presses;
   }
 
   consumeKeys(): Set<string> {
