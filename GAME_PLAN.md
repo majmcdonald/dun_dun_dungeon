@@ -71,6 +71,29 @@ Done: engine targeting/areas/taunt/heal/buff/equipment-break with tests; Mage, C
 **Phase 3 — Roster, Skills, Equipment**
 All 10–15 characters (stats, starting skills, class tags), full skill library (shared/tag/class-unique) with synergy system, equipment system (5 slots, rarities, enchanted passives), inventory/swap UI. Balancing pass 1: stat budgets per rarity, skill power per cooldown second, class HP/damage baselines. Art: portraits/sprites for full roster, equipment icons.
 
+Phase 3 design:
+- Roster: 12 classes; 6 available at start, 6 unlocked by run milestones (which milestone → Phase 6).
+  - Starting: Knight (martial, heavy), Mage (caster, arcane), Cleric (caster, holy), Rogue (martial, shadow), Ranger (martial, ranged, nature), Barbarian (martial, heavy).
+  - Unlockable: Paladin (martial, heavy, holy), Necromancer (caster, shadow), Druid (caster, nature), Monk (martial, holy), Bard (caster, arcane), Warlock (caster, shadow, arcane).
+- Tags: martial, caster, heavy, ranged, holy, arcane, nature, shadow. Drive tag-restricted skills and gear.
+- Gear restrictions by tag: heavy armor/helmets → heavy; staves, wands, tomes → caster; bows → ranged; swords, axes, maces → martial. Other gear is universal.
+- Skills: three access tiers (shared, tag-restricted, class-unique) plus a fixed rarity per skill (Common–Legendary) that sets power and drop frequency. Once per character (a second copy may go on another character). Prerequisite skills cannot be equipped unless their prerequisite is in another slot on the same character; the prerequisite cannot be unequipped while its dependent is equipped. Synergy bonuses apply when a specific other skill is co-equipped on the same character.
+- New effects: debuff (timed flat stat reduction, refreshes), multi-hit, drain (heal caster for % of damage), regen (heal over time), damage over time.
+- Elements: fire, ice, lightning, holy, shadow, poison, carried optionally on top of physical/magic damage. Elemental resist/weakness applies after Defense/Resistance mitigation. Sources: Epic/Legendary gear enchantments and innate enemy traits.
+- Equipment: distinct hand-authored items per rarity. Every Epic and Legendary item has one hand-authored enchantment: on-hit effects, reactive effects (thorns, on-hit-taken, ally-death), targeting/taunt effects, or elemental resistance. Common/Rare have stats only. Items use their slot icon with a rarity-colored border.
+- Scope: ~100 skills and ~60 items.
+- UI: each party-screen card gets an EDIT button opening that character's loadout (gear and skills plus inventory); dragging elsewhere on the card still reorders.
+- Process: content (classes, skills, items) is reviewed on a published reference page before it's final. Testing uses a simple choose-3 roster picker at launch (restyled in Phase 4) and an inventory holding one copy of every skill and item.
+- Work order: engine features + tests → balance formulas → content + reference page → 9 new sprites → loadout/inventory UI and roster picker.
+- Balancing pass 1 (approved), enforced by a budget-check test over all content:
+  - Skill budget per second of cooldown, by rarity (Common / Rare / Epic / Legendary): damage 0.75 / 0.90 / 1.05 / 1.25 × stat; heal 0.50 / 0.60 / 0.70 / 0.85 × MAG; barrier 0.60 / 0.72 / 0.84 / 1.00 × stat; buff/debuff 6 / 8 / 10 / 13 points (amount × duration ÷ cooldown).
+  - Per-target area factor: row/column ×0.5, all ×0.35. DoT and regen totals may reach ×1.1 (delayed). Drain costs 25% of the damage budget. Legendary skills with a prerequisite get +15%. Synergy bonuses are +25–40% on top. Multi-effect skills split one budget across their effects.
+  - Class baselines before gear (HP / ATK / MAG / DEF / RES): Tank 150/14/0/22/12 (Knight, Paladin); Bruiser 125/18/0/14/8 (Barbarian, Monk); Striker 95/18/0/8/8 (Rogue, Ranger); Caster 85/4/18/6/15 (Mage, Necromancer, Warlock); Support 95/6/14/8/15 (Cleric, Druid, Bard).
+  - Gear budget in points (1 ATK/MAG/DEF/RES = 1, 4 HP = 1): Common 8, Rare 14, Epic 20 + enchantment, Legendary 28 + enchantment.
+- Art template (from the second art review): hand-authored row by row; 7-wide head in profile with the eye 2 columns from the face edge; 10px shoulders narrowing to an 8px waist; 2px legs with knee highlights; robes flare 8→14px with folds, a widening shadow, and a trim hem; 4-step shading per material lit from the top-left; held items drawn once and only moved, tilted, or rotated in the attack frame.
+
+Progress: engine features, balance formulas, content (12 classes, 100 skills incl. 33 synergies, 60 items) and all 12 class sprites approved. Remaining: loadout/inventory UI (EDIT on party cards) and the roster picker. Until the picker exists, the main game starts with an empty party.
+
 **Phase 4 — Map & Run Structure**
 Branching map generator, node types, full-map visibility, run save/resume, post-battle reward flow (heal/skill draft/equipment draft/gold). Art: map screen, node icons, reward screen.
 

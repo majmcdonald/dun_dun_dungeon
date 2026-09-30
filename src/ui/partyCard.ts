@@ -4,6 +4,7 @@ import { spriteCanvas } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
 import { EQUIP_SLOTS, type Equipment, type EquipmentDef, type EquipSlot, type PartyMember, type Stats } from '../combat/types';
 import { NATIVE_HEIGHT, NATIVE_WIDTH } from '../engine/renderer';
+import { describeEnchantment } from '../game/describe';
 import { drawText, textWidth } from './font';
 import { drawFrame, drawPanel, inside, type Rect } from './widgets';
 
@@ -84,7 +85,7 @@ export function drawPartyCard(
 
   for (let i = 0; i < SKILL_SLOTS; i++) {
     const rowY = y + 68 + i * 11;
-    const skill = member.def.skills[i];
+    const skill = member.skills[i];
     if (!skill) {
       drawText(ctx, '- EMPTY -', x + 6, rowY, PALETTE.night, null);
       continue;
@@ -132,7 +133,7 @@ function tooltipLines(slot: EquipSlot, item: EquipmentDef | undefined): { text: 
   const lines: { text: string; color: string }[] = [{ text: `${SLOT_LABEL[slot]}: ${item.name}`, color: PALETTE.white }];
   const bonuses = STAT_LABEL.filter(([k]) => item.stats[k]).map(([k, label]) => `+${item.stats[k]} ${label}`);
   if (bonuses.length > 0) lines.push({ text: bonuses.join('  '), color: PALETTE.green });
-  if (item.taunt) lines.push({ text: 'TAUNT: DRAWS SINGLE-TARGET ATTACKS', color: PALETTE.orange });
+  if (item.enchantment) lines.push({ text: describeEnchantment(item.enchantment), color: PALETTE.orange });
   return lines;
 }
 

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { seededRng } from '../engine/random';
 import { Battle, mitigate, statOf } from './battle';
-import { TEST_ENCOUNTER, testParty } from './data';
-import type { Area, BattleEvent, CombatantDef, PartyMember, Selector, SkillDef, Stats } from './types';
+import { TEST_ENCOUNTER } from '../content/enemies';
+import { testParty } from '../content/testing';
+import type { Area, BattleEvent, CombatantDef, EquipmentDef, PartyMember, Selector, SkillDef, Stats } from './types';
 
 const DT = 1 / 60;
 const NO_JITTER = () => 0;
@@ -27,7 +28,7 @@ function unit(id: string, stats: Partial<Stats> = {}, skills: SkillDef[] = []): 
 }
 
 function member(def: CombatantDef, equipment: PartyMember['equipment'] = {}): PartyMember {
-  return { def, equipment };
+  return { def, equipment, skills: def.skills };
 }
 
 function hit(id: string, select: Selector, area: Area = 'single', cooldown = 1): SkillDef {
@@ -35,9 +36,11 @@ function hit(id: string, select: Selector, area: Area = 'single', cooldown = 1):
     id,
     name: id,
     category: 'skill',
+    rarity: 'common',
+    access: { kind: 'shared' },
     cooldown,
     target: { side: 'enemy', select, area },
-    effect: { kind: 'damage', damageType: 'physical', stat: 'attack', scaling: 1 },
+    effects: [{ kind: 'damage', damageType: 'physical', stat: 'attack', scaling: 1 }],
   };
 }
 
@@ -46,9 +49,11 @@ const guard: SkillDef = {
   id: 'guard',
   name: 'guard',
   category: 'skill',
+  rarity: 'common',
+  access: { kind: 'shared' },
   cooldown: 6,
   target: { side: 'self' },
-  effect: { kind: 'barrier', stat: 'defense', scaling: 1, duration: 4 },
+  effects: [{ kind: 'barrier', stat: 'defense', scaling: 1, duration: 4 }],
 };
 
 function targetIds(battle: Battle, actorUid: string, skill: SkillDef): string[] {
@@ -188,7 +193,7 @@ describe('areas', () => {
 });
 
 describe('taunt', () => {
-  const helm = { id: 'helm', name: 'helm', slot: 'helmet' as const, stats: {}, taunt: true };
+  const helm: EquipmentDef = { id: 'helm', name: 'helm', slot: 'helmet', rarity: 'epic', stats: {}, enchantment: { kind: 'taunt' } };
   const setup = () =>
     new Battle(
       [member(unit('p0')), member(unit('p1'), { helmet: helm }), member(unit('p2'))],
@@ -237,9 +242,11 @@ describe('effects', () => {
       id: 'heal',
       name: 'heal',
       category: 'spell',
+      rarity: 'common',
+      access: { kind: 'shared' },
       cooldown: 1,
       target: { side: 'ally', select: 'lowestHpPct', area: 'single' },
-      effect: { kind: 'heal', scaling: 2 },
+      effects: [{ kind: 'heal', scaling: 2 }],
     };
     const battle = new Battle([member(unit('c', { magic: 10 }, [heal])), member(unit('w'))], [unit('e')], NO_JITTER);
     battle.get('party-1').hp = 70;
@@ -255,9 +262,11 @@ describe('effects', () => {
       id: 'bless',
       name: 'bless',
       category: 'spell',
+      rarity: 'common',
+      access: { kind: 'shared' },
       cooldown: 2,
       target: { side: 'ally', select: 'front', area: 'all' },
-      effect: { kind: 'buff', stat: 'defense', amount: 10, duration: 3 },
+      effects: [{ kind: 'buff', stat: 'defense', amount: 10, duration: 3 }],
     };
     const battle = new Battle([member(unit('c', {}, [bless])), member(unit('w'))], [unit('e')], NO_JITTER);
     runFor(battle, 2);
@@ -280,8 +289,8 @@ describe('effects', () => {
 });
 
 describe('equipment', () => {
-  const armor = { id: 'armor', name: 'armor', slot: 'armor' as const, stats: { hp: 50, defense: 5 } };
-  const ring = { id: 'ring', name: 'ring', slot: 'jewelry' as const, stats: { attack: 5 } };
+  const armor: EquipmentDef = { id: 'armor', name: 'armor', slot: 'armor', rarity: 'common', stats: { hp: 50, defense: 5 } };
+  const ring: EquipmentDef = { id: 'ring', name: 'ring', slot: 'jewelry', rarity: 'common', stats: { attack: 5 } };
 
   it('adds item stats to max HP and derived stats', () => {
     const battle = new Battle([member(unit('a'), { armor, jewelry: ring })], [unit('e')], NO_JITTER);

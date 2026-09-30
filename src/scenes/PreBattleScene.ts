@@ -1,11 +1,10 @@
 import { PALETTE } from '../art/palette';
 import { spriteCanvas } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
-import { TEST_ENCOUNTER } from '../combat/data';
+import { TEST_ENCOUNTER } from '../content/enemies';
 import type { CombatantDef } from '../combat/types';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
-import { createState } from '../game/state';
 import { drawBackground } from '../ui/background';
 import { drawText, textWidth } from '../ui/font';
 import { cardIconOrigin, drawEquipmentTooltip, drawPartyCard, hoveredSlot, partyCardRect } from '../ui/partyCard';
@@ -33,7 +32,6 @@ export class PreBattleScene implements Scene {
   }
 
   update(): void {
-    if (this.game.input.consumeKeys().has('KeyR')) this.game.state.party = createState().party;
     for (const click of this.game.input.consumeClicks()) {
       if (inside(click, FIGHT)) return this.game.scenes.switchTo(new BattleScene(this.game));
       if (inside(click, UPDATE)) return this.game.scenes.switchTo(new PartyScene(this.game));
@@ -51,7 +49,6 @@ export class PreBattleScene implements Scene {
     const pointer = this.game.input.pointer;
     drawButton(ctx, UPDATE, inside(pointer, UPDATE));
     drawButton(ctx, FIGHT, inside(pointer, FIGHT));
-    drawText(ctx, 'R: RESET TEST GEAR', 8, 258, PALETTE.slate, null);
 
     party.forEach((m, i) => {
       const origin = cardIconOrigin(partyCardRect(i, CARDS_TOP));

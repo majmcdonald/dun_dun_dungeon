@@ -58,6 +58,10 @@ const GLYPHS: Record<string, string[]> = {
   "'": ['..#..', '..#..', '.#...', '.....', '.....', '.....', '.....'],
 };
 
+export function canDraw(text: string): boolean {
+  return [...text.toUpperCase()].every((ch) => ch in GLYPHS);
+}
+
 export function textWidth(text: string, scale = 1): number {
   return text.length === 0 ? 0 : (text.length * CHAR_ADVANCE - 1) * scale;
 }

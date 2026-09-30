@@ -3,7 +3,7 @@ import { PALETTE } from '../art/palette';
 import { spriteCanvas, TRANSPARENT, type SpriteDef } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
 import { Battle } from '../combat/battle';
-import { TEST_ENCOUNTER } from '../combat/data';
+import { TEST_ENCOUNTER } from '../content/enemies';
 import type { BattleEvent, Combatant, EquipSlot } from '../combat/types';
 import { NATIVE_HEIGHT, NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
