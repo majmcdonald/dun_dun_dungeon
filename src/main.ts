@@ -6,6 +6,7 @@ import { SceneManager, type GameContext } from './engine/scene';
 import { demoParty } from './content/testing';
 import { createState } from './game/state';
 import { PreBattleScene } from './scenes/PreBattleScene';
+import { RosterScene } from './scenes/RosterScene';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 
@@ -20,7 +21,7 @@ const game: GameContext = {
 const demo = new URLSearchParams(location.search).get('party');
 if (demo) game.state.party = demoParty(demo);
 
-game.scenes.switchTo(new PreBattleScene(game));
+game.scenes.switchTo(demo ? new PreBattleScene(game) : new RosterScene(game));
 
 startLoop({
   update: (dt) => game.scenes.update(dt),
