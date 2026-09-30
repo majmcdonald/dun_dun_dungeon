@@ -22,7 +22,7 @@ import {
 import { equipItemBlock, MAX_SKILLS, placeSkillBlock, removeSkillBlock, skillAccessBlock } from '../game/loadout';
 import { drawBackground } from '../ui/background';
 import { drawText, textWidth } from '../ui/font';
-import { equipIcon, SLOT_LABEL, STAT_LABEL } from '../ui/partyCard';
+import { drawItemIcon, equipIcon, SLOT_LABEL, STAT_LABEL } from '../ui/partyCard';
 import { drawButton, drawFrame, drawPanel, inside, RARITY_COLOR, type Button, type Rect } from '../ui/widgets';
 import { PartyScene } from './PartyScene';
 
@@ -297,8 +297,9 @@ export class LoadoutScene implements Scene {
       const r = gearRow(i);
       const item = m.equipment[slot];
       this.drawSlotFrame(ctx, r, this.selection.kind === 'gear' && this.selection.slot === slot, inside(pointer, r));
-      ctx.drawImage(equipIcon(slot), r.x + 2, r.y + 1);
-      drawText(ctx, item ? item.name.toUpperCase() : SLOT_LABEL[slot], r.x + 13, r.y + 2, item ? RARITY_COLOR[item.rarity] : PALETTE.slate);
+      if (item) drawItemIcon(ctx, item, r.x + 3, r.y + 1);
+      else ctx.drawImage(equipIcon(slot), r.x + 3, r.y + 1);
+      drawText(ctx, item ? item.name.toUpperCase() : SLOT_LABEL[slot], r.x + 15, r.y + 2, item ? RARITY_COLOR[item.rarity] : PALETTE.slate);
     });
 
     drawText(ctx, 'SKILLS', x, SKILLS_TOP - 10, PALETTE.sand);
@@ -343,8 +344,9 @@ export class LoadoutScene implements Scene {
       const color = entry.block ? PALETTE.slate : RARITY_COLOR[rarity];
       let textX = r.x + 3;
       if (entry.kind === 'item') {
-        ctx.drawImage(equipIcon(entry.item.slot), r.x + 2, r.y + 1);
-        textX = r.x + 13;
+        if (entry.block) ctx.drawImage(equipIcon(entry.item.slot), r.x + 3, r.y + 1);
+        else drawItemIcon(ctx, entry.item, r.x + 3, r.y + 1);
+        textX = r.x + 15;
       }
       drawText(ctx, entryName(entry), textX, r.y + 2, color);
       const right = entry.block ?? (entry.kind === 'skill' ? `${entry.skill.cooldown.toFixed(1)}S` : '');

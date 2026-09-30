@@ -6,9 +6,9 @@ import { EQUIP_SLOTS, type Equipment, type EquipmentDef, type EquipSlot, type Pa
 import { NATIVE_HEIGHT, NATIVE_WIDTH } from '../engine/renderer';
 import { describeEnchantment } from '../game/describe';
 import { drawText, textWidth } from './font';
-import { drawFrame, drawPanel, inside, type Rect } from './widgets';
+import { drawFrame, drawPanel, inside, RARITY_COLOR, type Rect } from './widgets';
 
-export const ICON_STEP = 9;
+export const ICON_STEP = 11;
 export const PARTY_CARD_W = 148;
 export const PARTY_CARD_H = 114;
 const SKILL_SLOTS = 4;
@@ -37,6 +37,12 @@ function idleSprite(id: string): HTMLCanvasElement {
   return canvas;
 }
 
+// The item's slot icon inside a 1px rarity-colored border (10x10, drawn from x - 1, y - 1).
+export function drawItemIcon(ctx: CanvasRenderingContext2D, item: EquipmentDef, x: number, y: number): void {
+  drawFrame(ctx, { x: x - 1, y: y - 1, w: 10, h: 10 }, RARITY_COLOR[item.rarity]);
+  ctx.drawImage(icons()[item.slot], x, y);
+}
+
 export function drawEquipmentIcons(
   ctx: CanvasRenderingContext2D,
   equipment: Equipment,
@@ -47,13 +53,14 @@ export function drawEquipmentIcons(
 ): void {
   EQUIP_SLOTS.forEach((slot, i) => {
     const ix = x + i * ICON_STEP;
-    if (equipment[slot]) {
+    const item = equipment[slot];
+    if (item) {
       ctx.globalAlpha = dim ? 0.4 : 1;
-      ctx.drawImage(icons()[slot], ix, y);
+      drawItemIcon(ctx, item, ix, y);
       ctx.globalAlpha = 1;
       return;
     }
-    drawFrame(ctx, { x: ix, y, w: 8, h: 8 }, PALETTE.night);
+    drawFrame(ctx, { x: ix - 1, y: y - 1, w: 10, h: 10 }, PALETTE.night);
     if (!broken?.has(slot)) return;
     ctx.fillStyle = PALETTE.hotRed;
     for (let d = 1; d < 7; d++) {

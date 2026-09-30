@@ -106,12 +106,12 @@ Phase 3 expansion (class archetypes):
   - Glory: power grows 5% per 5 seconds of fight.
 - New effects: slow/haste (timed timer-speed factors, e.g. 0.7× / 1.5×, refresh not stack; no permanent speed stat); transform (enemy → harmless critter: skills stop, +25% damage taken; ally → empowered form with bonus stats); steal a buff; drain a stat; bonus battle gold; short skill-based taunt; fear (push enemy timers back); chaos (random effect from a list); shapeshift (Druid's other skills pause, damage sharply up); zealot damage (bonus vs enemies that cast spells, reduced vs others); self-damage.
 - Summons: a second party column in front of the party; each character has up to 2 active summons, standing in front of them in the same row (the first in the front-most column; when both are up, a new summon replaces the oldest). Scaled from the summoner's stats, lasting until killed; front-targeting attacks hit summons first. Ranger beasts, Druid animals, Necromancer undead, and the Warlock familiar use it.
-- Work order: engine systems + tests → content in batches of 4 classes (reviewed on the codex page) → art for summons, the transform critter, meters, and new VFX → then the roster picker and loadout UI.
+- Work order: engine systems + tests → content in batches of 4 classes (reviewed on the codex page) → art for summons, the transform critter, and meters → then the roster picker and loadout UI. New VFX for the expansion effects moved to Phase 4.
 
-Progress: engine features, balance formulas, 60 items, and all 12 class sprites approved. Archetype expansion approved: 400 skills (30 per class, ~75 synergies), 9 summon creatures, and the Rage/Souls/Chi/Familiar mechanics, all engine-tested. Remaining: summon/critter sprites, meter and status UI, summon column on the battle screen, then the roster picker and loadout/inventory UI. Until the picker exists, the main game starts with an empty party.
+Progress: Phase 3 complete. Approved and built: 12 classes, 400 skills (69 synergies, 36 prerequisites), 60 items, the Rage/Souls/Chi/Familiar mechanics, 9 summon creatures plus the transform critter, the battle screen's summon columns (2 per character), meters and status icons, the roster picker, and the loadout screen (search, sort, gear stat preview, rarity-bordered item icons). Dev tools: party.html and ?party= demo parties.
 
 **Phase 4 — Map & Run Structure**
-Branching map generator, node types, full-map visibility, run save/resume, post-battle reward flow (heal/skill draft/equipment draft/gold). Art: map screen, node icons, reward screen.
+Branching map generator, node types, full-map visibility, run save/resume, post-battle reward flow (heal/skill draft/equipment draft/gold). Art: map screen, node icons, reward screen, and VFX for the Phase 3 expansion effects (summon, transform, shapeshift, slow/haste, damage over time, chaos).
 
 **Phase 5 — Shops & Events**
 Randomized-refresh shop (buy/sell), text-choice event system with stat-based outcomes. Art: shop screen, event screen.
