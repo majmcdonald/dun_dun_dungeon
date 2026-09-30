@@ -92,7 +92,23 @@ Phase 3 design:
   - Gear budget in points (1 ATK/MAG/DEF/RES = 1, 4 HP = 1): Common 8, Rare 14, Epic 20 + enchantment, Legendary 28 + enchantment.
 - Art template (from the second art review): hand-authored row by row; 7-wide head in profile with the eye 2 columns from the face edge; 10px shoulders narrowing to an 8px waist; 2px legs with knee highlights; robes flare 8→14px with folds, a widening shadow, and a trim hem; 4-step shading per material lit from the top-left; held items drawn once and only moved, tilted, or rotated in the attack frame.
 
-Progress: engine features, balance formulas, content (12 classes, 100 skills incl. 33 synergies, 60 items) and all 12 class sprites approved. Remaining: loadout/inventory UI (EDIT on party cards) and the roster picker. Until the picker exists, the main game starts with an empty party.
+Phase 3 expansion (class archetypes):
+- ~30 class-unique skills per class (~360 total), themed per class. Players mix and match freely; themes are archetypes, not subclasses. Duplicates may be owned in inventory, but a character still equips a skill once.
+- Themes: Knight (sacrifice, guard, honor); Mage (chaos, ice, transformation); Cleric (light, order, life); Rogue (swashbuckler, assassin, thief); Ranger (beast master, hunter, pathfinder); Paladin (devotion, vengeance, glory); Barbarian (berserker, zealot, storm); Necromancer (raise, fear, death); Druid (shapeshift, summon, fauna); Monk (open hand, true self, soul); Bard (pace, inspiration, spirit); Warlock (link life, siphon, sacrifice).
+- Class mechanics:
+  - Rage (Barbarian): +1 per 1% of max HP lost (hits and self-damage), max 100 → Frenzy: his timers ×2 for 5s, then rage resets. Storm skills only work during Frenzy.
+  - Souls (Necromancer): +1 whenever any unit dies (either side), max 5; soul spells spend 1–3.
+  - Chi (Monk): +10 per hit he lands, max 100; his damage ×0.8 while filling. Full → Chi Burst: damage ×1.8 for 5s, then resets. Soul skills add chi and hold during Burst; True Self skills heal only during Burst.
+  - Familiar (Warlock): 5s channel to summon it at the start of every battle and to resummon it after it dies; his timers pause while channeling.
+- New skill rules:
+  - Event skills: the timer advances only on its event. Honor (Knight is hit) and Vengeance (an ally is hurt) gain 1s per event; Life runs while the party's total HP is below 35%; Sacrifice fires once, instantly, when the Knight falls.
+  - Conditional skills (Storm, soul spells, Open Hand = only jewelry worn): the timer fills and waits until the condition holds, then fires.
+  - Glory: power grows 5% per 5 seconds of fight.
+- New effects: slow/haste (timed timer-speed factors, e.g. 0.7× / 1.5×, refresh not stack; no permanent speed stat); transform (enemy → harmless critter: skills stop, +25% damage taken; ally → empowered form with bonus stats); steal a buff; drain a stat; bonus battle gold; short skill-based taunt; fear (push enemy timers back); chaos (random effect from a list); shapeshift (Druid's other skills pause, damage sharply up); zealot damage (bonus vs enemies that cast spells, reduced vs others); self-damage.
+- Summons: a second party column in front of the party (up to 3), scaled from the summoner's stats, lasting until killed; front-targeting attacks hit summons first. Ranger beasts, Druid animals, Necromancer undead, and the Warlock familiar use it.
+- Work order: engine systems + tests → content in batches of 4 classes (reviewed on the codex page) → art for summons, the transform critter, meters, and new VFX → then the roster picker and loadout UI.
+
+Progress: engine features, balance formulas, 60 items, and all 12 class sprites approved. Archetype expansion approved: 400 skills (30 per class, ~75 synergies), 9 summon creatures, and the Rage/Souls/Chi/Familiar mechanics, all engine-tested. Remaining: summon/critter sprites, meter and status UI, summon column on the battle screen, then the roster picker and loadout/inventory UI. Until the picker exists, the main game starts with an empty party.
 
 **Phase 4 — Map & Run Structure**
 Branching map generator, node types, full-map visibility, run save/resume, post-battle reward flow (heal/skill draft/equipment draft/gold). Art: map screen, node icons, reward screen.

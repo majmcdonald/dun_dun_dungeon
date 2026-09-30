@@ -5,9 +5,10 @@ import type {
   BattleResult,
   Combatant,
   CombatantDef,
+  Condition,
   Element,
-  EquipSlot,
   Enchantment,
+  EquipSlot,
   PartyMember,
   Selector,
   Side,
@@ -15,6 +16,7 @@ import type {
   SkillEffect,
   StatKey,
   Ticking,
+  Timed,
 } from './types';
 import { EQUIP_SLOTS } from './types';
 
@@ -23,15 +25,48 @@ const TIMER_EPSILON = 1e-9;
 export const MAX_START_DELAY = 0.2;
 export const ENEMY_ROWS = 3;
 const MAX_RESIST = 0.9;
+export const SUMMON_SLOTS = 3;
+const FIRST_SUMMON_POSITION = 3;
+
+export const MECHANIC = {
+  rageMax: 100,
+  frenzySeconds: 5,
+  frenzySpeed: 2,
+  soulsMax: 5,
+  chiMax: 100,
+  chiPerHit: 10,
+  chiFilling: 0.8,
+  chiBurst: 1.8,
+  burstSeconds: 5,
+  channelSeconds: 5,
+  familiarShare: 0.6,
+  transformedDamageTaken: 1.25,
+  gloryStepSeconds: 5,
+} as const;
 
 export function mitigate(power: number, mitigation: number, resist = 0): number {
   return Math.max(1, Math.round(((power * 100) / (100 + mitigation)) * (1 - resist)));
 }
 
-// Party stands in one column (each member its own row); enemies fill a 3x3 grid, column 0 in front.
+export function isSummon(c: Pick<Combatant, 'summoner'>): boolean {
+  return c.summoner !== null;
+}
+
+// Enemies fill a 3x3 grid, column 0 in front. The party has its members in column 1 (one per row) and
+// summons in column 0, in front of them.
 export function gridCell(c: Pick<Combatant, 'side' | 'position'>): { row: number; column: number } {
-  if (c.side === 'party') return { row: c.position, column: 0 };
+  if (c.side === 'party') {
+    return c.position >= FIRST_SUMMON_POSITION
+      ? { row: c.position - FIRST_SUMMON_POSITION, column: 0 }
+      : { row: c.position, column: 1 };
+  }
   return { row: c.position % ENEMY_ROWS, column: Math.floor(c.position / ENEMY_ROWS) };
+}
+
+// Lower is closer to the front line; ties never happen because each unit has its own cell.
+function frontKey(c: Combatant): number {
+  const cell = gridCell(c);
+  return cell.column * ENEMY_ROWS + cell.row;
 }
 
 export function statOf(c: Combatant, key: StatKey): number {
@@ -56,7 +91,13 @@ export function resistOf(c: Combatant, element: Element | undefined): number {
 }
 
 export function hasTaunt(c: Combatant): boolean {
-  return enchantments(c).some(({ ench }) => ench.kind === 'taunt');
+  return c.taunting > 0 || enchantments(c).some(({ ench }) => ench.kind === 'taunt');
+}
+
+export function speedOf(c: Combatant): number {
+  let factor = c.speed.reduce((f, s) => f * s.value, 1);
+  if (c.def.mechanic === 'rage' && c.burst > 0) factor *= MECHANIC.frenzySpeed;
+  return factor;
 }
 
 const DEFENSIVE_KINDS = new Set<SkillEffect['kind']>(['heal', 'barrier', 'buff', 'regen']);
@@ -67,20 +108,30 @@ function isDefensive(skill: SkillDef): boolean {
   return skill.category === 'spell' && skill.effects.some((e) => DEFENSIVE_KINDS.has(e.kind));
 }
 
+export interface BattleOptions {
+  creatures?: Record<string, CombatantDef>;
+}
+
 export class Battle {
   readonly combatants: Combatant[];
   elapsed = 0;
   result: BattleResult | null = null;
+  gold = 0;
+  private summonCount = 0;
+  private creatures: Record<string, CombatantDef>;
 
   constructor(
     party: PartyMember[],
     enemies: CombatantDef[],
     private rng: Rng = Math.random,
+    options: BattleOptions = {},
   ) {
+    this.creatures = options.creatures ?? {};
     this.combatants = [
       ...party.map((m, i) => createCombatant(m.def, m.skills, 'party', i, { ...m.equipment }, rng)),
       ...enemies.map((def, i) => createCombatant(def, def.skills, 'enemy', i, {}, rng)),
     ];
+    for (const c of this.combatants) if (c.def.familiar) c.channel = MECHANIC.channelSeconds;
   }
 
   tick(dt: number): BattleEvent[] {
@@ -88,24 +139,28 @@ export class Battle {
     this.elapsed += dt;
     const events: BattleEvent[] = [];
 
-    for (const c of this.alive()) {
-      if (c.barrier) {
-        c.barrier.remaining -= dt;
-        if (c.barrier.remaining <= TIMER_EPSILON) c.barrier = null;
-      }
-      for (const b of c.buffs) b.remaining -= dt;
-      c.buffs = c.buffs.filter((b) => b.remaining > TIMER_EPSILON);
-    }
-
+    for (const c of this.alive()) this.tickStatuses(c, dt, events);
     this.tickPeriodic(dt, events);
 
-    for (const actor of this.combatants) {
+    for (const actor of [...this.combatants]) {
+      if (actor.hp <= 0 || this.result || actor.channel > 0 || actor.transformed > 0) continue;
+      const rate = speedOf(actor);
       for (const slot of actor.slots) {
         if (actor.hp <= 0 || this.result) break;
-        slot.timer += dt;
-        if (slot.timer + TIMER_EPSILON < slot.def.cooldown) continue;
-        slot.timer -= slot.def.cooldown;
-        this.useSkill(actor, slot.def, events);
+        const skill = slot.def;
+        if (actor.shapeshift && !skill.form) continue;
+        const trigger = skill.trigger;
+        if (trigger?.kind === 'onDefeat') continue;
+        const running = !trigger || (trigger.kind === 'partyLow' && this.partyHpRatio() < trigger.threshold);
+        if (running) slot.timer += dt * rate;
+        if (slot.timer + TIMER_EPSILON < skill.cooldown) continue;
+        if (!this.conditionMet(actor, skill.condition)) {
+          slot.timer = skill.cooldown;
+          continue;
+        }
+        slot.timer -= skill.cooldown;
+        if (skill.condition?.kind === 'souls') actor.meter -= skill.condition.cost;
+        this.useSkill(actor, skill, events);
       }
     }
 
@@ -116,15 +171,78 @@ export class Battle {
     return this.combatants.filter((c) => c.hp > 0 && (!side || c.side === side));
   }
 
+  members(side: Side): Combatant[] {
+    return this.alive(side).filter((c) => !isSummon(c));
+  }
+
   get(uid: string): Combatant {
     const c = this.combatants.find((x) => x.uid === uid);
     if (!c) throw new Error(`Unknown combatant: ${uid}`);
     return c;
   }
 
+  summonsOf(owner: Combatant): Combatant[] {
+    return this.alive(owner.side).filter((c) => c.summoner === owner.uid);
+  }
+
+  partyHpRatio(): number {
+    const party = this.combatants.filter((c) => c.side === 'party' && !isSummon(c));
+    const max = party.reduce((s, c) => s + c.maxHp, 0);
+    return max === 0 ? 0 : party.reduce((s, c) => s + Math.max(0, c.hp), 0) / max;
+  }
+
+  private conditionMet(actor: Combatant, condition: Condition | undefined): boolean {
+    if (!condition) return true;
+    switch (condition.kind) {
+      case 'frenzy':
+        return actor.def.mechanic === 'rage' && actor.burst > 0;
+      case 'souls':
+        return actor.meter >= condition.cost;
+      case 'onlyJewelry':
+        return EQUIP_SLOTS.every((s) => s === 'jewelry' || !actor.equipment[s]);
+      case 'chiBurst':
+        return actor.burst > 0;
+      case 'chiFilling':
+        return actor.burst <= 0;
+      case 'hasSummon':
+        return this.summonsOf(actor).length > 0;
+      case 'shapeshifted':
+        return actor.shapeshift !== null;
+    }
+  }
+
+  private tickStatuses(c: Combatant, dt: number, events: BattleEvent[]): void {
+    if (c.barrier) {
+      c.barrier.remaining -= dt;
+      if (c.barrier.remaining <= TIMER_EPSILON) c.barrier = null;
+    }
+    for (const b of c.buffs) b.remaining -= dt;
+    c.buffs = c.buffs.filter((b) => b.remaining > TIMER_EPSILON);
+    for (const s of c.speed) s.remaining -= dt;
+    c.speed = c.speed.filter((s) => s.remaining > TIMER_EPSILON);
+    c.transformed = Math.max(0, c.transformed - dt);
+    c.taunting = Math.max(0, c.taunting - dt);
+    if (c.shapeshift) {
+      c.shapeshift.remaining -= dt;
+      if (c.shapeshift.remaining <= TIMER_EPSILON) c.shapeshift = null;
+    }
+    if (c.burst > 0) c.burst = Math.max(0, c.burst - dt);
+    if (c.channel > 0) {
+      c.channel -= dt;
+      if (c.channel <= TIMER_EPSILON) {
+        c.channel = 0;
+        if (c.def.familiar) this.summon(c, c.def.familiar, MECHANIC.familiarShare, events, true);
+      }
+    }
+  }
+
   resolveTargets(actor: Combatant, skill: SkillDef): Combatant[] {
     const t = skill.target;
     if (t.side === 'self') return [actor];
+    if (t.side === 'summons') {
+      const own = this.summonsOf(actor);
+      return t.area === 'all' ? own : own.slice(0, 1);
+    }
 
     const side: Side = t.side === 'ally' ? actor.side : opposite(actor.side);
     const pool = this.alive(side);
@@ -145,7 +263,7 @@ export class Battle {
       case 'front':
         return frontMost(pool);
       case 'back':
-        return pool.reduce((a, b) => (b.position > a.position ? b : a));
+        return pool.reduce((a, b) => (frontKey(b) > frontKey(a) ? b : a));
       case 'random':
         return pool[Math.floor(this.rng() * pool.length)];
       case 'lowestHpPct':
@@ -172,16 +290,30 @@ export class Battle {
 
   private useSkill(actor: Combatant, skill: SkillDef, events: BattleEvent[]): void {
     const targets = this.resolveTargets(actor, skill);
-    if (targets.length === 0) return;
+    const selfOnly = skill.effects.every((e) => e.self || e.onSummons);
+    if (targets.length === 0 && !selfOnly) return;
     events.push({ type: 'skill', actor: actor.uid, skill: skill.id, targets: targets.map((t) => t.uid) });
     if (skill.category === 'spell') actor.castSpell = true;
     if (isDefensive(skill)) actor.castDefensive = true;
 
-    const synergy = skill.synergy && actor.slots.some((s) => s.def.id === skill.synergy!.with) ? 1 + skill.synergy.bonus : 1;
+    let mult = skill.synergy && actor.slots.some((s) => s.def.id === skill.synergy!.with) ? 1 + skill.synergy.bonus : 1;
+    if (skill.glory) mult *= 1 + skill.glory * Math.floor(this.elapsed / MECHANIC.gloryStepSeconds);
+    if (skill.form && actor.shapeshift) mult *= 1 + actor.shapeshift.bonus;
+
+    for (const effect of skill.effects.filter((e) => e.self)) {
+      if (this.result) return;
+      this.applyEffect(actor, skill.id, effect, actor, mult, events, true);
+    }
+    for (const effect of skill.effects.filter((e) => e.onSummons)) {
+      for (const summoned of this.summonsOf(actor)) {
+        if (this.result) return;
+        this.applyEffect(actor, skill.id, effect, summoned, mult, events, true);
+      }
+    }
     for (const target of targets) {
-      for (const effect of skill.effects) {
+      for (const effect of skill.effects.filter((e) => !e.self && !e.onSummons)) {
         if (this.result || target.hp <= 0) break;
-        this.applyEffect(actor, skill.id, effect, target, synergy, events, true);
+        this.applyEffect(actor, skill.id, effect, target, mult, events, true);
       }
     }
   }
@@ -200,11 +332,15 @@ export class Battle {
       case 'damage': {
         for (let hit = 0; hit < (effect.hits ?? 1); hit++) {
           if (target.hp <= 0 || this.result) return;
-          const power = statOf(actor, effect.stat) * effect.scaling * mult;
+          let power = statOf(actor, effect.stat) * effect.scaling * mult;
+          if (actor.def.mechanic === 'chi') power *= actor.burst > 0 ? MECHANIC.chiBurst : MECHANIC.chiFilling;
+          if (effect.vsCasters) power *= target.castSpell ? 1 + effect.vsCasters.bonus : 1 - effect.vsCasters.penalty;
+          if (target.transformed > 0) power *= MECHANIC.transformedDamageTaken;
           const mitigation = statOf(target, effect.damageType === 'physical' ? 'defense' : 'resistance');
           const amount = mitigate(power, mitigation, resistOf(target, effect.element));
           const total = this.applyDamage(actor, target, amount, events, { element: effect.element, direct: true });
           if (effect.drain) this.heal(actor, actor, Math.round(total * effect.drain), events);
+          if (actor.def.mechanic === 'chi') this.gainChi(actor, MECHANIC.chiPerHit, events);
           if (direct) this.triggerOnHit(actor, target, events);
           this.triggerReactive(actor, target, total, events);
         }
@@ -233,13 +369,125 @@ export class Battle {
       case 'buff':
       case 'debuff': {
         const sign = effect.kind === 'buff' ? 1 : -1;
-        const amount = sign * Math.round(effect.amount * mult);
-        target.buffs = target.buffs.filter((b) => b.source !== source || b.stat !== effect.stat);
-        target.buffs.push({ source, stat: effect.stat, amount, remaining: effect.duration });
-        events.push({ type: 'buff', target: target.uid, stat: effect.stat, amount });
+        this.setBuff(target, source, effect.stat, sign * Math.round(effect.amount * mult), effect.duration, events);
+        return;
+      }
+      case 'siphon': {
+        const amount = Math.round(effect.amount * mult);
+        this.setBuff(target, source, effect.stat, -amount, effect.duration, events);
+        this.setBuff(actor, source, effect.stat, amount, effect.duration, events);
+        return;
+      }
+      case 'speed':
+        target.speed = refreshTimed(target.speed, { source, value: effect.factor, remaining: effect.duration });
+        events.push({ type: 'status', target: target.uid, status: effect.factor < 1 ? 'slow' : 'haste' });
+        return;
+      case 'transform':
+        target.transformed = Math.max(target.transformed, effect.duration);
+        events.push({ type: 'status', target: target.uid, status: 'transform' });
+        return;
+      case 'taunt':
+        target.taunting = Math.max(target.taunting, effect.duration);
+        events.push({ type: 'status', target: target.uid, status: 'taunt' });
+        return;
+      case 'shapeshift':
+        target.shapeshift = { remaining: effect.duration, bonus: effect.bonus };
+        events.push({ type: 'status', target: target.uid, status: 'shapeshift' });
+        return;
+      case 'steal': {
+        const stolen = target.buffs.find((b) => b.amount > 0);
+        if (!stolen) return;
+        target.buffs = target.buffs.filter((b) => b !== stolen);
+        this.setBuff(actor, `stolen:${stolen.source}`, stolen.stat, stolen.amount, stolen.remaining, events);
+        events.push({ type: 'status', target: target.uid, status: 'steal' });
+        return;
+      }
+      case 'delay':
+        for (const slot of target.slots) slot.timer = Math.max(-slot.def.cooldown, slot.timer - effect.seconds);
+        events.push({ type: 'status', target: target.uid, status: 'delay' });
+        return;
+      case 'gold':
+        this.gold += Math.round(effect.amount * mult);
+        events.push({ type: 'gold', amount: Math.round(effect.amount * mult) });
+        return;
+      case 'selfDamage':
+        this.loseHp(target, Math.max(1, Math.round(target.maxHp * effect.fraction)), events, target);
+        return;
+      case 'chaos': {
+        const pick = effect.options[Math.floor(this.rng() * effect.options.length)];
+        this.applyEffect(actor, source, pick, target, mult, events, direct);
+        return;
+      }
+      case 'meter':
+        if (target.def.mechanic === 'chi') this.gainChi(target, effect.amount, events);
+        else if (target.def.mechanic === 'rage') this.gainRage(target, effect.amount, events);
+        else if (target.def.mechanic === 'souls') target.meter = Math.min(MECHANIC.soulsMax, target.meter + effect.amount);
+        return;
+      case 'summon':
+        this.summon(actor, effect.creature, effect.share * mult, events, false);
+        return;
+      case 'consumeSummon': {
+        const victim = this.summonsOf(actor)[0];
+        if (!victim) return;
+        victim.hp = 0;
+        this.onDeath(victim, events);
         return;
       }
     }
+  }
+
+  private setBuff(target: Combatant, source: string, stat: StatKey, amount: number, duration: number, events: BattleEvent[]): void {
+    target.buffs = target.buffs.filter((b) => b.source !== source || b.stat !== stat);
+    target.buffs.push({ source, stat, amount, remaining: duration });
+    events.push({ type: 'buff', target: target.uid, stat, amount });
+  }
+
+  private summon(owner: Combatant, creatureId: string, share: number, events: BattleEvent[], familiar: boolean): void {
+    const template = this.creatures[creatureId];
+    if (!template || owner.side !== 'party') return;
+    const scale = (n: number) => Math.max(1, Math.round(n * share));
+    const power = Math.max(statOf(owner, 'attack'), statOf(owner, 'magic'));
+    const def: CombatantDef = {
+      ...template,
+      stats: {
+        hp: scale(owner.maxHp),
+        attack: scale(power),
+        magic: scale(power),
+        defense: scale(statOf(owner, 'defense')),
+        resistance: scale(statOf(owner, 'resistance')),
+      },
+    };
+    const used = new Set(this.alive('party').filter(isSummon).map((c) => c.position));
+    let position = [0, 1, 2].map((r) => FIRST_SUMMON_POSITION + r).find((p) => !used.has(p));
+    if (position === undefined) {
+      const oldest = this.alive('party').filter(isSummon)[0];
+      oldest.hp = 0;
+      position = oldest.position;
+    }
+    const unit = createCombatant(def, def.skills, 'party', position, {}, this.rng);
+    unit.uid = `summon-${++this.summonCount}`;
+    unit.summoner = owner.uid;
+    unit.familiar = familiar;
+    this.combatants.push(unit);
+    events.push({ type: 'summon', summoner: owner.uid, unit: unit.uid });
+  }
+
+  private gainChi(monk: Combatant, amount: number, events: BattleEvent[]): void {
+    if (monk.burst > 0) return;
+    monk.meter += amount;
+    if (monk.meter < MECHANIC.chiMax) return;
+    monk.meter = 0;
+    monk.burst = MECHANIC.burstSeconds;
+    events.push({ type: 'status', target: monk.uid, status: 'burst' });
+  }
+
+  private gainRage(barbarian: Combatant, amount: number, events: BattleEvent[]): void {
+    if (barbarian.burst > 0) return;
+    barbarian.meter += amount;
+    if (barbarian.meter < MECHANIC.rageMax) return;
+    barbarian.meter = 0;
+    barbarian.burst = MECHANIC.frenzySeconds;
+    events.push({ type: 'status', target: barbarian.uid, status: 'frenzy' });
   }
 
   private heal(source: Combatant, target: Combatant, raw: number, events: BattleEvent[], periodic = false): void {
@@ -306,7 +554,6 @@ export class Battle {
       if (target.barrier.amount <= 0) target.barrier = null;
     }
     const dealt = Math.min(target.hp, amount - absorbed);
-    target.hp -= dealt;
     source.damageDealt += dealt;
     if (opts.direct) target.lastAttacker = source.uid;
     events.push({
@@ -318,22 +565,53 @@ export class Battle {
       ...(opts.element && { element: opts.element }),
       ...(opts.periodic && { periodic: true }),
     });
-
-    if (target.hp <= 0) this.onDeath(target, events);
+    this.loseHp(target, dealt, events, source);
     return dealt + absorbed;
+  }
+
+  // All HP loss funnels through here so rage, event timers, and deaths stay consistent.
+  private loseHp(target: Combatant, amount: number, events: BattleEvent[], source: Combatant): void {
+    if (amount <= 0 || target.hp <= 0) return;
+    const selfInflicted = source === target;
+    const dealt = selfInflicted ? Math.min(amount, target.hp - 1) : Math.min(amount, target.hp);
+    if (dealt <= 0) return;
+    target.hp -= dealt;
+
+    if (target.def.mechanic === 'rage') this.gainRage(target, (dealt / target.maxHp) * 100, events);
+    if (!selfInflicted) {
+      for (const slot of target.slots) if (slot.def.trigger?.kind === 'whenHit') slot.timer += slot.def.trigger.perEvent;
+      for (const ally of this.alive(target.side)) {
+        if (ally === target) continue;
+        for (const slot of ally.slots) if (slot.def.trigger?.kind === 'allyHurt') slot.timer += slot.def.trigger.perEvent;
+      }
+    }
+    if (target.hp <= 0) this.onDeath(target, events);
   }
 
   private onDeath(target: Combatant, events: BattleEvent[]): void {
     events.push({ type: 'death', target: target.uid });
     this.breakEquipment(target, events);
+    for (const c of this.alive()) {
+      if (c.def.mechanic === 'souls') c.meter = Math.min(MECHANIC.soulsMax, c.meter + 1);
+    }
+
+    for (const slot of target.slots) {
+      if (slot.def.trigger?.kind === 'onDefeat' && !this.result) this.useSkill(target, slot.def, events);
+    }
+
+    if (target.familiar && target.summoner) {
+      const owner = this.get(target.summoner);
+      if (owner.hp > 0) owner.channel = MECHANIC.channelSeconds;
+    }
 
     if (this.alive('enemy').length === 0) this.result = 'victory';
-    else if (this.alive('party').length === 0) this.result = 'defeat';
+    else if (this.members('party').length === 0) this.result = 'defeat';
     if (this.result) {
       events.push({ type: 'end', result: this.result });
       return;
     }
 
+    if (isSummon(target)) return;
     for (const ally of this.alive(target.side)) {
       for (const { source, ench } of enchantments(ally)) {
         if (ench.kind === 'onAllyDeath') this.applyEffect(ally, source, ench.effect, ally, 1, events, false);
@@ -357,6 +635,10 @@ function refresh(list: Ticking[], next: Ticking): Ticking[] {
   return [...list.filter((t) => t !== existing), { ...next, tick: existing?.tick ?? 0 }];
 }
 
+function refreshTimed(list: Timed[], next: Timed): Timed[] {
+  return [...list.filter((t) => t.source !== next.source), next];
+}
+
 // Advances a periodic effect by dt and returns how many whole-second ticks it crossed.
 function advance(t: Ticking, dt: number): number {
   t.tick += dt;
@@ -375,14 +657,14 @@ function opposite(side: Side): Side {
 
 function frontMost(pool: Combatant[]): Combatant | null {
   if (pool.length === 0) return null;
-  return pool.reduce((a, b) => (b.position < a.position ? b : a));
+  return pool.reduce((a, b) => (frontKey(b) < frontKey(a) ? b : a));
 }
 
 // Highest score wins; ties go to the front-most unit.
 function extreme(pool: Combatant[], score: (c: Combatant) => number): Combatant | null {
   let best: Combatant | null = null;
   for (const c of pool) {
-    if (!best || score(c) > score(best) || (score(c) === score(best) && c.position < best.position)) best = c;
+    if (!best || score(c) > score(best) || (score(c) === score(best) && frontKey(c) < frontKey(best))) best = c;
   }
   return best;
 }
@@ -423,10 +705,19 @@ function createCombatant(
     buffs: [],
     dots: [],
     regens: [],
-    slots: skills.map((s) => ({ def: s, timer: -rng() * MAX_START_DELAY })),
+    speed: [],
+    slots: skills.map((s) => ({ def: s, timer: s.trigger ? 0 : -rng() * MAX_START_DELAY })),
     damageDealt: 0,
     lastAttacker: null,
     castSpell: false,
     castDefensive: false,
+    summoner: null,
+    familiar: false,
+    transformed: 0,
+    taunting: 0,
+    shapeshift: null,
+    channel: 0,
+    meter: 0,
+    burst: 0,
   };
 }

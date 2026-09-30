@@ -1,4 +1,16 @@
 import type { SkillDef } from '../combat/types';
+import { BARBARIAN_ARCHETYPES } from './archetypes/barbarian';
+import { BARD_ARCHETYPES } from './archetypes/bard';
+import { CLERIC_ARCHETYPES } from './archetypes/cleric';
+import { DRUID_ARCHETYPES } from './archetypes/druid';
+import { KNIGHT_ARCHETYPES } from './archetypes/knight';
+import { MAGE_ARCHETYPES } from './archetypes/mage';
+import { MONK_ARCHETYPES } from './archetypes/monk';
+import { NECROMANCER_ARCHETYPES } from './archetypes/necromancer';
+import { PALADIN_ARCHETYPES } from './archetypes/paladin';
+import { RANGER_ARCHETYPES } from './archetypes/ranger';
+import { ROGUE_ARCHETYPES } from './archetypes/rogue';
+import { WARLOCK_ARCHETYPES } from './archetypes/warlock';
 import { ally, barrier, buff, cls, debuff, dmg, dot, foe, heal, regen, SELF, SHARED, skill, tag } from './build';
 
 const magic = (element?: 'fire' | 'ice' | 'lightning' | 'holy' | 'shadow' | 'poison') =>
@@ -169,6 +181,18 @@ export const SKILL_LIBRARY: SkillDef[] = [
   ...monk,
   ...bard,
   ...warlock,
+  ...KNIGHT_ARCHETYPES,
+  ...MAGE_ARCHETYPES,
+  ...CLERIC_ARCHETYPES,
+  ...ROGUE_ARCHETYPES,
+  ...RANGER_ARCHETYPES,
+  ...BARBARIAN_ARCHETYPES,
+  ...PALADIN_ARCHETYPES,
+  ...NECROMANCER_ARCHETYPES,
+  ...DRUID_ARCHETYPES,
+  ...MONK_ARCHETYPES,
+  ...BARD_ARCHETYPES,
+  ...WARLOCK_ARCHETYPES,
 ];
 
 export const SKILLS_BY_ID: Record<string, SkillDef> = Object.fromEntries(SKILL_LIBRARY.map((s) => [s.id, s]));

@@ -6,11 +6,14 @@ import { SPRITES } from '../art/sprites';
 import { canDraw } from '../ui/font';
 import { CLASSES } from './classes';
 import { ITEM_LIBRARY } from './items';
+import { Battle } from '../combat/battle';
+import type { SkillEffect } from '../combat/types';
+import { CREATURES } from './creatures';
 import { SKILL_LIBRARY, SKILLS_BY_ID } from './skills';
 
 describe('skill library', () => {
   it('has about 100 skills with unique ids', () => {
-    expect(SKILL_LIBRARY.length).toBeGreaterThanOrEqual(95);
+    expect(SKILL_LIBRARY.length).toBe(400);
     expect(new Set(SKILL_LIBRARY.map((s) => s.id)).size).toBe(SKILL_LIBRARY.length);
   });
 
@@ -91,11 +94,13 @@ describe('classes', () => {
     for (const c of CLASSES) expect(SPRITES, c.id).toHaveProperty(c.id);
   });
 
-  it('each class has 5 unique skills', () => {
-    for (const c of CLASSES) {
-      const own = SKILL_LIBRARY.filter((s) => s.access.kind === 'class' && s.access.classId === c.id);
-      expect(own, c.id).toHaveLength(5);
-    }
+  it.each(CLASSES.map((c) => [c.id] as const))('%s has 30 class skills', (id) => {
+    const own = SKILL_LIBRARY.filter((s) => s.access.kind === 'class' && s.access.classId === id);
+    expect(own).toHaveLength(30);
+  });
+
+  it('every familiar is a known creature', () => {
+    for (const c of CLASSES.filter((x) => x.familiar)) expect(CREATURES, c.id).toHaveProperty(c.familiar!);
   });
 });
 
@@ -103,5 +108,38 @@ describe('text', () => {
   it('every name can be drawn with the pixel font', () => {
     const names = [...SKILL_LIBRARY.map((s) => s.name), ...ITEM_LIBRARY.map((i) => i.name), ...CLASSES.map((c) => c.name)];
     for (const n of names) expect(canDraw(n), n).toBe(true);
+  });
+});
+
+describe('summons', () => {
+  const summonEffects = (effects: SkillEffect[]): SkillEffect[] =>
+    effects.flatMap((e) => (e.kind === 'chaos' ? summonEffects(e.options) : e.kind === 'summon' ? [e] : []));
+
+  it('every summon names a known creature', () => {
+    for (const s of SKILL_LIBRARY) {
+      for (const e of summonEffects(s.effects)) {
+        if (e.kind === 'summon') expect(CREATURES, `${s.id} → ${e.creature}`).toHaveProperty(e.creature);
+      }
+    }
+  });
+
+  it("the ranger's Call Wolf brings a wolf into the fight", () => {
+    const ranger = CLASSES.find((c) => c.id === 'ranger')!;
+    const party = [{ ...recruit(ranger), skills: [SKILLS_BY_ID.callWolf] }];
+    const target = { id: 'dummy', name: 'dummy', stats: { hp: 9999, attack: 0, magic: 0, defense: 0, resistance: 0 }, skills: [] };
+    const battle = new Battle(party, [target], () => 0, { creatures: CREATURES });
+    for (let i = 0; i < 10.1 * 60; i++) battle.tick(1 / 60);
+    const wolf = battle.combatants.find((c) => c.summoner === 'party-0');
+    expect(wolf?.def.id).toBe('wolf');
+  });
+
+  it('the warlock summons his imp after a 5 second channel', () => {
+    const warlock = CLASSES.find((c) => c.id === 'warlock')!;
+    const target = { id: 'dummy', name: 'dummy', stats: { hp: 9999, attack: 0, magic: 0, defense: 0, resistance: 0 }, skills: [] };
+    const battle = new Battle([recruit(warlock)], [target], () => 0, { creatures: CREATURES });
+    for (let i = 0; i < 4.9 * 60; i++) battle.tick(1 / 60);
+    expect(battle.combatants.some((c) => c.familiar)).toBe(false);
+    for (let i = 0; i < 0.2 * 60; i++) battle.tick(1 / 60);
+    expect(battle.combatants.find((c) => c.familiar)?.def.id).toBe('imp');
   });
 });

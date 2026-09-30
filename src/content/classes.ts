@@ -23,6 +23,7 @@ function classDef(
   startingSkills: string[],
   starting: boolean,
   statOverride: Partial<Stats> = {},
+  extra: Pick<ClassDef, 'mechanic' | 'familiar'> = {},
 ): ClassDef {
   return {
     id,
@@ -30,6 +31,7 @@ function classDef(
     role,
     tags,
     starting,
+    ...extra,
     stats: { ...ROLE[role], ...statOverride },
     skills: startingSkills.map((s) => SKILLS_BY_ID[s]),
   };
@@ -41,14 +43,17 @@ export const CLASSES: ClassDef[] = [
   classDef('cleric', 'Cleric', 'support', ['caster', 'holy'], ['heal', 'blessing'], true),
   classDef('rogue', 'Rogue', 'striker', ['martial', 'shadow'], ['backstab', 'poisonedBlade'], true),
   classDef('ranger', 'Ranger', 'striker', ['martial', 'ranged', 'nature'], ['aimedShot', 'volley'], true),
-  classDef('barbarian', 'Barbarian', 'bruiser', ['martial', 'heavy'], ['cleave', 'rage'], true),
+  classDef('barbarian', 'Barbarian', 'bruiser', ['martial', 'heavy'], ['cleave', 'rage'], true, {}, { mechanic: 'rage' }),
   // Tank baseline with 6 ATK moved into MAG so Lay on Hands (a Magic Power heal) does something.
   classDef('paladin', 'Paladin', 'tank', ['martial', 'heavy', 'holy'], ['holyStrike', 'layOnHands'], false, { attack: 8, magic: 6 }),
-  classDef('necromancer', 'Necromancer', 'caster', ['caster', 'shadow'], ['siphonLife', 'curseOfFrailty'], false),
+  classDef('necromancer', 'Necromancer', 'caster', ['caster', 'shadow'], ['siphonLife', 'curseOfFrailty'], false, {}, { mechanic: 'souls' }),
   classDef('druid', 'Druid', 'support', ['caster', 'nature'], ['rejuvenate', 'barkskin'], false),
-  classDef('monk', 'Monk', 'bruiser', ['martial', 'holy'], ['flurry', 'innerPeace'], false),
+  classDef('monk', 'Monk', 'bruiser', ['martial', 'holy'], ['flurry', 'innerPeace'], false, {}, { mechanic: 'chi' }),
   classDef('bard', 'Bard', 'support', ['caster', 'arcane'], ['inspire', 'discord'], false),
-  classDef('warlock', 'Warlock', 'caster', ['caster', 'shadow', 'arcane'], ['corruption', 'eldritchBlast'], false),
+  classDef('warlock', 'Warlock', 'caster', ['caster', 'shadow', 'arcane'], ['corruption', 'eldritchBlast'], false, {}, {
+    mechanic: 'familiar',
+    familiar: 'imp',
+  }),
 ];
 
 export const CLASSES_BY_ID: Record<string, ClassDef> = Object.fromEntries(CLASSES.map((c) => [c.id, c]));

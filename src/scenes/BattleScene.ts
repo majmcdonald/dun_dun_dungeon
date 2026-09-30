@@ -3,6 +3,7 @@ import { PALETTE } from '../art/palette';
 import { spriteCanvas, TRANSPARENT, type SpriteDef } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
 import { Battle } from '../combat/battle';
+import { CREATURES } from '../content/creatures';
 import { TEST_ENCOUNTER } from '../content/enemies';
 import type { BattleEvent, Combatant, EquipSlot } from '../combat/types';
 import { NATIVE_HEIGHT, NATIVE_WIDTH } from '../engine/renderer';
@@ -106,7 +107,7 @@ export class BattleScene implements Scene {
   }
 
   private start(): void {
-    this.battle = new Battle(this.game.state.party, TEST_ENCOUNTER);
+    this.battle = new Battle(this.game.state.party, TEST_ENCOUNTER, Math.random, { creatures: CREATURES });
     this.anims.clear();
     for (const c of this.battle.combatants) {
       this.anims.set(c.uid, { attack: 0, flash: 0, death: 0, lastFired: c.slots.map(() => -Infinity) });
