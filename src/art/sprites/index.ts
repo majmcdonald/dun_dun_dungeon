@@ -1,4 +1,14 @@
 import type { SpriteDef } from '../sprite';
+import { WOLF_SPRITE } from './wolf';
+import { HAWK_SPRITE } from './hawk';
+import { BEAR_SPRITE } from './bear';
+import { BOAR_SPRITE } from './boar';
+import { OWL_SPRITE } from './owl';
+import { SKELETON_SPRITE } from './skeleton';
+import { ZOMBIE_SPRITE } from './zombie';
+import { WRAITH_SPRITE } from './wraith';
+import { IMP_SPRITE } from './imp';
+import { CRITTER_SPRITE } from './critter';
 import { ARCHER_SPRITE } from './archer';
 import { BARBARIAN_SPRITE } from './barbarian';
 import { BARD_SPRITE } from './bard';
@@ -35,4 +45,14 @@ export const SPRITES: Record<string, SpriteDef> = {
   archer: ARCHER_SPRITE,
   orc: ORC_SPRITE,
   shaman: SHAMAN_SPRITE,
+  wolf: WOLF_SPRITE,
+  hawk: HAWK_SPRITE,
+  bear: BEAR_SPRITE,
+  boar: BOAR_SPRITE,
+  owl: OWL_SPRITE,
+  skeleton: SKELETON_SPRITE,
+  zombie: ZOMBIE_SPRITE,
+  wraith: WRAITH_SPRITE,
+  imp: IMP_SPRITE,
+  critter: CRITTER_SPRITE,
 };

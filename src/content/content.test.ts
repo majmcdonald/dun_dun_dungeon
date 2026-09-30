@@ -99,6 +99,10 @@ describe('classes', () => {
     expect(own).toHaveLength(30);
   });
 
+  it('every creature and the transform critter have a sprite', () => {
+    for (const id of [...Object.keys(CREATURES), 'critter']) expect(SPRITES, id).toHaveProperty(id);
+  });
+
   it('every familiar is a known creature', () => {
     for (const c of CLASSES.filter((x) => x.familiar)) expect(CREATURES, c.id).toHaveProperty(c.familiar!);
   });
