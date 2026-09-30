@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Battle, MECHANIC, speedOf, statOf } from './battle';
+import { Battle, gridCell, MECHANIC, speedOf, statOf } from './battle';
 import type { BattleEvent, CombatantDef, Condition, PartyMember, SkillDef, SkillEffect, Stats, Targeting, Trigger } from './types';
 
 const DT = 1 / 60;
@@ -65,10 +65,20 @@ describe('summons', () => {
     expect(damageTo(events, 'party-0').length).toBe(0);
   });
 
-  it('fill up to three slots, replacing the oldest', () => {
-    const battle = new Battle([member(unit('r', {}, [call]))], [unit('e')], NO_JITTER, { creatures: CREATURES });
-    runFor(battle, 4);
-    expect(battle.alive('party').filter((c) => c.summoner)).toHaveLength(3);
+  it('are two per summoner, in front of them in the same row, with the newest replacing the oldest', () => {
+    const battle = new Battle([member(unit('a')), member(unit('r', {}, [call]))], [unit('e')], NO_JITTER, { creatures: CREATURES });
+    runFor(battle, 2.1);
+    const cells = () => battle.alive('party').filter((c) => c.summoner).map((c) => [c.uid, gridCell(c)]);
+    expect(cells()).toEqual([
+      ['summon-1', { row: 1, column: 0 }],
+      ['summon-2', { row: 1, column: 1 }],
+    ]);
+    runFor(battle, 1);
+    expect(cells()).toEqual([
+      ['summon-2', { row: 1, column: 1 }],
+      ['summon-3', { row: 1, column: 0 }],
+    ]);
+    expect(gridCell(battle.get('party-1'))).toEqual({ row: 1, column: 2 });
   });
 
   it('never cause a defeat on their own', () => {

@@ -11,6 +11,10 @@ const legend: SpriteDef['legend'] = {
   G: 'gold',
   C: 'cyan',
   Y: 'yellow',
+  R: 'red',
+  V: 'green',
+  N: 'blue',
+  P: 'magenta',
 };
 
 function icon(rows: string[]): SpriteDef {
@@ -26,3 +30,10 @@ export const EQUIP_ICONS: Record<EquipSlot, SpriteDef> = {
 };
 
 export const BUFF_ICON = icon(['...K....', '..KYK...', '.KYYYK..', 'KKYYYKK.', '..KYK...', '..KYK...', '..KKK...', '........']);
+export const DEBUFF_ICON = icon(['..KKK...', '..KRK...', '..KRK...', 'KKRRRKK.', '.KRRRK..', '..KRK...', '...K....', '........']);
+export const HASTE_ICON = icon(['KK.KK...', 'KVKKVK..', '.KVKKVK.', '..KVKKVK', '.KVKKVK.', 'KVKKVK..', 'KK.KK...', '........']);
+export const SLOW_ICON = icon(['...KK.KK', '..KNKKNK', '.KNKKNK.', 'KNKKNK..', '.KNKKNK.', '..KNKKNK', '...KK.KK', '........']);
+export const TAUNT_ICON = icon(['KKKKKKK.', 'KRRWRRK.', 'KRRWRRK.', 'KRRWRRK.', 'KRRRRRK.', '.KRWRK..', '..KRK...', '...K....']);
+export const SHAPESHIFT_ICON = icon(['.KK.KK..', 'KBBKBBK.', '.KKKKK..', 'KBBBBBK.', 'KBBBBBK.', '.KBBBK..', '..KKK...', '........']);
+export const DOT_ICON = icon(['...K....', '..KPK...', '..KPK...', '.KPPPK..', 'KPPPPPK.', 'KPPPPPK.', '.KPPPK..', '..KKK...']);
+export const REGEN_ICON = icon(['..KKK...', '..KVK...', 'KKKVKKK.', 'KVVVVVK.', 'KKKVKKK.', '..KVK...', '..KKK...', '........']);

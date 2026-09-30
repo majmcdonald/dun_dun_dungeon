@@ -1,24 +1,35 @@
-import { BUFF_ICON } from '../art/icons';
+import {
+  BUFF_ICON,
+  DEBUFF_ICON,
+  DOT_ICON,
+  HASTE_ICON,
+  REGEN_ICON,
+  SHAPESHIFT_ICON,
+  SLOW_ICON,
+  TAUNT_ICON,
+} from '../art/icons';
 import { PALETTE } from '../art/palette';
 import { spriteCanvas, TRANSPARENT, type SpriteDef } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
-import { Battle } from '../combat/battle';
+import { Battle, gridCell, isSummon, MECHANIC } from '../combat/battle';
 import { CREATURES } from '../content/creatures';
 import { TEST_ENCOUNTER } from '../content/enemies';
-import type { BattleEvent, Combatant, EquipSlot } from '../combat/types';
+import { EQUIP_SLOTS, type BattleEvent, type Combatant, type EquipSlot } from '../combat/types';
 import { NATIVE_HEIGHT, NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
 import { drawBackground } from '../ui/background';
 import { CHAR_ADVANCE, drawText, textWidth } from '../ui/font';
-import { drawEquipmentIcons, drawEquipmentTooltip, hoveredSlot } from '../ui/partyCard';
+import { drawEquipmentIcons, drawEquipmentTooltip, hoveredSlot, ICON_STEP } from '../ui/partyCard';
 import { VFX } from '../vfx/effects';
 import { PreBattleScene } from './PreBattleScene';
 
 const SIDEBAR_W = 152;
 const FIELD_CENTER_X = SIDEBAR_W + (NATIVE_WIDTH - SIDEBAR_W) / 2;
 const ROW_TOPS = [52, 126, 200];
-const PARTY_X = 186;
-const ENEMY_COLUMN_X = [292, 346, 400];
+const PARTY_X = 180;
+// Summon columns, front-most first.
+const SUMMON_X = [262, 220];
+const ENEMY_COLUMN_X = [316, 370, 424];
 const SKILL_SLOTS = 4;
 
 const CARD_X = 4;
@@ -39,6 +50,9 @@ const POP_TIME = 0.1;
 const RESULT_DELAY = 1.0;
 const NOTICE_TIME = 1.5;
 const NOTICE_RISE_PER_SEC = 10;
+const STATUS_ICONS_MAX = 4;
+const FAMILIAR_GHOST_ALPHA = 0.35;
+const FRENZY_BLINK = 0.15;
 
 interface SpriteSet {
   idle: HTMLCanvasElement;
@@ -89,7 +103,16 @@ export class BattleScene implements Scene {
   private vfxSeed = 0;
   private endedFor = 0;
   private sprites = new Map<string, SpriteSet>();
-  private buffIcon = spriteCanvas(BUFF_ICON, 'idle');
+  private icons = {
+    taunt: spriteCanvas(TAUNT_ICON, 'idle'),
+    shapeshift: spriteCanvas(SHAPESHIFT_ICON, 'idle'),
+    haste: spriteCanvas(HASTE_ICON, 'idle'),
+    slow: spriteCanvas(SLOW_ICON, 'idle'),
+    dot: spriteCanvas(DOT_ICON, 'idle'),
+    regen: spriteCanvas(REGEN_ICON, 'idle'),
+    buff: spriteCanvas(BUFF_ICON, 'idle'),
+    debuff: spriteCanvas(DEBUFF_ICON, 'idle'),
+  };
 
   constructor(private game: GameContext) {
     for (const [id, def] of Object.entries(SPRITES)) {
@@ -109,9 +132,6 @@ export class BattleScene implements Scene {
   private start(): void {
     this.battle = new Battle(this.game.state.party, TEST_ENCOUNTER, Math.random, { creatures: CREATURES });
     this.anims.clear();
-    for (const c of this.battle.combatants) {
-      this.anims.set(c.uid, { attack: 0, flash: 0, death: 0, lastFired: c.slots.map(() => -Infinity) });
-    }
     this.floats = [];
     this.vfx = [];
     this.notices = [];
@@ -190,9 +210,13 @@ export class BattleScene implements Scene {
     }
   }
 
+  // Created on first use, since summons join mid-battle.
   private anim(uid: string): Anim {
-    const a = this.anims.get(uid);
-    if (!a) throw new Error(`No anim state for ${uid}`);
+    let a = this.anims.get(uid);
+    if (!a) {
+      a = { attack: 0, flash: 0, death: 0, lastFired: this.battle.get(uid).slots.map(() => -Infinity) };
+      this.anims.set(uid, a);
+    }
     return a;
   }
 
@@ -221,9 +245,10 @@ export class BattleScene implements Scene {
   render(ctx: CanvasRenderingContext2D): void {
     drawBackground(ctx);
 
-    const party = this.battle.combatants.filter((c) => c.side === 'party');
+    const party = this.battle.combatants.filter((c) => c.side === 'party' && !isSummon(c));
     party.forEach((c) => this.drawCard(ctx, c));
 
+    for (const c of party) this.drawFamiliarGhost(ctx, c);
     for (const c of this.battle.combatants) this.drawCombatant(ctx, c);
     for (const v of this.vfx) this.drawVfx(ctx, v);
     for (const f of this.floats) this.drawFloat(ctx, f);
@@ -244,7 +269,8 @@ export class BattleScene implements Scene {
   }
 
   private spriteSet(c: Combatant): SpriteSet {
-    const set = this.sprites.get(c.def.id);
+    const id = c.transformed > 0 ? 'critter' : c.def.id;
+    const set = this.sprites.get(id);
     if (!set) throw new Error(`No sprite for ${c.def.id}`);
     return set;
   }
@@ -265,12 +291,77 @@ export class BattleScene implements Scene {
     ctx.drawImage(img, x + lunge, y);
     ctx.globalAlpha = 1;
     if (c.hp <= 0) return;
-    if (c.buffs.length > 0) ctx.drawImage(this.buffIcon, x - 9, y + 23);
-    if (c.side === 'party') return;
+    this.statusIcons(c).forEach((icon, i) => ctx.drawImage(icon, x - 9, y + 23 - i * 9));
+    if (c.side === 'party' && !isSummon(c)) {
+      this.drawMeter(ctx, c, x, y + 34);
+      return;
+    }
 
     drawBar(ctx, x, y + 34, 32, 3, c.hp / c.maxHp, PALETTE.green);
+    if (isSummon(c)) return;
     const slot = c.slots[0];
     if (slot) drawBar(ctx, x, y + 38, 32, 2, slot.timer / slot.def.cooldown, PALETTE.gold);
+  }
+
+  // Most important first; only the first few fit beside the sprite.
+  private statusIcons(c: Combatant): HTMLCanvasElement[] {
+    const speed = c.speed.reduce((f, s) => f * s.value, 1);
+    const shown = [
+      c.taunting > 0 && this.icons.taunt,
+      c.shapeshift && this.icons.shapeshift,
+      speed > 1 && this.icons.haste,
+      speed < 1 && this.icons.slow,
+      c.dots.length > 0 && this.icons.dot,
+      c.regens.length > 0 && this.icons.regen,
+      c.buffs.some((b) => b.amount > 0) && this.icons.buff,
+      c.buffs.some((b) => b.amount < 0) && this.icons.debuff,
+    ];
+    return shown.filter((icon): icon is HTMLCanvasElement => !!icon).slice(0, STATUS_ICONS_MAX);
+  }
+
+  // Class mechanic under the sprite: rage and chi bars, soul pips, or the familiar's summoning progress.
+  private drawMeter(ctx: CanvasRenderingContext2D, c: Combatant, x: number, y: number): void {
+    if (c.def.familiar && c.channel > 0) {
+      drawBar(ctx, x, y, 32, 3, 1 - c.channel / MECHANIC.channelSeconds, PALETTE.magenta);
+      return;
+    }
+    const blink = Math.floor(this.battle.elapsed / FRENZY_BLINK) % 2 === 0;
+    switch (c.def.mechanic) {
+      case 'rage':
+        if (c.burst > 0) {
+          drawBar(ctx, x, y, 32, 3, c.burst / MECHANIC.frenzySeconds, blink ? PALETTE.hotRed : PALETTE.white);
+          return;
+        }
+        drawBar(ctx, x, y, 32, 3, c.meter / MECHANIC.rageMax, PALETTE.red);
+        return;
+      case 'chi':
+        if (c.burst > 0) {
+          drawBar(ctx, x, y, 32, 3, c.burst / MECHANIC.burstSeconds, blink ? PALETTE.gold : PALETTE.white);
+          return;
+        }
+        drawBar(ctx, x, y, 32, 3, c.meter / MECHANIC.chiMax, PALETTE.cyan);
+        ctx.fillStyle = PALETTE.white;
+        ctx.fillRect(x + Math.round(32 * MECHANIC.chiFilling), y - 1, 1, 5);
+        return;
+      case 'souls':
+        for (let i = 0; i < MECHANIC.soulsMax; i++) {
+          ctx.fillStyle = PALETTE.black;
+          ctx.fillRect(x + i * 7 - 1, y - 1, 6, 5);
+          ctx.fillStyle = i < c.meter ? PALETTE.magenta : PALETTE.night;
+          ctx.fillRect(x + i * 7, y, 4, 3);
+        }
+        return;
+    }
+  }
+
+  // While the familiar is being summoned, a faint preview stands where it will appear.
+  private drawFamiliarGhost(ctx: CanvasRenderingContext2D, c: Combatant): void {
+    if (!c.def.familiar || c.channel <= 0 || c.hp <= 0) return;
+    const set = this.sprites.get(c.def.familiar);
+    if (!set) return;
+    ctx.globalAlpha = FAMILIAR_GHOST_ALPHA;
+    ctx.drawImage(set.idle, SUMMON_X[0], ROW_TOPS[c.position]);
+    ctx.globalAlpha = 1;
   }
 
   private visualCenter(c: Combatant): { cx: number; cy: number } {
@@ -327,16 +418,17 @@ export class BattleScene implements Scene {
     const inner = cx + 5;
     const innerW = CARD_W - 10;
     drawText(ctx, c.def.name, inner, cy + 5, alive ? PALETTE.white : PALETTE.slate);
-    const icons = cardIconOrigin(c);
-    drawEquipmentIcons(ctx, c.equipment, icons.x, icons.y, !alive, this.brokenThisBattle.get(c.uid));
     const hp = `${c.hp}/${c.maxHp}`;
     drawText(ctx, hp, inner + innerW - textWidth(hp), cy + 5, alive ? PALETTE.green : PALETTE.slate);
-    drawBar(ctx, inner, cy + 15, innerW, 4, c.hp / c.maxHp, PALETTE.green);
-    if (c.barrier) drawBar(ctx, inner, cy + 20, innerW, 1, c.barrier.amount / c.maxHp, PALETTE.cyan, false);
+    const icons = cardIconOrigin(c);
+    drawEquipmentIcons(ctx, c.equipment, icons.x, icons.y, !alive, this.brokenThisBattle.get(c.uid));
+    const hpW = icons.x - inner - 4;
+    drawBar(ctx, inner, cy + 15, hpW, 4, c.hp / c.maxHp, PALETTE.green);
+    if (c.barrier) drawBar(ctx, inner, cy + 20, hpW, 1, c.barrier.amount / c.maxHp, PALETTE.cyan, false);
 
     const anim = this.anim(c.uid);
     for (let i = 0; i < SKILL_SLOTS; i++) {
-      const rowY = cy + 25 + i * 10;
+      const rowY = cy + 24 + i * 11;
       const slot = c.slots[i];
       if (!slot) {
         drawText(ctx, '- EMPTY -', inner, rowY, PALETTE.night, null);
@@ -344,11 +436,9 @@ export class BattleScene implements Scene {
       }
       const nameColor = !alive ? PALETTE.slate : slot.def.category === 'spell' ? PALETTE.cyan : PALETTE.lightGray;
       drawText(ctx, slot.def.name, inner, rowY, nameColor);
-      const barX = inner + 70;
-      const barW = innerW - 70;
       const justFired = !this.battle.result && this.battle.elapsed - anim.lastFired[i] < FIRE_HIGHLIGHT;
       const fill = !alive ? 0 : justFired ? 1 : slot.timer / slot.def.cooldown;
-      drawBar(ctx, barX, rowY + 1, barW, 5, fill, justFired ? PALETTE.white : PALETTE.gold, false);
+      drawBar(ctx, inner, rowY + 8, innerW, 2, fill, justFired ? PALETTE.white : PALETTE.gold, false);
     }
   }
 
@@ -378,14 +468,16 @@ export class BattleScene implements Scene {
   }
 }
 
-// Party: one per row, aligned with its sidebar card. Enemies: 3x3 grid, column 0 is the front line.
+// Party: one per row, aligned with its sidebar card, with summons in a column in front of them.
+// Enemies: 3x3 grid, column 0 is the front line.
 function slotPosition(c: Combatant): { x: number; y: number } {
-  if (c.side === 'party') return { x: PARTY_X, y: ROW_TOPS[c.position] };
-  return { x: ENEMY_COLUMN_X[Math.floor(c.position / 3)], y: ROW_TOPS[c.position % 3] };
+  const { row, column } = gridCell(c);
+  if (c.side === 'party') return { x: SUMMON_X[column] ?? PARTY_X, y: ROW_TOPS[row] };
+  return { x: ENEMY_COLUMN_X[column], y: ROW_TOPS[row] };
 }
 
 function cardIconOrigin(c: Combatant): { x: number; y: number } {
-  return { x: CARD_X + 5 + 44, y: ROW_TOPS[c.position] + CARD_OFFSET_Y + 4 };
+  return { x: CARD_X + CARD_W - 5 - (EQUIP_SLOTS.length * ICON_STEP - 1), y: ROW_TOPS[c.position] + CARD_OFFSET_Y + 13 };
 }
 
 function firstOpaqueRow(def: SpriteDef): number {

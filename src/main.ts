@@ -3,6 +3,7 @@ import { Input } from './engine/input';
 import { startLoop } from './engine/loop';
 import { Renderer } from './engine/renderer';
 import { SceneManager, type GameContext } from './engine/scene';
+import { demoParty } from './content/testing';
 import { createState } from './game/state';
 import { PreBattleScene } from './scenes/PreBattleScene';
 
@@ -15,6 +16,9 @@ const game: GameContext = {
   scenes: new SceneManager(),
   state: createState(),
 };
+
+const demo = new URLSearchParams(location.search).get('party');
+if (demo) game.state.party = demoParty(demo);
 
 game.scenes.switchTo(new PreBattleScene(game));
 

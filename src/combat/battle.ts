@@ -25,8 +25,8 @@ const TIMER_EPSILON = 1e-9;
 export const MAX_START_DELAY = 0.2;
 export const ENEMY_ROWS = 3;
 const MAX_RESIST = 0.9;
-export const SUMMON_SLOTS = 3;
-const FIRST_SUMMON_POSITION = 3;
+export const FIRST_SUMMON_POSITION = 3;
+export const SUMMONS_PER_MEMBER = 2;
 
 export const MECHANIC = {
   rageMax: 100,
@@ -52,15 +52,20 @@ export function isSummon(c: Pick<Combatant, 'summoner'>): boolean {
   return c.summoner !== null;
 }
 
-// Enemies fill a 3x3 grid, column 0 in front. The party has its members in column 1 (one per row) and
-// summons in column 0, in front of them.
+// Enemies fill a 3x3 grid, column 0 in front. The party has its members in the back column (one per row)
+// and each member's summons in the columns in front of them, in the same row.
 export function gridCell(c: Pick<Combatant, 'side' | 'position'>): { row: number; column: number } {
   if (c.side === 'party') {
-    return c.position >= FIRST_SUMMON_POSITION
-      ? { row: c.position - FIRST_SUMMON_POSITION, column: 0 }
-      : { row: c.position, column: 1 };
+    if (c.position < FIRST_SUMMON_POSITION) return { row: c.position, column: SUMMONS_PER_MEMBER };
+    const index = c.position - FIRST_SUMMON_POSITION;
+    return { row: index % FIRST_SUMMON_POSITION, column: Math.floor(index / FIRST_SUMMON_POSITION) };
   }
   return { row: c.position % ENEMY_ROWS, column: Math.floor(c.position / ENEMY_ROWS) };
+}
+
+// Slot 0 is the front-most summon column.
+function summonPosition(owner: Combatant, slot: number): number {
+  return FIRST_SUMMON_POSITION + slot * FIRST_SUMMON_POSITION + owner.position;
 }
 
 // Lower is closer to the front line; ties never happen because each unit has its own cell.
@@ -457,12 +462,16 @@ export class Battle {
         resistance: scale(statOf(owner, 'resistance')),
       },
     };
-    const used = new Set(this.alive('party').filter(isSummon).map((c) => c.position));
-    let position = [0, 1, 2].map((r) => FIRST_SUMMON_POSITION + r).find((p) => !used.has(p));
-    if (position === undefined) {
-      const oldest = this.alive('party').filter(isSummon)[0];
-      oldest.hp = 0;
-      position = oldest.position;
+    // Up to 2 summons per summoner, in front of them in the same row; when full, the newest replaces the oldest.
+    const own = this.summonsOf(owner);
+    let position: number;
+    if (own.length >= SUMMONS_PER_MEMBER) {
+      own[0].hp = 0;
+      position = own[0].position;
+    } else {
+      const used = new Set(own.map((c) => c.position));
+      const slot = [...Array(SUMMONS_PER_MEMBER).keys()].find((s) => !used.has(summonPosition(owner, s)))!;
+      position = summonPosition(owner, slot);
     }
     const unit = createCombatant(def, def.skills, 'party', position, {}, this.rng);
     unit.uid = `summon-${++this.summonCount}`;
