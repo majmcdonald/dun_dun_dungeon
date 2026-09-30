@@ -1,5 +1,13 @@
 import { PALETTE } from '../art/palette';
+import type { Rarity } from '../combat/types';
 import { drawText, textWidth } from './font';
+
+export const RARITY_COLOR: Record<Rarity, string> = {
+  common: PALETTE.lightGray,
+  rare: PALETTE.blue,
+  epic: PALETTE.magenta,
+  legendary: PALETTE.gold,
+};
 
 export interface Rect {
   x: number;

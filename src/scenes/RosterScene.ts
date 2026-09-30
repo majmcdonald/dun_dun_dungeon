@@ -121,7 +121,7 @@ export class RosterScene implements Scene {
       const target = describeTarget(skill.target);
       drawText(ctx, target, DETAIL.x + DETAIL.w - 6 - textWidth(target), y, PALETTE.slate);
       y += LINE_HEIGHT + 1;
-      line(`  ${skill.effects.map(describeEffect).join('; ')}`, PALETTE.lightGray);
+      line(`  ${skill.effects.map(describeEffect).join(', ')}`, PALETTE.lightGray);
     }
     for (const text of def.mechanic ? MECHANIC_TEXT[def.mechanic] : []) line(text, PALETTE.magenta);
   }

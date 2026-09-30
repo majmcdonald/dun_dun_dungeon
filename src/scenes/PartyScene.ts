@@ -5,13 +5,18 @@ import type { GameContext, Scene } from '../engine/scene';
 import { drawBackground } from '../ui/background';
 import { drawText, textWidth } from '../ui/font';
 import { cardIconOrigin, drawEquipmentTooltip, drawPartyCard, hoveredSlot, partyCardRect } from '../ui/partyCard';
-import { drawButton, drawFrame, inside, type Button } from '../ui/widgets';
+import { drawButton, drawFrame, inside, type Button, type Rect } from '../ui/widgets';
 import { BattleScene } from './BattleScene';
+import { LoadoutScene } from './LoadoutScene';
 
 const START: Button = { x: 170, y: 212, w: 140, h: 22, label: 'START BATTLE' };
 const CARDS_TOP = 60;
 const TITLE = 'UPDATE PARTY';
 const HINT = 'DRAG CHARACTERS TO REORDER';
+
+function editButton(card: Rect): Button {
+  return { x: card.x + card.w - 34, y: card.y + 3, w: 30, h: 11, label: 'EDIT' };
+}
 
 interface Drag {
   from: number;
@@ -38,6 +43,7 @@ export class PartyScene implements Scene {
       const index = this.game.state.party.findIndex((_, i) => inside(press, partyCardRect(i, CARDS_TOP)));
       if (index < 0) continue;
       const rect = partyCardRect(index, CARDS_TOP);
+      if (inside(press, editButton(rect))) continue;
       this.drag = { from: index, grabX: press.x - rect.x, grabY: press.y - rect.y };
     }
 
@@ -50,6 +56,8 @@ export class PartyScene implements Scene {
     }
     for (const click of clicks) {
       if (inside(click, START)) return this.game.scenes.switchTo(new BattleScene(this.game));
+      const edit = this.game.state.party.findIndex((_, i) => inside(click, editButton(partyCardRect(i, CARDS_TOP))));
+      if (edit >= 0) return this.game.scenes.switchTo(new LoadoutScene(this.game, edit));
     }
   }
 
@@ -87,6 +95,7 @@ export class PartyScene implements Scene {
         return;
       }
       drawPartyCard(ctx, m, i, rect, !this.drag && inside(pointer, rect) ? PALETTE.lightGray : PALETTE.darkSlate);
+      if (!this.drag) drawButton(ctx, editButton(rect), inside(pointer, editButton(rect)));
     });
 
     drawText(ctx, HINT, (NATIVE_WIDTH - textWidth(HINT)) / 2, 190, PALETTE.lightGray);

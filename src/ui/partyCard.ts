@@ -16,6 +16,10 @@ const SKILL_SLOTS = 4;
 let iconCache: Record<EquipSlot, HTMLCanvasElement> | null = null;
 const spriteCache = new Map<string, HTMLCanvasElement>();
 
+export function equipIcon(slot: EquipSlot): HTMLCanvasElement {
+  return icons()[slot];
+}
+
 function icons(): Record<EquipSlot, HTMLCanvasElement> {
   iconCache ??= Object.fromEntries(EQUIP_SLOTS.map((s) => [s, spriteCanvas(EQUIP_ICONS[s], 'idle')])) as Record<
     EquipSlot,
@@ -112,7 +116,7 @@ export function hoveredSlot(pointer: { x: number; y: number }, origin: { x: numb
   return EQUIP_SLOTS.find((_, i) => inside(pointer, { x: origin.x + i * ICON_STEP, y: origin.y, w: 8, h: 8 })) ?? null;
 }
 
-const SLOT_LABEL: Record<EquipSlot, string> = {
+export const SLOT_LABEL: Record<EquipSlot, string> = {
   helmet: 'HELMET',
   armor: 'ARMOR',
   boots: 'BOOTS',
@@ -120,7 +124,7 @@ const SLOT_LABEL: Record<EquipSlot, string> = {
   jewelry: 'JEWELRY',
 };
 
-const STAT_LABEL: [keyof Stats, string][] = [
+export const STAT_LABEL: [keyof Stats, string][] = [
   ['hp', 'HP'],
   ['attack', 'ATK'],
   ['magic', 'MAG'],
