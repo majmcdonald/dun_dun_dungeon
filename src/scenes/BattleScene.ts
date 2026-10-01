@@ -20,7 +20,7 @@ import type { GameContext, Scene } from '../engine/scene';
 import { drawBackground } from '../ui/background';
 import { CHAR_ADVANCE, drawText, textWidth } from '../ui/font';
 import { drawEquipmentIcons, drawEquipmentTooltip, hoveredSlot, ICON_STEP } from '../ui/partyCard';
-import { VFX } from '../vfx/effects';
+import { dotVfxId, VFX } from '../vfx/effects';
 import { loseRun, winNode } from '../run/flow';
 import { PreBattleScene } from './PreBattleScene';
 
@@ -52,6 +52,8 @@ const RESULT_DELAY = 1.0;
 const NOTICE_TIME = 1.5;
 const NOTICE_RISE_PER_SEC = 10;
 const STATUS_ICONS_MAX = 4;
+// Statuses that play the VFX of the same name when applied.
+const STATUS_VFX = new Set(['slow', 'haste', 'transform', 'shapeshift']);
 const FAMILIAR_GHOST_ALPHA = 0.35;
 const FRENZY_BLINK = 0.15;
 
@@ -67,6 +69,12 @@ interface Anim {
   flash: number;
   death: number;
   lastFired: number[];
+  // Seconds left before a new summon shows up, and before a transformed unit turns into the critter:
+  // each waits for its VFX to finish.
+  hidden: number;
+  morph: number;
+  // Already drawn as the critter, so a refreshed transform doesn't replay the swap.
+  critter: boolean;
 }
 
 interface FloatText {
@@ -169,6 +177,8 @@ export class BattleScene implements Scene {
     for (const anim of this.anims.values()) {
       anim.attack = Math.max(0, anim.attack - dt);
       anim.flash = Math.max(0, anim.flash - dt);
+      anim.hidden = Math.max(0, anim.hidden - dt);
+      anim.morph = Math.max(0, anim.morph - dt);
     }
     for (const c of this.battle.combatants) {
       if (c.hp <= 0) this.anim(c.uid).death += dt;
@@ -184,9 +194,10 @@ export class BattleScene implements Scene {
         anim.attack = ATTACK_TIME;
         const slotIndex = actor.slots.findIndex((s) => s.def.id === event.skill);
         anim.lastFired[slotIndex] = this.battle.elapsed;
-        const vfx = actor.slots[slotIndex].def.vfx;
-        if (vfx) {
-          for (const target of event.targets) this.vfx.push({ id: vfx, target, age: 0, seed: ++this.vfxSeed });
+        const skill = actor.slots[slotIndex].def;
+        for (const target of event.targets) {
+          if (skill.vfx) this.playVfx(skill.vfx, target);
+          if (skill.effects.some((e) => e.kind === 'chaos')) this.playVfx('chaos', target);
         }
         break;
       }
@@ -197,8 +208,20 @@ export class BattleScene implements Scene {
         else if (stats) stats.damageDone += hit;
         this.anim(event.target).flash = FLASH_TIME;
         this.float(event.target, { damage: event.amount, absorbed: event.absorbed });
+        if (event.periodic) {
+          const target = this.battle.get(event.target);
+          this.playVfx(dotVfxId(event.element, event.amount + event.absorbed, target.maxHp), event.target);
+        }
         break;
       }
+      case 'status':
+        if (STATUS_VFX.has(event.status)) this.playVfx(event.status, event.target);
+        if (event.status === 'transform' && !this.anim(event.target).critter) this.anim(event.target).morph = VFX.transform.duration;
+        break;
+      case 'summon':
+        this.playVfx('summon', event.unit);
+        this.anim(event.unit).hidden = VFX.summon.duration;
+        break;
       case 'barrier':
         this.float(event.target, { barrier: event.amount });
         break;
@@ -225,10 +248,14 @@ export class BattleScene implements Scene {
   }
 
   // Created on first use, since summons join mid-battle.
+  private playVfx(id: string, target: string): void {
+    this.vfx.push({ id, target, age: 0, seed: ++this.vfxSeed });
+  }
+
   private anim(uid: string): Anim {
     let a = this.anims.get(uid);
     if (!a) {
-      a = { attack: 0, flash: 0, death: 0, lastFired: this.battle.get(uid).slots.map(() => -Infinity) };
+      a = { attack: 0, flash: 0, death: 0, lastFired: this.battle.get(uid).slots.map(() => -Infinity), hidden: 0, morph: 0, critter: false };
       this.anims.set(uid, a);
     }
     return a;
@@ -283,7 +310,9 @@ export class BattleScene implements Scene {
   }
 
   private spriteSet(c: Combatant): SpriteSet {
-    const id = c.transformed > 0 ? 'critter' : c.def.id;
+    const anim = this.anim(c.uid);
+    anim.critter = c.transformed > 0 && anim.morph <= 0;
+    const id = anim.critter ? 'critter' : c.def.id;
     const set = this.sprites.get(id);
     if (!set) throw new Error(`No sprite for ${c.def.id}`);
     return set;
@@ -292,7 +321,7 @@ export class BattleScene implements Scene {
   private drawCombatant(ctx: CanvasRenderingContext2D, c: Combatant): void {
     const anim = this.anim(c.uid);
     const alpha = c.hp > 0 ? 1 : Math.max(0, 1 - anim.death / DEATH_FADE);
-    if (alpha <= 0) return;
+    if (alpha <= 0 || anim.hidden > 0) return;
 
     const set = this.spriteSet(c);
     const { x, y } = slotPosition(c);

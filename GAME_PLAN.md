@@ -129,6 +129,7 @@ Phase 4 design:
 - Save: 3 save slots in localStorage, autosaved after every node.
 - Debug screen (approved): Title → DEBUG or ?debug. Party panel: up to 3 characters (any class incl. locked, via a class picker), drag rows to reorder, EDIT opens the loadout with an unlimited inventory, REMOVE. Encounter panel: 3×3 grid; clicking a cell opens a full-screen, searchable, scrollable monster picker with a stats/skills detail panel; CLEAR empties the grid. FIGHT runs the battle and returns to the debug screen with the setup restored (gear broken in the fight comes back).
 - Art for approval: title screen, map screen and node icons (battle, epic, event, store, treasure, boss), reward screen, run over and victory screens, then the 6 moved VFX.
+- VFX (approved): summon (spiral in + flash; the creature appears when it ends), transform (smoke poof; the critter appears when it ends), shapeshift (spiraling leaves), slow (sinking drops + tightening ring), haste (speed lines), chaos (multicolor burst), and damage-over-time ticks in the element's colors at 3 tiers by tick size (under 5%, 5–25%, 25%+ of the target's max HP). Played from battle events; preview at ?preview=vfx.
 - Work order: run engine (map generator, run state, rewards, save slots) + tests → title and save-slot screen → map screen → reward flow → run over/victory → debug screen → VFX.
 
 **Phase 5 — Shops & Events**

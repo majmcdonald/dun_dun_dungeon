@@ -7,6 +7,7 @@ import { createState } from './game/state';
 import { DebugScene } from './scenes/DebugScene';
 import { RunEndScene } from './scenes/RunEndScene';
 import { TitleScene } from './scenes/TitleScene';
+import { VfxPreviewScene } from './scenes/VfxPreviewScene';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 
@@ -20,9 +21,11 @@ const game: GameContext = {
 
 const params = new URLSearchParams(location.search);
 
-// Dev-only: ?preview=victory or ?preview=defeat shows the run-end screen with sample stats.
+// Dev-only: ?preview=vfx loops the battle VFX; ?preview=victory or ?preview=defeat shows the run-end screen.
 const preview = params.get('preview');
-if (preview === 'victory' || preview === 'defeat') {
+if (preview === 'vfx') {
+  game.scenes.switchTo(new VfxPreviewScene(game));
+} else if (preview === 'victory' || preview === 'defeat') {
   const won = preview === 'victory';
   game.scenes.switchTo(
     new RunEndScene(game, {
