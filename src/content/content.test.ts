@@ -10,6 +10,9 @@ import { Battle } from '../combat/battle';
 import type { SkillEffect } from '../combat/types';
 import { CREATURES } from './creatures';
 import { SKILL_LIBRARY, SKILLS_BY_ID } from './skills';
+import { ENEMIES } from './enemies';
+import { EVENT_LIBRARY } from './events';
+import { wrap } from '../ui/describeLines';
 
 describe('skill library', () => {
   it('has about 100 skills with unique ids', () => {
@@ -145,5 +148,54 @@ describe('summons', () => {
     expect(battle.combatants.some((c) => c.familiar)).toBe(false);
     for (let i = 0; i < 0.2 * 60; i++) battle.tick(1 / 60);
     expect(battle.combatants.find((c) => c.familiar)?.def.id).toBe('imp');
+  });
+});
+
+describe('events', () => {
+  const enemyIds = new Set(ENEMIES.map((e) => e.id));
+  const fits = (text: string, chars: number, lines: number) => wrap(text, chars).length <= lines;
+
+  it('have unique ids and 2–3 choices', () => {
+    expect(EVENT_LIBRARY.length).toBeGreaterThanOrEqual(15);
+    expect(new Set(EVENT_LIBRARY.map((e) => e.id)).size).toBe(EVENT_LIBRARY.length);
+    for (const e of EVENT_LIBRARY) {
+      expect(e.choices.length, e.id).toBeGreaterThanOrEqual(2);
+      expect(e.choices.length, e.id).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it('give every rolled choice a failure, and fight only real enemies', () => {
+    for (const e of EVENT_LIBRARY) {
+      for (const c of e.choices) {
+        const rolled = c.check !== undefined || c.chance !== undefined;
+        expect(!!c.failure, `${e.id}: ${c.label}`).toBe(rolled);
+        for (const r of [c.success, c.failure].filter(Boolean)) {
+          for (const o of r!.outcomes) if (o.kind === 'fight') for (const id of o.enemies ?? []) expect(enemyIds.has(id), id).toBe(true);
+        }
+      }
+    }
+  });
+
+  // Buying something must be affordable; plain penalties (dropping coins while fleeing) need no cost.
+  it('charge a cost for any choice that pays gold for a gain', () => {
+    const gains = new Set(['skill', 'item', 'blessed']);
+    for (const e of EVENT_LIBRARY) {
+      for (const c of e.choices) {
+        const paid = -Math.min(0, ...c.success.outcomes.map((o) => (o.kind === 'gold' ? o.amount : 0)));
+        const buys = c.success.outcomes.some((o) => gains.has(o.kind));
+        if (paid > 0 && buys) expect(c.cost ?? 0, `${e.id}: ${c.label}`).toBeGreaterThanOrEqual(paid);
+      }
+    }
+  });
+
+  it('use only drawable text that fits the event screen', () => {
+    for (const e of EVENT_LIBRARY) {
+      expect(canDraw(e.title) && fits(e.title, 70, 1), e.id).toBe(true);
+      expect(canDraw(e.text) && fits(e.text, 57, 5), e.id).toBe(true);
+      for (const c of e.choices) {
+        expect(canDraw(c.label) && c.label.length <= 40, c.label).toBe(true);
+        for (const r of [c.success, c.failure].filter(Boolean)) expect(canDraw(r!.text) && fits(r!.text, 70, 2), r!.text).toBe(true);
+      }
+    }
   });
 });

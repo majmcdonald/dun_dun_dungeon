@@ -4,7 +4,7 @@ import { ENEMIES, MAP_ENCOUNTER } from '../content/enemies';
 import { EVENT_LIBRARY } from '../content/events';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
-import { checkChance, chooseOption, type EventDef, type StatCheck } from '../run/events';
+import { canAfford, choiceChance, chooseOption, type EventDef, type StatCheck } from '../run/events';
 import { completeNode } from '../run/flow';
 import { saveRun } from '../run/run';
 import { drawBackground } from '../ui/background';
@@ -46,8 +46,7 @@ export class EventScene implements Scene {
         continue;
       }
       const index = this.event.choices.findIndex((_, i) => inside(click, choiceRect(i)));
-      if (index < 0) continue;
-      chooseOption(this.game.state, this.event, index);
+      if (index < 0 || !chooseOption(this.game.state, this.event, index)) continue;
       saveRun(this.game.state);
       return;
     }
@@ -78,13 +77,17 @@ export class EventScene implements Scene {
     const pointer = this.game.input.pointer;
     this.event.choices.forEach((choice, i) => {
       const r = choiceRect(i);
-      const hover = inside(pointer, r);
-      ctx.fillStyle = hover ? PALETTE.sand : PALETTE.tan;
+      const affordable = canAfford(this.game.state, choice);
+      const hover = affordable && inside(pointer, r);
+      ctx.fillStyle = hover ? PALETTE.sand : affordable ? PALETTE.tan : PALETTE.sand;
       ctx.fillRect(r.x, r.y, r.w, r.h);
       drawFrame(ctx, r, hover ? PALETTE.deepBrown : PALETTE.brown);
-      drawText(ctx, `${i + 1}. ${choice.label}`, r.x + 8, r.y + 7, INK, null);
-      if (choice.check) {
-        const tag = checkTag(choice.check, checkChance(this.game.state, choice.check));
+      drawText(ctx, `${i + 1}. ${choice.label}`, r.x + 8, r.y + 7, affordable ? INK : PALETTE.tan, null);
+      if (!affordable) {
+        const need = `NEED ${choice.cost} G`;
+        drawText(ctx, need, r.x + r.w - 8 - textWidth(need), r.y + 7, PALETTE.brown, null);
+      } else if (choice.check || choice.chance !== undefined) {
+        const tag = checkTag(choice.check, choiceChance(this.game.state, choice));
         drawText(ctx, tag, r.x + r.w - 8 - textWidth(tag), r.y + 7, PALETTE.darkRed, null);
       }
     });
@@ -96,7 +99,7 @@ export class EventScene implements Scene {
     let y = CHOICES_Y;
     drawText(ctx, `- ${choice.label}`, ART.x, y, PALETTE.brown, null);
     y += 14;
-    if (choice.check) {
+    if (choice.check || choice.chance !== undefined) {
       drawText(ctx, result.success ? 'SUCCESS!' : 'FAILED!', ART.x, y, result.success ? PALETTE.darkGreen : PALETTE.darkRed, null);
       y += 12;
     }
@@ -151,10 +154,13 @@ function choiceRect(i: number): Rect {
   return { x: ART.x, y: CHOICES_Y + i * CHOICE_STEP, w: PARCHMENT.x + PARCHMENT.w - 12 - ART.x, h: CHOICE_H };
 }
 
-// e.g. "BEST MAG 45%" or "PARTY DEF 80%".
-function checkTag(check: StatCheck, chance: number): string {
+// What is tested and the odds, never the outcome: e.g. "BEST MAG: PASS 45% FAIL 55%", or "LUCK: PASS 50% FAIL 50%".
+function checkTag(check: StatCheck | undefined, chance: number): string {
+  const pass = Math.round(chance * 100);
+  const odds = `PASS ${pass}% FAIL ${100 - pass}%`;
+  if (!check) return `LUCK: ${odds}`;
   const stat = STAT_LABEL.find(([k]) => k === check.stat)?.[1] ?? check.stat.toUpperCase();
-  return `${check.mode === 'highest' ? 'BEST' : 'PARTY'} ${stat} ${Math.round(chance * 100)}%`;
+  return `${check.mode === 'highest' ? 'BEST' : 'PARTY'} ${stat}: ${odds}`;
 }
 
 function lineColor(line: string): string {

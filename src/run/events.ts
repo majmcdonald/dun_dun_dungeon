@@ -41,9 +41,19 @@ export interface Result {
 export interface EventChoice {
   label: string;
   check?: StatCheck;
+  // Plain luck instead of a stat: the chance to succeed.
+  chance?: number;
+  // Gold the party must have to pick it (the payment itself is a gold outcome).
+  cost?: number;
   success: Result;
-  // Only for checked choices.
+  // Only for checked or chance choices.
   failure?: Result;
+}
+
+// The odds of a choice succeeding: 1 when there's nothing to roll.
+export function choiceChance(state: GameState, choice: EventChoice): number {
+  if (choice.chance !== undefined) return choice.chance;
+  return choice.check ? checkChance(state, choice.check) : 1;
 }
 
 export interface EventDef {
@@ -100,12 +110,18 @@ export function openEvent(state: GameState, node: MapNode, library: EventDef[]):
   return event;
 }
 
+export function canAfford(state: GameState, choice: EventChoice): boolean {
+  return state.run!.gold >= (choice.cost ?? 0);
+}
+
 // Resolves a choice once: rolls any check, applies the outcomes, and records what happened.
-export function chooseOption(state: GameState, event: EventDef, index: number, rng: Rng = Math.random): EventResult {
+// Returns null for a choice the party can't afford.
+export function chooseOption(state: GameState, event: EventDef, index: number, rng: Rng = Math.random): EventResult | null {
   const visit = state.run!.event!;
   if (visit.result) return visit.result;
   const choice = event.choices[index];
-  const success = !choice.check || rng() < checkChance(state, choice.check);
+  if (!canAfford(state, choice)) return null;
+  const success = rng() < choiceChance(state, choice);
   const result = success || !choice.failure ? choice.success : choice.failure;
   const lines: string[] = [];
   let fight: string[] | null = null;

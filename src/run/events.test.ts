@@ -4,7 +4,7 @@ import { CLASSES_BY_ID } from '../content/classes';
 import { SLIME } from '../content/enemies';
 import { ITEMS_BY_ID } from '../content/items';
 import { createState } from '../game/state';
-import { checkChance, chooseOption, openEvent, partyStat, takeNextFight, type EventDef } from './events';
+import { checkChance, choiceChance, chooseOption, openEvent, partyStat, takeNextFight, type EventDef } from './events';
 import type { MapNode } from './map';
 import { beginNode, fromSave, startRun, toSave } from './run';
 
@@ -45,6 +45,13 @@ describe('event checks', () => {
     expect(partyStat(state, { stat: 'magic', mode: 'total', difficulty: 1 })).toBe(0 + mage + 14);
   });
 
+  it('can be plain luck instead of a stat', () => {
+    const state = atEvent();
+    const coin = { label: 'FLIP', chance: 0.5, success: { text: '', outcomes: [] }, failure: { text: '', outcomes: [] } };
+    expect(choiceChance(state, coin)).toBe(0.5);
+    expect(choiceChance(state, { label: 'GO', success: { text: '', outcomes: [] } })).toBe(1);
+  });
+
   it('give 50% at the difficulty, scaling with the stat, clamped to 10–95%', () => {
     const state = atEvent();
     expect(checkChance(state, { stat: 'magic', mode: 'highest', difficulty: 18 })).toBe(0.5);
@@ -79,8 +86,8 @@ describe('events', () => {
     const state = atEvent(40);
     openEvent(state, node, [SHRINE]);
     const result = chooseOption(state, SHRINE, 0, () => 0.99);
-    expect(result.success).toBe(false);
-    expect(result.lines).toEqual(['WOUNDED: NEXT FIGHT STARTS AT 75% HP', '-40 GOLD']);
+    expect(result!.success).toBe(false);
+    expect(result!.lines).toEqual(['WOUNDED: NEXT FIGHT STARTS AT 75% HP', '-40 GOLD']);
     expect(state.run!.gold).toBe(0);
   });
 
@@ -92,10 +99,20 @@ describe('events', () => {
     expect(state.inventory.skills.map((s) => s.rarity)).toEqual(['rare']);
   });
 
+  it('refuse a choice the party can\'t afford', () => {
+    const state = atEvent(10);
+    const shop: EventDef = { ...SHRINE, choices: [{ label: 'BUY', cost: 50, success: { text: '', outcomes: [{ kind: 'gold', amount: -50 }] } }] };
+    openEvent(state, node, [shop]);
+    expect(chooseOption(state, shop, 0)).toBeNull();
+    expect(state.run!.event!.result).toBeNull();
+    state.run!.gold = 50;
+    expect(chooseOption(state, shop, 0)!.lines).toEqual(['-50 GOLD']);
+  });
+
   it('report a fight instead of applying it', () => {
     const state = atEvent();
     openEvent(state, node, [SHRINE]);
-    expect(chooseOption(state, SHRINE, 2).fight).toEqual(['orc']);
+    expect(chooseOption(state, SHRINE, 2)!.fight).toEqual(['orc']);
   });
 
   it('take a random piece of gear, equipped or not', () => {
@@ -103,7 +120,7 @@ describe('events', () => {
     state.party[0] = { ...state.party[0], equipment: { weapon: ITEMS_BY_ID.longsword } };
     const lose: EventDef = { ...SHRINE, choices: [{ label: 'X', success: { text: '', outcomes: [{ kind: 'loseItem' }] } }] };
     openEvent(state, node, [lose]);
-    expect(chooseOption(state, lose, 0, () => 0).lines).toEqual(['LOST LONGSWORD']);
+    expect(chooseOption(state, lose, 0, () => 0)!.lines).toEqual(['LOST LONGSWORD']);
     expect(state.party[0].equipment.weapon).toBeUndefined();
   });
 
