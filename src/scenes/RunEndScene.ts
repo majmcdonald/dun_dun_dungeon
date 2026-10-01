@@ -3,22 +3,12 @@ import { spriteCanvas } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
-import type { RunStats } from '../run/run';
+import type { RunSummary } from '../run/run';
 import { drawBackground } from '../ui/background';
 import { drawText, textWidth } from '../ui/font';
 import { drawButton, drawPanel, inside, type Button, type Rect } from '../ui/widgets';
 import { TitleScene } from './TitleScene';
 
-export interface RunSummary {
-  won: boolean;
-  level: number;
-  // Where the run ended, e.g. "ROOM 7" or "THE BOSS".
-  where: string;
-  party: string[];
-  stats: RunStats;
-  // Enemy types in the fight that wiped the party; empty on a win.
-  slayers: string[];
-}
 
 const TITLE_SCALE = 2;
 const VALUE_COLOR: Record<string, string> = { 'GOLD EARNED': PALETTE.gold, 'DAMAGE DONE': PALETTE.green, 'DAMAGE TAKEN': PALETTE.red };

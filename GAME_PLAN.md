@@ -1,6 +1,6 @@
 # Autobattler Game — Design & Development Plan
 
-Status: Phase 4 complete. Phase 5 next.
+Status: Phase 4 complete. Phase 5 in progress.
 
 ## Confirmed Decisions
 
@@ -136,6 +136,16 @@ Progress: Phase 4 complete. Built and approved: map generator and map screen, ti
 
 **Phase 5 — Shops & Events**
 Randomized-refresh shop (buy/sell), text-choice event system with stat-based outcomes. Art: shop screen, event screen.
+
+Phase 5 design:
+- Store stock per visit: 4 skills + 2 items, rolled with the same rules as fight rewards (only things the party can use; rarity weights Common 60 / Rare 25 / Epic 12 / Legendary 3 for skills, 35 / 35 / 22 / 8 for items). Each Store node has its own stock; no rerolls.
+- Prices by rarity: items Common 30 / Rare 60 / Epic 120 / Legendary 220 gold; skills 20% cheaper. Selling equipment pays 50% of its price; skills can't be sold.
+- Repair: gear broken on a KO this run is remembered; the store can restore one piece to the inventory for 50% of its price.
+- Store art: a 32×32 shopkeeper sprite beside the stock, with a counter graphic.
+- Events: 15+ text events now (Phase 6 adds level-specific ones). Each has 2–3 choices; a choice may test one party stat (e.g. highest ATK, total DEF) with a success chance that rises with it, shown as a %, clamped to 10–95%.
+- Event outcomes: gain or lose gold; gain a skill or item; lose a random item; the next fight starts "wounded" (–25% HP) or "blessed" (bonus stats); start a fight (a win gives a bonus reward).
+- Event screen art: a parchment panel with a 64×64 pixel illustration per event, the story text, and 2–3 choice buttons showing the tested stat and %.
+- Work order: screen-flow tests (Phase 4 open item) → store engine + tests → store screen and shopkeeper → event engine (checks, outcomes, wounded/blessed, event fights) + tests → event screen → event texts (reviewed as a list) → event illustrations in batches.
 
 **Phase 6 — Content: 3 Levels**
 Populate each level's enemies/elites/boss, event pool, shop weighting, difficulty curve, and which milestone unlocks which roster character. Balancing pass 2: enemy stats, group sizes, elite/boss curve, gold and drop rates. Art: level backgrounds, boss sprites, level-specific enemies.

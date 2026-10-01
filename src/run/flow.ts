@@ -7,19 +7,18 @@ import { MapScene } from '../scenes/MapScene';
 import { PartyScene } from '../scenes/PartyScene';
 import { PreBattleScene } from '../scenes/PreBattleScene';
 import { RewardScene } from '../scenes/RewardScene';
-import { RunEndScene, type RunSummary } from '../scenes/RunEndScene';
-import { findNode, FLOORS, type MapNode } from './map';
+import { RunEndScene } from '../scenes/RunEndScene';
+import type { MapNode } from './map';
 import { rollReward } from './rewards';
-import { clearNode, LEVELS, saveRun, setRewardPicks } from './run';
+import { beginNode, clearNode, pendingNodeOf, recordWin, runSummary, saveRun, setRewardPicks } from './run';
 
 // Moves the run between screens: map → node → (fight) → reward → party → map. Every step is autosaved.
+// The run rules themselves live in run.ts.
 
 export function enterNode(game: GameContext, node: MapNode): void {
   const run = game.state.run;
   if (!run) return;
-  // Moving on locks in the previous reward's picks.
-  run.lastReward = null;
-  run.pending = node.id;
+  beginNode(run, node);
   switch (node.type) {
     case 'battle':
     case 'epic':
@@ -34,36 +33,15 @@ export function enterNode(game: GameContext, node: MapNode): void {
 }
 
 export function pendingNode(game: GameContext): MapNode | null {
-  const run = game.state.run;
-  if (!run?.pending) return null;
-  return findNode(run.map, run.pending) ?? null;
+  return game.state.run ? pendingNodeOf(game.state.run) : null;
 }
 
-// A won fight or an opened treasure: bank the gold (including any won by Gold skills), clear the node,
-// and offer the skill/item picks. The last boss ends the run, so it skips the picks.
+// A won fight or an opened treasure; `battleGold` is gold won by Gold skills during the fight.
 export function winNode(game: GameContext, battleGold = 0): void {
   const run = game.state.run;
   const node = pendingNode(game);
   if (!run || !node) return;
-  const reward = rollReward(node.type, game.state.party, SKILL_LIBRARY, ITEM_LIBRARY, Math.random, battleGold);
-  run.gold += reward.gold;
-  run.stats.goldEarned += reward.gold;
-  if (node.type !== 'treasure') run.stats.fights += 1;
-  if (node.type === 'epic') run.stats.epics += 1;
-  if (node.type === 'boss') run.stats.bosses += 1;
-  const finalBoss = node.type === 'boss' && run.level + 1 >= LEVELS;
-  clearNode(run, node.id);
-  if (!finalBoss) {
-    run.lastReward = {
-      node: node.id,
-      type: node.type,
-      gold: reward.gold,
-      skills: reward.skills.map((s) => s.id),
-      items: reward.items.map((i) => i.id),
-      skill: null,
-      item: null,
-    };
-  }
+  recordWin(run, node, rollReward(node.type, game.state.party, SKILL_LIBRARY, ITEM_LIBRARY, Math.random, battleGold));
   saveRun(game.state);
   if (run.result === 'won') return endRun(game);
   game.scenes.switchTo(new RewardScene(game));
@@ -105,15 +83,7 @@ export function loseRun(game: GameContext, slayers: string[]): void {
 function endRun(game: GameContext, slayers: string[] = []): void {
   const run = game.state.run;
   if (!run) return;
-  const at = pendingNode(game) ?? findNode(run.map, run.position ?? '');
-  const summary: RunSummary = {
-    won: run.result === 'won',
-    level: run.level + 1,
-    where: at?.type === 'boss' ? 'THE BOSS' : `ROOM ${at ? Math.min(at.floor + 1, FLOORS) : 1}`,
-    party: game.state.party.map((m) => m.def.id),
-    stats: { ...run.stats },
-    slayers,
-  };
+  const summary = runSummary(game.state, slayers);
   clearSlot(run.slot);
   game.state.run = null;
   game.scenes.switchTo(new RunEndScene(game, summary));

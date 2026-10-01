@@ -5,7 +5,8 @@ import { SKILLS_BY_ID } from '../content/skills';
 import { seededRng } from '../engine/random';
 import { loadSlot, saveSlot } from '../engine/save';
 import { recruit, type GameState } from '../game/state';
-import { findNode, generateMap, reachable, type MapNode, type NodeType, type RunMap } from './map';
+import { findNode, FLOORS, generateMap, reachable, type MapNode, type NodeType, type RunMap } from './map';
+import type { Reward } from './rewards';
 
 export const LEVELS = 3;
 
@@ -86,6 +87,63 @@ export function clearNode(run: RunState, id: string): void {
   run.map = levelMap(run.seed, run.level);
   run.position = null;
   run.path = [];
+}
+
+// Entering a node locks in the previous reward's picks.
+export function beginNode(run: RunState, node: MapNode): void {
+  run.lastReward = null;
+  run.pending = node.id;
+}
+
+export function pendingNodeOf(run: RunState): MapNode | null {
+  return run.pending ? (findNode(run.map, run.pending) ?? null) : null;
+}
+
+// A won fight or opened treasure: banks the gold, counts it in the stats, clears the node, and stores the
+// picks to offer. The last boss wins the run instead, so it stores no picks.
+export function recordWin(run: RunState, node: MapNode, reward: Reward): void {
+  run.gold += reward.gold;
+  run.stats.goldEarned += reward.gold;
+  if (node.type !== 'treasure') run.stats.fights += 1;
+  if (node.type === 'epic') run.stats.epics += 1;
+  if (node.type === 'boss') run.stats.bosses += 1;
+  const finalBoss = node.type === 'boss' && run.level + 1 >= LEVELS;
+  clearNode(run, node.id);
+  if (finalBoss) return;
+  run.lastReward = {
+    node: node.id,
+    type: node.type,
+    gold: reward.gold,
+    skills: reward.skills.map((s) => s.id),
+    items: reward.items.map((i) => i.id),
+    skill: null,
+    item: null,
+  };
+}
+
+export interface RunSummary {
+  won: boolean;
+  level: number;
+  // Where the run ended, e.g. "ROOM 7" or "THE BOSS".
+  where: string;
+  party: string[];
+  stats: RunStats;
+  // Enemy types in the fight that wiped the party; empty on a win.
+  slayers: string[];
+}
+
+// What the victory / Run Over screen shows; `slayers` are the enemy types of the fight that wiped the party.
+export function runSummary(state: GameState, slayers: string[] = []): RunSummary {
+  const run = state.run!;
+  const at = pendingNodeOf(run) ?? (run.position ? (findNode(run.map, run.position) ?? null) : null);
+  return {
+    won: run.result === 'won',
+    level: run.level + 1,
+    where: at?.type === 'boss' ? 'THE BOSS' : `ROOM ${at ? Math.min(at.floor + 1, FLOORS) : 1}`,
+    party: state.party.map((m) => m.def.id),
+    stats: { ...run.stats },
+    slayers,
+  };
 }
 
 // Swaps the taken reward skill/item. Only changed picks move: the old one comes back out (from the inventory,

@@ -7,7 +7,20 @@ import { equipItemBlock, skillAccessBlock } from '../game/loadout';
 import { createState, recruit } from '../game/state';
 import { COLUMNS, FIRST_EPIC_FLOOR, FLOORS, generateMap, reachable, TREASURE_FLOOR, type RunMap } from './map';
 import { rollReward } from './rewards';
-import { clearNode, fromSave, LEVELS, nextNodes, pickHolder, setRewardPicks, startRun, toSave, type LastReward } from './run';
+import {
+  beginNode,
+  clearNode,
+  fromSave,
+  LEVELS,
+  nextNodes,
+  pickHolder,
+  recordWin,
+  runSummary,
+  setRewardPicks,
+  startRun,
+  toSave,
+  type LastReward,
+} from './run';
 
 const SEEDS = Array.from({ length: 50 }, (_, i) => i + 1);
 
@@ -239,5 +252,85 @@ describe('reachable', () => {
     const map = generateMap(seededRng(3));
     const last = map.floors[FLOORS - 1][0];
     expect(reachable(map, last.id)).toEqual([map.boss]);
+  });
+});
+
+describe('run flow rules', () => {
+  const classes = ['knight', 'mage', 'cleric'].map((id) => CLASSES_BY_ID[id]);
+  const reward = { gold: 20, skills: [SKILLS_BY_ID.bodyguard], items: [ITEMS_BY_ID.longsword] };
+
+  function started() {
+    const state = createState();
+    startRun(state, 0, classes, 5);
+    return state;
+  }
+
+  // Walks to the boss of the current level and enters it.
+  function enterBoss(state: ReturnType<typeof createState>) {
+    const run = state.run!;
+    while (nextNodes(run)[0].type !== 'boss') clearNode(run, nextNodes(run)[0].id);
+    beginNode(run, run.map.boss);
+    return run.map.boss;
+  }
+
+  it('entering a node locks in the last reward and marks it pending', () => {
+    const state = started();
+    const run = state.run!;
+    run.lastReward = { node: 'x', type: 'battle', gold: 1, skills: [], items: [], skill: null, item: null };
+    beginNode(run, nextNodes(run)[0]);
+    expect(run.lastReward).toBeNull();
+    expect(run.pending).toBe(nextNodes(run)[0].id);
+  });
+
+  it('a win banks gold, counts the fight, clears the room, and offers the picks', () => {
+    const state = started();
+    const run = state.run!;
+    const node = nextNodes(run)[0];
+    beginNode(run, node);
+    recordWin(run, node, reward);
+    expect(run.gold).toBe(20);
+    expect(run.stats).toMatchObject({ rooms: 1, fights: 1, epics: 0, bosses: 0, goldEarned: 20 });
+    expect(run.position).toBe(node.id);
+    expect(run.pending).toBeNull();
+    expect(run.lastReward).toMatchObject({ node: node.id, gold: 20, skills: ['bodyguard'], items: ['longsword'], skill: null, item: null });
+  });
+
+  it('treasure pays out without counting as a fight', () => {
+    const state = started();
+    const run = state.run!;
+    const node = { ...nextNodes(run)[0], type: 'treasure' as const };
+    recordWin(run, node, reward);
+    expect(run.stats.fights).toBe(0);
+    expect(run.stats.rooms).toBe(1);
+  });
+
+  it('a level boss opens the next level with its picks still on offer', () => {
+    const state = started();
+    const run = state.run!;
+    recordWin(run, enterBoss(state), reward);
+    expect(run.level).toBe(1);
+    expect(run.stats.bosses).toBe(1);
+    expect(run.lastReward).not.toBeNull();
+    expect(run.result).toBeNull();
+  });
+
+  it('the last boss wins the run with no picks, and the summary says so', () => {
+    const state = started();
+    const run = state.run!;
+    run.level = LEVELS - 1;
+    recordWin(run, enterBoss(state), reward);
+    expect(run.result).toBe('won');
+    expect(run.lastReward).toBeNull();
+    expect(runSummary(state)).toMatchObject({ won: true, level: LEVELS, where: 'THE BOSS', party: ['knight', 'mage', 'cleric'], slayers: [] });
+  });
+
+  it('a lost run reports the room it fell in and who did it', () => {
+    const state = started();
+    const run = state.run!;
+    clearNode(run, nextNodes(run)[0].id);
+    const next = nextNodes(run)[0];
+    beginNode(run, next);
+    run.result = 'lost';
+    expect(runSummary(state, ['ORC'])).toMatchObject({ won: false, level: 1, where: 'ROOM 2', slayers: ['ORC'] });
   });
 });
