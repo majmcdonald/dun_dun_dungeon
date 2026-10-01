@@ -15,6 +15,7 @@ import type {
   SkillDef,
   SkillEffect,
   StatKey,
+  Stats,
   Ticking,
   Timed,
 } from './types';
@@ -113,7 +114,14 @@ function isDefensive(skill: SkillDef): boolean {
   return skill.category === 'spell' && skill.effects.some((e) => DEFENSIVE_KINDS.has(e.kind));
 }
 
+// How the party starts a fight, from events: wounded (a share of max HP) and/or blessed (bonus stats).
+export interface PartyStart {
+  hpFraction?: number;
+  bonus?: Partial<Stats>;
+}
+
 export interface BattleOptions {
+  party?: PartyStart;
   creatures?: Record<string, CombatantDef>;
 }
 
@@ -133,11 +141,17 @@ export class Battle {
     options: BattleOptions = {},
   ) {
     this.creatures = options.creatures ?? {};
+    const bonus = options.party?.bonus;
+    const boosted = bonus ? party.map((m) => ({ ...m, def: { ...m.def, stats: addStats(m.def.stats, bonus) } })) : party;
     this.combatants = [
-      ...party.map((m, i) => createCombatant(m.def, m.skills, 'party', i, { ...m.equipment }, rng)),
+      ...boosted.map((m, i) => createCombatant(m.def, m.skills, 'party', i, { ...m.equipment }, rng)),
       ...enemies.flatMap((def, i) => (def ? [createCombatant(def, def.skills, 'enemy', i, {}, rng)] : [])),
     ];
     for (const c of this.combatants) if (c.def.familiar) c.channel = MECHANIC.channelSeconds;
+    const fraction = options.party?.hpFraction;
+    if (fraction !== undefined) {
+      for (const c of this.combatants) if (c.side === 'party') c.hp = Math.max(1, Math.round(c.maxHp * fraction));
+    }
   }
 
   tick(dt: number): BattleEvent[] {
@@ -730,4 +744,10 @@ function createCombatant(
     meter: 0,
     burst: 0,
   };
+}
+
+function addStats(stats: Stats, bonus: Partial<Stats>): Stats {
+  const sum = { ...stats };
+  for (const [k, v] of Object.entries(bonus) as [keyof Stats, number][]) sum[k] += v;
+  return sum;
 }

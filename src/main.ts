@@ -4,6 +4,7 @@ import { startLoop } from './engine/loop';
 import { Renderer } from './engine/renderer';
 import { SceneManager, type GameContext } from './engine/scene';
 import { CLASSES_BY_ID } from './content/classes';
+import { EVENT_LIBRARY } from './content/events';
 import { ITEMS_BY_ID } from './content/items';
 import { createState } from './game/state';
 import { enterNode } from './run/flow';
@@ -27,7 +28,17 @@ const params = new URLSearchParams(location.search);
 
 // Dev-only: ?preview=vfx loops the battle VFX; ?preview=victory or ?preview=defeat shows the run-end screen.
 const preview = params.get('preview');
-if (preview === 'store') {
+if (preview === 'event') {
+  // A run sitting just before an Event room; &id= picks the event (the first one by default).
+  const state = game.state;
+  startRun(state, 0, ['knight', 'mage', 'cleric'].map((id) => CLASSES_BY_ID[id]), 7);
+  const run = state.run!;
+  const node = run.map.floors.flat().find((n) => n.type === 'event')!;
+  run.position = run.map.floors.flat().find((n) => n.next.includes(node.id))?.id ?? null;
+  run.gold = 100;
+  run.event = { node: node.id, id: params.get('id') ?? EVENT_LIBRARY[0].id, result: null };
+  enterNode(game, node);
+} else if (preview === 'store') {
   // A run sitting just before a Store room, with gold, worn and spare gear, and two broken pieces.
   const state = game.state;
   startRun(state, 0, ['knight', 'mage', 'cleric'].map((id) => CLASSES_BY_ID[id]), 7);

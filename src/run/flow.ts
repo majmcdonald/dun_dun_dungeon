@@ -2,13 +2,15 @@ import { ITEM_LIBRARY } from '../content/items';
 import { SKILL_LIBRARY } from '../content/skills';
 import { clearSlot } from '../engine/save';
 import type { GameContext } from '../engine/scene';
-import { ComingSoonScene } from '../scenes/ComingSoonScene';
+import { EVENT_LIBRARY } from '../content/events';
+import { EventScene } from '../scenes/EventScene';
 import { MapScene } from '../scenes/MapScene';
 import { PartyScene } from '../scenes/PartyScene';
 import { PreBattleScene } from '../scenes/PreBattleScene';
 import { RewardScene } from '../scenes/RewardScene';
 import { RunEndScene } from '../scenes/RunEndScene';
 import { StoreScene } from '../scenes/StoreScene';
+import { openEvent } from './events';
 import { openStore } from './store';
 import type { MapNode } from './map';
 import { rollReward } from './rewards';
@@ -27,7 +29,8 @@ export function enterNode(game: GameContext, node: MapNode): void {
     case 'boss':
       return game.scenes.switchTo(new PreBattleScene(game));
     case 'event':
-      return game.scenes.switchTo(new ComingSoonScene(game, node.type));
+      openEvent(game.state, node, EVENT_LIBRARY);
+      return game.scenes.switchTo(new EventScene(game));
     case 'store':
       openStore(game.state, node);
       return game.scenes.switchTo(new StoreScene(game));
@@ -41,17 +44,19 @@ export function pendingNode(game: GameContext): MapNode | null {
 }
 
 // A won fight or an opened treasure; `battleGold` is gold won by Gold skills during the fight.
+// Event fights pay out like an Epic Monster.
 export function winNode(game: GameContext, battleGold = 0): void {
   const run = game.state.run;
   const node = pendingNode(game);
   if (!run || !node) return;
-  recordWin(run, node, rollReward(node.type, game.state.party, SKILL_LIBRARY, ITEM_LIBRARY, Math.random, battleGold));
+  const payAs = node.type === 'event' ? 'epic' : node.type;
+  recordWin(run, node, rollReward(payAs, game.state.party, SKILL_LIBRARY, ITEM_LIBRARY, Math.random, battleGold));
   saveRun(game.state);
   if (run.result === 'won') return endRun(game);
   game.scenes.switchTo(new RewardScene(game));
 }
 
-// Nodes with nothing to win: leaving a Store, or the Event placeholder.
+// Nodes with nothing to win: leaving a Store, or finishing an event without a fight.
 export function completeNode(game: GameContext): void {
   const run = game.state.run;
   const node = pendingNode(game);

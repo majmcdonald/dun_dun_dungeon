@@ -22,6 +22,7 @@ import { CHAR_ADVANCE, drawText, textWidth } from '../ui/font';
 import { drawEquipmentIcons, drawEquipmentTooltip, hoveredSlot, ICON_STEP } from '../ui/partyCard';
 import { dotVfxId, VFX } from '../vfx/effects';
 import { loseRun, winNode } from '../run/flow';
+import { takeNextFight } from '../run/events';
 import { itemRef } from '../run/run';
 import { PreBattleScene } from './PreBattleScene';
 
@@ -145,7 +146,9 @@ export class BattleScene implements Scene {
   }
 
   private start(): void {
-    this.battle = new Battle(this.game.state.party, this.encounter, Math.random, { creatures: CREATURES });
+    // Wounded/blessed effects from events apply to this fight only.
+    const party = this.game.state.run ? takeNextFight(this.game.state) : undefined;
+    this.battle = new Battle(this.game.state.party, this.encounter, Math.random, { creatures: CREATURES, party });
     this.anims.clear();
     this.floats = [];
     this.vfx = [];

@@ -1,3 +1,4 @@
+import type { PartyStart } from '../combat/battle';
 import type { EquipmentDef, EquipSlot, PartyMember } from '../combat/types';
 import { CLASSES_BY_ID, type ClassDef } from '../content/classes';
 import { ITEMS_BY_ID } from '../content/items';
@@ -6,6 +7,7 @@ import { seededRng } from '../engine/random';
 import { loadSlot, saveSlot } from '../engine/save';
 import { recruit, type GameState } from '../game/state';
 import { findNode, FLOORS, generateMap, reachable, type MapNode, type NodeType, type RunMap } from './map';
+import type { EventVisit } from './events';
 import type { Reward } from './rewards';
 
 export const LEVELS = 3;
@@ -31,6 +33,11 @@ export interface RunState {
   broken: ItemRef[];
   // The store being visited (stock and what has been done there), kept so a reload shows the same shop.
   store: StoreVisit | null;
+  // The event being visited, and every event already met this run.
+  event: EventVisit | null;
+  seenEvents: string[];
+  // Wounded/blessed effects from events, applied to the next fight.
+  nextFight: PartyStart | null;
 }
 
 export interface StoreVisit {
@@ -70,7 +77,7 @@ export interface LastReward {
 export function startRun(state: GameState, slot: number, classes: ClassDef[], seed: number): void {
   state.party = classes.map(recruit);
   state.inventory = { skills: [], items: [] };
-  state.run = { slot, seed, level: 0, map: levelMap(seed, 0), position: null, path: [], pending: null, gold: 0, result: null, lastReward: null, stats: { ...NO_STATS }, broken: [], store: null };
+  state.run = { slot, seed, level: 0, map: levelMap(seed, 0), position: null, path: [], pending: null, gold: 0, result: null, lastReward: null, stats: { ...NO_STATS }, broken: [], store: null, event: null, seenEvents: [], nextFight: null };
 }
 
 function levelMap(seed: number, level: number): RunMap {
@@ -107,6 +114,7 @@ export function beginNode(run: RunState, node: MapNode): void {
   run.lastReward = null;
   run.pending = node.id;
   if (run.store?.node !== node.id) run.store = null;
+  if (run.event?.node !== node.id) run.event = null;
 }
 
 export function pendingNodeOf(run: RunState): MapNode | null {
@@ -269,6 +277,9 @@ export function fromSave(saved: SavedRun, state: GameState): void {
     stats: { ...NO_STATS, ...saved.run.stats },
     broken: saved.run.broken ?? [],
     store: saved.run.store ?? null,
+    event: saved.run.event ?? null,
+    seenEvents: saved.run.seenEvents ?? [],
+    nextFight: saved.run.nextFight ?? null,
   };
   state.party = saved.party.map(
     (m): PartyMember => ({

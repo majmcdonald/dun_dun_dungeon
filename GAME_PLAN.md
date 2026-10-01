@@ -146,6 +146,7 @@ Phase 5 design:
 - Events: 15+ text events now (Phase 6 adds level-specific ones). Each has 2–3 choices; a choice may test one party stat (e.g. highest ATK, total DEF) with a success chance that rises with it, shown as a %, clamped to 10–95%.
 - Event outcomes: gain or lose gold; gain a skill or item; lose a random item; the next fight starts "wounded" (–25% HP) or "blessed" (bonus stats); start a fight (a win gives a bonus reward).
 - Event screen art: a parchment panel with a 64×64 pixel illustration per event, the story text, and 2–3 choice buttons showing the tested stat and %.
+- Event engine and screen (approved): checks read the party's BEST single value or PARTY total (gear included); 50% at the difficulty, scaling with the stat, clamped 10–95%. Outcomes: gold ±, a random usable skill/item (optionally of a set rarity), lose a random piece of gear, wounded (next fight at 75% HP), blessed (+stats next fight), or a fight (listed enemies or the map encounter; a win pays like an Epic Monster). The event per room is seeded and each appears once per run until all are seen; the choice and result save immediately. Preview: ?preview=event&id=<event id>.
 - Work order: screen-flow tests (Phase 4 open item) → store engine + tests → store screen and shopkeeper → event engine (checks, outcomes, wounded/blessed, event fights) + tests → event screen → event texts (reviewed as a list) → event illustrations in batches.
 
 **Phase 6 — Content: 3 Levels**
