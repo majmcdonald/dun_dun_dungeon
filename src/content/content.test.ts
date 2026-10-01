@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { gearBudgetRatio, skillBudgetRatio } from '../game/balance';
 import { placeSkillBlock, skillAccessBlock } from '../game/loadout';
 import { recruit } from '../game/state';
+import { EVENT_ART } from '../art/eventArt';
 import { SPRITES } from '../art/sprites';
 import { canDraw } from '../ui/font';
 import { CLASSES } from './classes';
@@ -154,6 +155,11 @@ describe('summons', () => {
 describe('events', () => {
   const enemyIds = new Set(ENEMIES.map((e) => e.id));
   const fits = (text: string, chars: number, lines: number) => wrap(text, chars).length <= lines;
+
+  it('each have their own illustration', () => {
+    for (const e of EVENT_LIBRARY) expect(EVENT_ART[e.art], e.id).toBeDefined();
+    expect(new Set(EVENT_LIBRARY.map((e) => e.art)).size).toBe(EVENT_LIBRARY.length);
+  });
 
   it('have unique ids and 2–3 choices', () => {
     expect(EVENT_LIBRARY.length).toBeGreaterThanOrEqual(15);

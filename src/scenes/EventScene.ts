@@ -1,4 +1,6 @@
+import { EVENT_ART } from '../art/eventArt';
 import { PALETTE } from '../art/palette';
+import { spriteCanvas } from '../art/sprite';
 import type { CombatantDef } from '../combat/types';
 import { ENEMIES, MAP_ENCOUNTER } from '../content/enemies';
 import { EVENT_LIBRARY } from '../content/events';
@@ -28,10 +30,13 @@ const INK = PALETTE.deepBrown;
 // result. A result that starts a fight leads into battle; otherwise CONTINUE clears the room.
 export class EventScene implements Scene {
   private event: EventDef;
+  private art: HTMLCanvasElement | null;
 
   constructor(private game: GameContext) {
     const visit = game.state.run!.event!;
     this.event = EVENT_LIBRARY.find((e) => e.id === visit.id)!;
+    const art = EVENT_ART[this.event.art];
+    this.art = art ? spriteCanvas(art, 'idle') : null;
   }
 
   enter(): void {
@@ -138,8 +143,13 @@ export class EventScene implements Scene {
     drawFrame(ctx, p, PALETTE.brown);
   }
 
-  // Placeholder frame until the event illustrations are drawn.
+  // The event's illustration, or a placeholder frame while it hasn't been drawn yet.
   private drawArt(ctx: CanvasRenderingContext2D): void {
+    if (this.art) {
+      ctx.drawImage(this.art, ART.x, ART.y);
+      drawFrame(ctx, { x: ART.x - 1, y: ART.y - 1, w: ART.w + 2, h: ART.h + 2 }, PALETTE.brown);
+      return;
+    }
     ctx.fillStyle = PALETTE.tan;
     ctx.fillRect(ART.x, ART.y, ART.w, ART.h);
     ctx.fillStyle = PALETTE.sand;
