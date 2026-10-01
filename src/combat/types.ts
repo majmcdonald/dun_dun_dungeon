@@ -146,6 +146,8 @@ export interface EquipmentDef {
   stats: Partial<Stats>;
   requires?: Tag;
   enchantment?: Enchantment;
+  // Set when a store has enchanted this copy: the bonus is already included in `stats`.
+  boost?: { stat: keyof Stats; amount: number };
 }
 
 export type Equipment = Partial<Record<EquipSlot, EquipmentDef>>;

@@ -553,6 +553,58 @@ def critter():
          frames([(y + 1, line) for y, line in CRITTER], [(y + 1, line) for y, line in CRITTER_HOP]))
 
 
+# ------------------------------------------------------------------ Shopkeeper
+# Front-facing merchant, drawn as a left half and mirrored; the store's counter hides everything below row 25.
+SHOPKEEPER_HALF = [
+    '................',
+    '................',
+    '..............rR',
+    '.............rRR',
+    '.............rRR',
+    '............rRRR',
+    '...........sSSSS',
+    '..........sSSSSS',
+    '..........sSKSSS',
+    '..........sSSSSS',
+    '..........sSSSSs',
+    '..........sbbbbb',
+    '...........bSSSS',
+    '...........sSSSS',
+    '............ssSS',
+    '.............sss',
+    '........bBBBBWWW',
+    '.......bBBBBBWWW',
+    '......bBBBBBBWGW',
+    '......bBBBBBBWWW',
+    '......bBBBBBBWGW',
+    '......bBBBBBBWWW',
+    '......bBBBBBBWGW',
+    '......bSSSsBBWWW',
+    '......bSSSsBBWWW',
+    '......bbbbbbbbbb',
+    '......bBBBBBBBBB',
+    '......bBBBBBBBBB',
+    '......bBBBBBBBBB',
+    '......bBBBBBBBBB',
+    '......bBBBBBBBBB',
+    '................',
+]
+
+
+def shopkeeper():
+    rows = [half + half[::-1] for half in SHOPKEEPER_HALF]
+    # A gold coin in his left hand (viewer's right), and a gold tassel hanging off the fez.
+    rows = [list(r) for r in rows]
+    for x, y, c in [(22, 22, 'G'), (23, 22, 'Y'), (22, 23, 'Y'), (23, 23, 'G'), (19, 3, 'G'), (20, 4, 'G'), (20, 5, 'G')]:
+        rows[y][x] = c
+    rows = [''.join(r) for r in rows]
+    g = sprite(list(enumerate(rows)))
+    emit(f'{OUT}/shopkeeper.ts', 'SHOPKEEPER_SPRITE',
+         {'K': 'black', 'S': 'skin', 's': 'skinShade', 'R': 'red', 'r': 'darkRed', 'W': 'white', 'B': 'brown',
+          'b': 'darkBrown', 'G': 'gold', 'Y': 'yellow'},
+         {'idle': g, 'attack': g})
+
+
 if __name__ == '__main__':
     for name in sys.argv[1:]:
         globals()[name]()

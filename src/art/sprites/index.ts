@@ -9,6 +9,7 @@ import { ZOMBIE_SPRITE } from './zombie';
 import { WRAITH_SPRITE } from './wraith';
 import { IMP_SPRITE } from './imp';
 import { CRITTER_SPRITE } from './critter';
+import { SHOPKEEPER_SPRITE } from './shopkeeper';
 import { ARCHER_SPRITE } from './archer';
 import { BARBARIAN_SPRITE } from './barbarian';
 import { BARD_SPRITE } from './bard';
@@ -55,4 +56,5 @@ export const SPRITES: Record<string, SpriteDef> = {
   wraith: WRAITH_SPRITE,
   imp: IMP_SPRITE,
   critter: CRITTER_SPRITE,
+  shopkeeper: SHOPKEEPER_SPRITE,
 };

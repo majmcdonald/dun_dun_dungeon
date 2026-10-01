@@ -3,7 +3,11 @@ import { Input } from './engine/input';
 import { startLoop } from './engine/loop';
 import { Renderer } from './engine/renderer';
 import { SceneManager, type GameContext } from './engine/scene';
+import { CLASSES_BY_ID } from './content/classes';
+import { ITEMS_BY_ID } from './content/items';
 import { createState } from './game/state';
+import { enterNode } from './run/flow';
+import { startRun } from './run/run';
 import { DebugScene } from './scenes/DebugScene';
 import { RunEndScene } from './scenes/RunEndScene';
 import { TitleScene } from './scenes/TitleScene';
@@ -23,7 +27,20 @@ const params = new URLSearchParams(location.search);
 
 // Dev-only: ?preview=vfx loops the battle VFX; ?preview=victory or ?preview=defeat shows the run-end screen.
 const preview = params.get('preview');
-if (preview === 'vfx') {
+if (preview === 'store') {
+  // A run sitting just before a Store room, with gold, worn and spare gear, and two broken pieces.
+  const state = game.state;
+  startRun(state, 0, ['knight', 'mage', 'cleric'].map((id) => CLASSES_BY_ID[id]), 7);
+  const run = state.run!;
+  const store = run.map.floors.flat().find((n) => n.type === 'store')!;
+  const parent = run.map.floors.flat().find((n) => n.next.includes(store.id));
+  run.position = parent?.id ?? null;
+  run.gold = 300;
+  run.broken = ['scaleMail', 'leatherCap'];
+  state.inventory.items.push(ITEMS_BY_ID.longsword, ITEMS_BY_ID.clothRobe);
+  state.party[0].equipment = { armor: ITEMS_BY_ID.chainmail };
+  enterNode(game, store);
+} else if (preview === 'vfx') {
   game.scenes.switchTo(new VfxPreviewScene(game));
 } else if (preview === 'victory' || preview === 'defeat') {
   const won = preview === 'victory';

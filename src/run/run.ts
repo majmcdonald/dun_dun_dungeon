@@ -1,4 +1,4 @@
-import type { EquipSlot, PartyMember } from '../combat/types';
+import type { EquipmentDef, EquipSlot, PartyMember } from '../combat/types';
 import { CLASSES_BY_ID, type ClassDef } from '../content/classes';
 import { ITEMS_BY_ID } from '../content/items';
 import { SKILLS_BY_ID } from '../content/skills';
@@ -27,6 +27,19 @@ export interface RunState {
   // The latest reward; its picks can be changed until the next node is entered.
   lastReward: LastReward | null;
   stats: RunStats;
+  // Gear broken on a KO this run (enchantments included), which a store can repair.
+  broken: ItemRef[];
+  // The store being visited (stock and what has been done there), kept so a reload shows the same shop.
+  store: StoreVisit | null;
+}
+
+export interface StoreVisit {
+  node: string;
+  skills: string[];
+  items: string[];
+  // Stock ids already bought.
+  bought: string[];
+  repaired: boolean;
 }
 
 export interface RunStats {
@@ -57,7 +70,7 @@ export interface LastReward {
 export function startRun(state: GameState, slot: number, classes: ClassDef[], seed: number): void {
   state.party = classes.map(recruit);
   state.inventory = { skills: [], items: [] };
-  state.run = { slot, seed, level: 0, map: levelMap(seed, 0), position: null, path: [], pending: null, gold: 0, result: null, lastReward: null, stats: { ...NO_STATS } };
+  state.run = { slot, seed, level: 0, map: levelMap(seed, 0), position: null, path: [], pending: null, gold: 0, result: null, lastReward: null, stats: { ...NO_STATS }, broken: [], store: null };
 }
 
 function levelMap(seed: number, level: number): RunMap {
@@ -93,6 +106,7 @@ export function clearNode(run: RunState, id: string): void {
 export function beginNode(run: RunState, node: MapNode): void {
   run.lastReward = null;
   run.pending = node.id;
+  if (run.store?.node !== node.id) run.store = null;
 }
 
 export function pendingNodeOf(run: RunState): MapNode | null {
@@ -202,16 +216,34 @@ function takeBackItem(state: GameState, id: string): void {
 
 // --- Saving: definitions are stored by id and looked up again on load.
 
+// Plain library items save as their id; store-enchanted copies also keep their boost.
+export type ItemRef = string | { id: string; boost: NonNullable<EquipmentDef['boost']> };
+
+export function itemRef(item: EquipmentDef): ItemRef {
+  return item.boost ? { id: item.id, boost: item.boost } : item.id;
+}
+
+export function itemFromRef(ref: ItemRef): EquipmentDef | undefined {
+  if (typeof ref === 'string') return ITEMS_BY_ID[ref];
+  const base = ITEMS_BY_ID[ref.id];
+  return base && withBoost(base, ref.boost);
+}
+
+// A separate copy of the item with the bonus added to its stats.
+export function withBoost(item: EquipmentDef, boost: NonNullable<EquipmentDef['boost']>): EquipmentDef {
+  return { ...item, stats: { ...item.stats, [boost.stat]: (item.stats[boost.stat] ?? 0) + boost.amount }, boost };
+}
+
 interface SavedMember {
   classId: string;
   skills: string[];
-  equipment: Partial<Record<EquipSlot, string>>;
+  equipment: Partial<Record<EquipSlot, ItemRef>>;
 }
 
 export interface SavedRun {
   run: RunState;
   party: SavedMember[];
-  inventory: { skills: string[]; items: string[] };
+  inventory: { skills: string[]; items: ItemRef[] };
 }
 
 export function toSave(state: GameState): SavedRun {
@@ -221,9 +253,9 @@ export function toSave(state: GameState): SavedRun {
     party: state.party.map((m) => ({
       classId: m.def.id,
       skills: m.skills.map((s) => s.id),
-      equipment: Object.fromEntries(Object.entries(m.equipment).map(([slot, item]) => [slot, item!.id])),
+      equipment: Object.fromEntries(Object.entries(m.equipment).map(([slot, item]) => [slot, itemRef(item!)])),
     })),
-    inventory: { skills: state.inventory.skills.map((s) => s.id), items: state.inventory.items.map((i) => i.id) },
+    inventory: { skills: state.inventory.skills.map((s) => s.id), items: state.inventory.items.map(itemRef) },
   };
 }
 
@@ -235,19 +267,24 @@ export function fromSave(saved: SavedRun, state: GameState): void {
     pending: null,
     lastReward: saved.run.lastReward ?? null,
     stats: { ...NO_STATS, ...saved.run.stats },
+    broken: saved.run.broken ?? [],
+    store: saved.run.store ?? null,
   };
   state.party = saved.party.map(
     (m): PartyMember => ({
       def: CLASSES_BY_ID[m.classId],
       skills: m.skills.map((id) => SKILLS_BY_ID[id]).filter(Boolean),
       equipment: Object.fromEntries(
-        Object.entries(m.equipment).flatMap(([slot, id]) => (ITEMS_BY_ID[id!] ? [[slot, ITEMS_BY_ID[id!]]] : [])),
+        Object.entries(m.equipment).flatMap(([slot, ref]) => {
+          const item = itemFromRef(ref!);
+          return item ? [[slot, item]] : [];
+        }),
       ),
     }),
   );
   state.inventory = {
     skills: saved.inventory.skills.map((id) => SKILLS_BY_ID[id]).filter(Boolean),
-    items: saved.inventory.items.map((id) => ITEMS_BY_ID[id]).filter(Boolean),
+    items: saved.inventory.items.map(itemFromRef).filter((i): i is EquipmentDef => !!i),
   };
 }
 

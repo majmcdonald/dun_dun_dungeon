@@ -238,12 +238,14 @@ describe('rewards', () => {
     const rolls = (type: 'battle' | 'epic') => SEEDS.flatMap((seed) => rollReward(type, party, SKILL_LIBRARY, ITEM_LIBRARY, seededRng(seed)));
     const skills = rolls('battle').flatMap((r) => r.skills);
     const common = skills.filter((s) => s.rarity === 'common').length / skills.length;
-    expect(common).toBeGreaterThan(0.45);
+    expect(common).toBeGreaterThan(0.65);
     const betterThanCommon = (type: 'battle' | 'epic') => {
       const items = rolls(type).flatMap((r) => r.items);
       return items.filter((i) => i.rarity !== 'common').length / items.length;
     };
     expect(betterThanCommon('epic')).toBeGreaterThan(betterThanCommon('battle'));
+    const bossItems = SEEDS.flatMap((seed) => rollReward('boss', party, SKILL_LIBRARY, ITEM_LIBRARY, seededRng(seed)).items);
+    expect(bossItems.some((i) => i.rarity === 'common')).toBe(false);
   });
 });
 

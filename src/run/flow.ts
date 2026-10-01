@@ -8,6 +8,8 @@ import { PartyScene } from '../scenes/PartyScene';
 import { PreBattleScene } from '../scenes/PreBattleScene';
 import { RewardScene } from '../scenes/RewardScene';
 import { RunEndScene } from '../scenes/RunEndScene';
+import { StoreScene } from '../scenes/StoreScene';
+import { openStore } from './store';
 import type { MapNode } from './map';
 import { rollReward } from './rewards';
 import { beginNode, clearNode, pendingNodeOf, recordWin, runSummary, saveRun, setRewardPicks } from './run';
@@ -25,8 +27,10 @@ export function enterNode(game: GameContext, node: MapNode): void {
     case 'boss':
       return game.scenes.switchTo(new PreBattleScene(game));
     case 'event':
-    case 'store':
       return game.scenes.switchTo(new ComingSoonScene(game, node.type));
+    case 'store':
+      openStore(game.state, node);
+      return game.scenes.switchTo(new StoreScene(game));
     case 'treasure':
       return winNode(game);
   }
@@ -47,7 +51,7 @@ export function winNode(game: GameContext, battleGold = 0): void {
   game.scenes.switchTo(new RewardScene(game));
 }
 
-// Nodes with nothing to win (the Store and Event placeholders).
+// Nodes with nothing to win: leaving a Store, or the Event placeholder.
 export function completeNode(game: GameContext): void {
   const run = game.state.run;
   const node = pendingNode(game);

@@ -36,6 +36,7 @@ export function itemLines(item: EquipmentDef): Line[] {
   if (bonuses.length > 0) lines.push({ text: bonuses.join('  '), color: PALETTE.green });
   if (item.enchantment) lines.push({ text: describeEnchantment(item.enchantment), color: PALETTE.orange });
   if (item.requires) lines.push({ text: `REQUIRES ${item.requires.toUpperCase()}`, color: PALETTE.magenta });
+  if (item.boost) lines.push({ text: `ENCHANTED: +${item.boost.amount} ${statLabel(item.boost.stat)}`, color: PALETTE.cyan });
   return lines;
 }
 
@@ -51,4 +52,8 @@ export function wrap(text: string, maxChars: number): string[] {
   }
   if (current) lines.push(current);
   return lines;
+}
+
+function statLabel(stat: string): string {
+  return STAT_LABEL.find(([k]) => k === stat)?.[1] ?? stat.toUpperCase();
 }

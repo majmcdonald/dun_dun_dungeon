@@ -145,6 +145,10 @@ function tooltipLines(slot: EquipSlot, item: EquipmentDef | undefined): { text: 
   const bonuses = STAT_LABEL.filter(([k]) => item.stats[k]).map(([k, label]) => `+${item.stats[k]} ${label}`);
   if (bonuses.length > 0) lines.push({ text: bonuses.join('  '), color: PALETTE.green });
   if (item.enchantment) lines.push({ text: describeEnchantment(item.enchantment), color: PALETTE.orange });
+  if (item.boost) {
+    const label = STAT_LABEL.find(([k]) => k === item.boost!.stat)?.[1];
+    lines.push({ text: `ENCHANTED: +${item.boost.amount} ${label}`, color: PALETTE.cyan });
+  }
   return lines;
 }
 

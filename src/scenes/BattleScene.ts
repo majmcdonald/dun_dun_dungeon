@@ -22,6 +22,7 @@ import { CHAR_ADVANCE, drawText, textWidth } from '../ui/font';
 import { drawEquipmentIcons, drawEquipmentTooltip, hoveredSlot, ICON_STEP } from '../ui/partyCard';
 import { dotVfxId, VFX } from '../vfx/effects';
 import { loseRun, winNode } from '../run/flow';
+import { itemRef } from '../run/run';
 import { PreBattleScene } from './PreBattleScene';
 
 const SIDEBAR_W = 152;
@@ -238,6 +239,7 @@ export class BattleScene implements Scene {
         if (!this.brokenThisBattle.has(event.target)) this.brokenThisBattle.set(event.target, new Set());
         this.brokenThisBattle.get(event.target)!.add(event.slot);
         this.notices.push({ target: event.target, text: `${item?.name ?? event.slot} BROKE`, age: 0 });
+        if (item && state.run) state.run.broken.push(itemRef(item));
         break;
       }
       case 'buff':

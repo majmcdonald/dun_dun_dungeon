@@ -10,6 +10,7 @@ import { drawBackground } from '../ui/background';
 import { drawText, textWidth } from '../ui/font';
 import { drawButton, drawFrame, drawPanel, inside, type Button, type Rect } from '../ui/widgets';
 import { PartyScene } from './PartyScene';
+import { StoreScene } from './StoreScene';
 
 // Floors run left to right so the whole map fits on screen without scrolling.
 const FLOOR_X0 = 24;
@@ -57,7 +58,9 @@ export class MapScene implements Scene {
       const node = nextNodes(this.run).find((n) => inside(click, this.nodeRect(n)));
       if (node) return enterNode(this.game, node);
       const last = this.reviewable();
-      if (last && inside(click, this.nodeRect(last))) return reviewReward(this.game);
+      if (last && inside(click, this.nodeRect(last))) {
+        return last.type === 'store' ? this.game.scenes.switchTo(new StoreScene(this.game)) : reviewReward(this.game);
+      }
     }
   }
 
@@ -86,14 +89,20 @@ export class MapScene implements Scene {
       const here = node.id === run.position;
       this.drawNode(ctx, node, rect, open.has(node.id), path.has(node.id), here, hovered === node && (here ? !!this.reviewable() : true), floor);
     }
-    if (hovered) this.drawLabel(ctx, hovered === this.reviewable() ? 'REVIEW REWARDS' : NODE_LABEL[hovered.type], pointer);
+    if (hovered) this.drawLabel(ctx, this.hoverLabel(hovered), pointer);
   }
 
-  // The node just cleared, while its reward picks can still be changed.
+  // The node just cleared, while its reward picks can still be changed or its store revisited.
   private reviewable(): MapNode | null {
     const run = this.run;
-    if (!run.lastReward || run.position !== run.lastReward.node) return null;
-    return currentNode(run);
+    const reward = run.lastReward?.node === run.position;
+    const store = run.store?.node === run.position;
+    return run.position && (reward || store) ? currentNode(run) : null;
+  }
+
+  private hoverLabel(node: MapNode): string {
+    if (node !== this.reviewable()) return NODE_LABEL[node.type];
+    return node.type === 'store' ? 'REVISIT STORE' : 'REVIEW REWARDS';
   }
 
   private drawEdges(ctx: CanvasRenderingContext2D, nodes: MapNode[], open: Set<string>, path: Set<string>): void {
