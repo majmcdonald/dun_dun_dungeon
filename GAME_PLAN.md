@@ -1,6 +1,6 @@
 # Autobattler Game — Design & Development Plan
 
-Status: Phase 4 complete. Phase 5 in progress.
+Status: Phase 5 complete. Phase 6 next.
 
 ## Confirmed Decisions
 
@@ -149,6 +149,8 @@ Phase 5 design:
 - Event engine and screen (approved): checks read the party's BEST single value or PARTY total (gear included); 50% at the difficulty, scaling with the stat, clamped 10–95%. Outcomes: gold ±, a random usable skill/item (optionally of a set rarity), lose a random piece of gear, wounded (next fight at 75% HP), blessed (+stats next fight), or a fight (listed enemies or the map encounter; a win pays like an Epic Monster). The event per room is seeded and each appears once per run until all are seen; the choice and result save immediately. Preview: ?preview=event&id=<event id>.
 - Events (approved): 16 events (shrine, locked chest, wandering merchant, rope bridge, goblin toll, clear spring, pinned adventurer, golden idol, bones and dice, dusty library, old battlefield, sleeping orc, humming portal, old mentor, bat cloud, ghost smith) in src/content/events.ts. Choices may roll on luck instead of a stat; paid choices need the gold (greyed out "NEED N G" otherwise). The screen shows what is tested and PASS/FAIL odds, never the outcomes.
 - Work order: screen-flow tests (Phase 4 open item) → store engine + tests → store screen and shopkeeper → event engine (checks, outcomes, wounded/blessed, event fights) + tests → event screen → event texts (reviewed as a list) → event illustrations in batches.
+
+Progress: Phase 5 complete. Built and approved: store (buy, sell, repair, enchant, revisit), shopkeeper sprite, event engine and parchment event screen, 16 events with illustrations, and new rarity weights. Wounded fights and event-fight rewards were verified in the browser. Not yet played end to end: gear broken in a fight then repaired at a store (the repair rules are unit-tested).
 
 **Phase 6 — Content: 3 Levels**
 Populate each level's enemies/elites/boss, event pool, shop weighting, difficulty curve, and which milestone unlocks which roster character. Balancing pass 2: enemy stats, group sizes, elite/boss curve, gold and drop rates. Art: level backgrounds, boss sprites, level-specific enemies.
