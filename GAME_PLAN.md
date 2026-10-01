@@ -1,6 +1,6 @@
 # Autobattler Game — Design & Development Plan
 
-Status: Phase 3 complete. Phase 4 in progress.
+Status: Phase 4 complete. Phase 5 next.
 
 ## Confirmed Decisions
 
@@ -131,6 +131,8 @@ Phase 4 design:
 - Art for approval: title screen, map screen and node icons (battle, epic, event, store, treasure, boss), reward screen, run over and victory screens, then the 6 moved VFX.
 - VFX (approved): summon (spiral in + flash; the creature appears when it ends), transform (smoke poof; the critter appears when it ends), shapeshift (spiraling leaves), slow (sinking drops + tightening ring), haste (speed lines), chaos (multicolor burst), and damage-over-time ticks in the element's colors at 3 tiers by tick size (under 5%, 5–25%, 25%+ of the target's max HP). Played from battle events; preview at ?preview=vfx.
 - Work order: run engine (map generator, run state, rewards, save slots) + tests → title and save-slot screen → map screen → reward flow → run over/victory → debug screen → VFX.
+
+Progress: Phase 4 complete. Built and approved: map generator and map screen, title screen with 3 autosaved slots, reward flow with editable picks, victory and Run Over screens with run stats, debug screen with monster picker, and the 6 expansion VFX. Boss → next level, final boss → victory, and party wipe → Run Over were verified in the browser. Open item: unit tests for the screen flow (src/run/flow.ts).
 
 **Phase 5 — Shops & Events**
 Randomized-refresh shop (buy/sell), text-choice event system with stat-based outcomes. Art: shop screen, event screen.
