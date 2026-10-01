@@ -145,7 +145,7 @@ export class BattleScene implements Scene {
     if (this.battle.result && this.endedFor >= RESULT_DELAY && clicks.length > 0) {
       if (!this.game.state.run) return this.game.scenes.switchTo(new PreBattleScene(this.game));
       if (this.battle.result === 'victory') return winNode(this.game, this.battle.gold);
-      loseRun(this.game);
+      loseRun(this.game, [...new Set(this.battle.combatants.filter((c) => c.side === 'enemy').map((c) => c.def.name.toUpperCase()))]);
       return;
     }
 
@@ -184,10 +184,15 @@ export class BattleScene implements Scene {
         }
         break;
       }
-      case 'damage':
+      case 'damage': {
+        const stats = this.game.state.run?.stats;
+        const hit = event.amount + event.absorbed;
+        if (stats && this.battle.get(event.target).side === 'party') stats.damageTaken += hit;
+        else if (stats) stats.damageDone += hit;
         this.anim(event.target).flash = FLASH_TIME;
         this.float(event.target, { damage: event.amount, absorbed: event.absorbed });
         break;
+      }
       case 'barrier':
         this.float(event.target, { barrier: event.amount });
         break;

@@ -7,8 +7,8 @@ import { MapScene } from '../scenes/MapScene';
 import { PartyScene } from '../scenes/PartyScene';
 import { PreBattleScene } from '../scenes/PreBattleScene';
 import { RewardScene } from '../scenes/RewardScene';
-import { TitleScene } from '../scenes/TitleScene';
-import { findNode, type MapNode } from './map';
+import { RunEndScene, type RunSummary } from '../scenes/RunEndScene';
+import { findNode, FLOORS, type MapNode } from './map';
 import { rollReward } from './rewards';
 import { clearNode, LEVELS, saveRun, setRewardPicks } from './run';
 
@@ -47,6 +47,10 @@ export function winNode(game: GameContext, battleGold = 0): void {
   if (!run || !node) return;
   const reward = rollReward(node.type, game.state.party, SKILL_LIBRARY, ITEM_LIBRARY, Math.random, battleGold);
   run.gold += reward.gold;
+  run.stats.goldEarned += reward.gold;
+  if (node.type !== 'treasure') run.stats.fights += 1;
+  if (node.type === 'epic') run.stats.epics += 1;
+  if (node.type === 'boss') run.stats.bosses += 1;
   const finalBoss = node.type === 'boss' && run.level + 1 >= LEVELS;
   clearNode(run, node.id);
   if (!finalBoss) {
@@ -89,17 +93,28 @@ export function reviewReward(game: GameContext): void {
   game.scenes.switchTo(reward.skill || reward.item ? new PartyScene(game) : new RewardScene(game));
 }
 
-export function loseRun(game: GameContext): void {
+// `slayers`: the enemy types of the fight that wiped the party.
+export function loseRun(game: GameContext, slayers: string[]): void {
   const run = game.state.run;
   if (!run) return;
   run.result = 'lost';
-  endRun(game);
+  endRun(game, slayers);
 }
 
-// A finished run frees its save slot.
-function endRun(game: GameContext): void {
+// A finished run frees its save slot and shows the victory or Run Over screen.
+function endRun(game: GameContext, slayers: string[] = []): void {
   const run = game.state.run;
-  if (run) clearSlot(run.slot);
+  if (!run) return;
+  const at = pendingNode(game) ?? findNode(run.map, run.position ?? '');
+  const summary: RunSummary = {
+    won: run.result === 'won',
+    level: run.level + 1,
+    where: at?.type === 'boss' ? 'THE BOSS' : `ROOM ${at ? Math.min(at.floor + 1, FLOORS) : 1}`,
+    party: game.state.party.map((m) => m.def.id),
+    stats: { ...run.stats },
+    slayers,
+  };
+  clearSlot(run.slot);
   game.state.run = null;
-  game.scenes.switchTo(new TitleScene(game));
+  game.scenes.switchTo(new RunEndScene(game, summary));
 }

@@ -25,7 +25,21 @@ export interface RunState {
   result: 'won' | 'lost' | null;
   // The latest reward; its picks can be changed until the next node is entered.
   lastReward: LastReward | null;
+  stats: RunStats;
 }
+
+export interface RunStats {
+  rooms: number;
+  fights: number;
+  epics: number;
+  bosses: number;
+  goldEarned: number;
+  // Full hits including what barriers absorbed; summons count as part of the party.
+  damageDone: number;
+  damageTaken: number;
+}
+
+const NO_STATS: RunStats = { rooms: 0, fights: 0, epics: 0, bosses: 0, goldEarned: 0, damageDone: 0, damageTaken: 0 };
 
 export interface LastReward {
   node: string;
@@ -42,7 +56,7 @@ export interface LastReward {
 export function startRun(state: GameState, slot: number, classes: ClassDef[], seed: number): void {
   state.party = classes.map(recruit);
   state.inventory = { skills: [], items: [] };
-  state.run = { slot, seed, level: 0, map: levelMap(seed, 0), position: null, path: [], pending: null, gold: 0, result: null, lastReward: null };
+  state.run = { slot, seed, level: 0, map: levelMap(seed, 0), position: null, path: [], pending: null, gold: 0, result: null, lastReward: null, stats: { ...NO_STATS } };
 }
 
 function levelMap(seed: number, level: number): RunMap {
@@ -61,6 +75,7 @@ export function currentNode(run: RunState): MapNode | null {
 export function clearNode(run: RunState, id: string): void {
   if (!nextNodes(run).some((n) => n.id === id)) throw new Error(`Node ${id} is not reachable`);
   run.pending = null;
+  run.stats.rooms += 1;
   if (id !== run.map.boss.id || run.level + 1 >= LEVELS) {
     run.position = id;
     run.path.push(id);
@@ -156,7 +171,13 @@ export function toSave(state: GameState): SavedRun {
 
 // A run reloaded mid-node restarts that node from the map.
 export function fromSave(saved: SavedRun, state: GameState): void {
-  state.run = { ...saved.run, path: saved.run.path ?? [], pending: null, lastReward: saved.run.lastReward ?? null };
+  state.run = {
+    ...saved.run,
+    path: saved.run.path ?? [],
+    pending: null,
+    lastReward: saved.run.lastReward ?? null,
+    stats: { ...NO_STATS, ...saved.run.stats },
+  };
   state.party = saved.party.map(
     (m): PartyMember => ({
       def: CLASSES_BY_ID[m.classId],
