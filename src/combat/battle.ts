@@ -127,14 +127,15 @@ export class Battle {
 
   constructor(
     party: PartyMember[],
-    enemies: CombatantDef[],
+    // Index = grid position; null leaves that cell empty.
+    enemies: (CombatantDef | null)[],
     private rng: Rng = Math.random,
     options: BattleOptions = {},
   ) {
     this.creatures = options.creatures ?? {};
     this.combatants = [
       ...party.map((m, i) => createCombatant(m.def, m.skills, 'party', i, { ...m.equipment }, rng)),
-      ...enemies.map((def, i) => createCombatant(def, def.skills, 'enemy', i, {}, rng)),
+      ...enemies.flatMap((def, i) => (def ? [createCombatant(def, def.skills, 'enemy', i, {}, rng)] : [])),
     ];
     for (const c of this.combatants) if (c.def.familiar) c.channel = MECHANIC.channelSeconds;
   }

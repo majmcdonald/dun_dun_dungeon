@@ -306,3 +306,14 @@ describe('thief and misc effects', () => {
     expect(battle.gold).toBe(5);
   });
 });
+
+describe('enemy grid', () => {
+  it('keeps empty cells empty, so enemies stand where they were placed', () => {
+    const battle = new Battle([member(unit('a'))], [null, null, null, unit('mid'), null, null, null, null, unit('back')], NO_JITTER);
+    const enemies = battle.combatants.filter((c) => c.side === 'enemy');
+    expect(enemies.map((c) => [c.def.id, gridCell(c)])).toEqual([
+      ['mid', { row: 0, column: 1 }],
+      ['back', { row: 2, column: 2 }],
+    ]);
+  });
+});

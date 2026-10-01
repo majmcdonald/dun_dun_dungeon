@@ -9,6 +9,7 @@ import { loadRun, type SavedRun } from '../run/run';
 import { drawBackground } from '../ui/background';
 import { drawText, textWidth } from '../ui/font';
 import { drawButton, drawPanel, inside, type Button, type Rect } from '../ui/widgets';
+import { DebugScene } from './DebugScene';
 import { MapScene } from './MapScene';
 import { RosterScene } from './RosterScene';
 
@@ -56,10 +57,7 @@ export class TitleScene implements Scene {
 
   update(): void {
     for (const click of this.game.input.consumeClicks()) {
-      if (inside(click, DEBUG)) {
-        location.href = '/party.html';
-        return;
-      }
+      if (inside(click, DEBUG)) return this.game.scenes.switchTo(new DebugScene(this.game));
       const index = this.slots.findIndex((s) => inside(click, s.rect));
       if (index < 0) {
         this.confirmDelete = null;

@@ -12,6 +12,7 @@ import { CLASSES_BY_ID } from '../content/classes';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
 import { equipItemBlock, MAX_SKILLS, placeSkillBlock, removeSkillBlock, skillAccessBlock } from '../game/loadout';
+import type { Inventory } from '../game/state';
 import { drawBackground } from '../ui/background';
 import { itemLines, skillLines, wrap } from '../ui/describeLines';
 import { drawText, textWidth } from '../ui/font';
@@ -57,9 +58,11 @@ export class LoadoutScene implements Scene {
   private skillSort: SortKey = 'rarity';
   private gearSort: SortKey = 'rarity';
 
+  // `done` builds the screen to return to (the party screen by default).
   constructor(
     private game: GameContext,
     private index: number,
+    private done: () => Scene = () => new PartyScene(game),
   ) {}
 
   enter(): void {
@@ -85,7 +88,7 @@ export class LoadoutScene implements Scene {
     this.scroll = Math.min(maxScroll, Math.max(0, this.scroll + input.consumeWheel()));
 
     for (const click of input.consumeClicks()) {
-      if (inside(click, DONE)) return this.game.scenes.switchTo(new PartyScene(this.game));
+      if (inside(click, DONE)) return this.game.scenes.switchTo(this.done());
       if (inside(click, PREV)) this.switchMember(-1);
       else if (inside(click, NEXT)) this.switchMember(1);
       else if (inside(click, UNEQUIP)) this.unequip();
@@ -153,8 +156,8 @@ export class LoadoutScene implements Scene {
     const m = this.member;
     if (entry.kind === 'item') {
       const old = m.equipment[entry.item.slot];
-      inventory.items = without(inventory.items, entry.item);
-      if (old) inventory.items.push(old);
+      inventory.items = take(inventory, inventory.items, entry.item);
+      if (old) give(inventory, inventory.items, old);
       this.member = { ...m, equipment: { ...m.equipment, [entry.item.slot]: entry.item } };
       return;
     }
@@ -162,8 +165,8 @@ export class LoadoutScene implements Scene {
     const skills = [...m.skills];
     const old = skills[index];
     skills[index] = entry.skill;
-    inventory.skills = without(inventory.skills, entry.skill);
-    if (old) inventory.skills.push(old);
+    inventory.skills = take(inventory, inventory.skills, entry.skill);
+    if (old) give(inventory, inventory.skills, old);
     this.member = { ...m, skills };
   }
 
@@ -175,7 +178,7 @@ export class LoadoutScene implements Scene {
       if (!old) return;
       const equipment = { ...m.equipment };
       delete equipment[this.selection.slot];
-      inventory.items.push(old);
+      give(inventory, inventory.items, old);
       this.member = { ...m, equipment };
       return;
     }
@@ -184,7 +187,7 @@ export class LoadoutScene implements Scene {
     if (!old) return;
     const block = removeSkillBlock(m, index);
     if (block) return this.say(block);
-    inventory.skills.push(old);
+    give(inventory, inventory.skills, old);
     this.member = { ...m, skills: m.skills.filter((_, i) => i !== index) };
   }
 
@@ -437,6 +440,14 @@ function totalStats(m: PartyMember): Stats {
     for (const [k] of STAT_LABEL) total[k] += item?.stats[k] ?? 0;
   }
   return total;
+}
+
+function take<T>(inventory: Inventory, list: T[], item: T): T[] {
+  return inventory.unlimited ? list : without(list, item);
+}
+
+function give<T>(inventory: Inventory, list: T[], item: T): void {
+  if (!inventory.unlimited) list.push(item);
 }
 
 function without<T>(list: T[], item: T): T[] {

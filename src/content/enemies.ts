@@ -70,6 +70,9 @@ export const SHAMAN: CombatantDef = {
   resist: { shadow: 0.5, poison: 0.3 },
 };
 
+// Every enemy type, for pickers.
+export const ENEMIES: CombatantDef[] = [SLIME, BAT, ORC, ARCHER, SHAMAN];
+
 // Positions fill column by column: 0-2 front, 3-5 middle, 6-8 back.
 export const TEST_ENCOUNTER: CombatantDef[] = [SLIME, SLIME, SLIME, BAT, ORC, BAT, ARCHER, SHAMAN, ARCHER];
 

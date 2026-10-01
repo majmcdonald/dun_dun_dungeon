@@ -3,9 +3,8 @@ import { Input } from './engine/input';
 import { startLoop } from './engine/loop';
 import { Renderer } from './engine/renderer';
 import { SceneManager, type GameContext } from './engine/scene';
-import { demoParty } from './content/testing';
 import { createState } from './game/state';
-import { PreBattleScene } from './scenes/PreBattleScene';
+import { DebugScene } from './scenes/DebugScene';
 import { RunEndScene } from './scenes/RunEndScene';
 import { TitleScene } from './scenes/TitleScene';
 
@@ -19,11 +18,10 @@ const game: GameContext = {
   state: createState(),
 };
 
-const demo = new URLSearchParams(location.search).get('party');
-if (demo) game.state.party = demoParty(demo);
+const params = new URLSearchParams(location.search);
 
 // Dev-only: ?preview=victory or ?preview=defeat shows the run-end screen with sample stats.
-const preview = new URLSearchParams(location.search).get('preview');
+const preview = params.get('preview');
 if (preview === 'victory' || preview === 'defeat') {
   const won = preview === 'victory';
   game.scenes.switchTo(
@@ -38,7 +36,8 @@ if (preview === 'victory' || preview === 'defeat') {
         : { rooms: 22, fights: 14, epics: 2, bosses: 1, goldEarned: 517, damageDone: 15944, damageTaken: 13602 },
     }),
   );
-} else game.scenes.switchTo(demo ? new PreBattleScene(game) : new TitleScene(game));
+  // Dev-only: ?debug opens the debug screen directly.
+} else game.scenes.switchTo(params.has('debug') ? new DebugScene(game) : new TitleScene(game));
 
 startLoop({
   update: (dt) => game.scenes.update(dt),

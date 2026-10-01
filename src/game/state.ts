@@ -7,6 +7,8 @@ import type { RunState } from '../run/run';
 export interface Inventory {
   skills: SkillDef[];
   items: EquipmentDef[];
+  // Debug screen: equipping never uses up a copy and unequipping never adds one.
+  unlimited?: boolean;
 }
 
 export interface GameState {
