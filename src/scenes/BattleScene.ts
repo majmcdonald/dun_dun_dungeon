@@ -13,7 +13,7 @@ import { spriteCanvas, TRANSPARENT, type SpriteDef } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
 import { Battle, gridCell, isSummon, MECHANIC } from '../combat/battle';
 import { CREATURES } from '../content/creatures';
-import { TEST_ENCOUNTER } from '../content/enemies';
+import { MAP_ENCOUNTER } from '../content/enemies';
 import { EQUIP_SLOTS, type BattleEvent, type Combatant, type EquipSlot } from '../combat/types';
 import { NATIVE_HEIGHT, NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
@@ -21,6 +21,7 @@ import { drawBackground } from '../ui/background';
 import { CHAR_ADVANCE, drawText, textWidth } from '../ui/font';
 import { drawEquipmentIcons, drawEquipmentTooltip, hoveredSlot, ICON_STEP } from '../ui/partyCard';
 import { VFX } from '../vfx/effects';
+import { loseRun, winNode } from '../run/flow';
 import { PreBattleScene } from './PreBattleScene';
 
 const SIDEBAR_W = 152;
@@ -130,7 +131,7 @@ export class BattleScene implements Scene {
   }
 
   private start(): void {
-    this.battle = new Battle(this.game.state.party, TEST_ENCOUNTER, Math.random, { creatures: CREATURES });
+    this.battle = new Battle(this.game.state.party, MAP_ENCOUNTER, Math.random, { creatures: CREATURES });
     this.anims.clear();
     this.floats = [];
     this.vfx = [];
@@ -142,7 +143,9 @@ export class BattleScene implements Scene {
   update(dt: number): void {
     const clicks = this.game.input.consumeClicks();
     if (this.battle.result && this.endedFor >= RESULT_DELAY && clicks.length > 0) {
-      this.game.scenes.switchTo(new PreBattleScene(this.game));
+      if (!this.game.state.run) return this.game.scenes.switchTo(new PreBattleScene(this.game));
+      if (this.battle.result === 'victory') return winNode(this.game, this.battle.gold);
+      loseRun(this.game);
       return;
     }
 

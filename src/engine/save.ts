@@ -1,4 +1,4 @@
-const SAVE_KEY = 'autob.save';
+export const SAVE_SLOTS = 3;
 const SAVE_VERSION = 1;
 
 interface SaveEnvelope<T> {
@@ -7,31 +7,41 @@ interface SaveEnvelope<T> {
   data: T;
 }
 
-export function saveGame<T>(data: T): boolean {
+export interface SlotInfo<T> {
+  savedAt: number;
+  data: T;
+}
+
+function key(slot: number): string {
+  return `autob.save.${slot}`;
+}
+
+export function saveSlot<T>(slot: number, data: T): boolean {
   const envelope: SaveEnvelope<T> = { version: SAVE_VERSION, savedAt: Date.now(), data };
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(envelope));
+    localStorage.setItem(key(slot), JSON.stringify(envelope));
     return true;
   } catch {
     return false;
   }
 }
 
-export function loadGame<T>(): T | null {
+// Null for an empty slot, unreadable data, or a save from an older version.
+export function loadSlot<T>(slot: number): SlotInfo<T> | null {
   try {
-    const raw = localStorage.getItem(SAVE_KEY);
+    const raw = localStorage.getItem(key(slot));
     if (!raw) return null;
     const envelope = JSON.parse(raw) as SaveEnvelope<T>;
     if (envelope.version !== SAVE_VERSION) return null;
-    return envelope.data;
+    return { savedAt: envelope.savedAt, data: envelope.data };
   } catch {
     return null;
   }
 }
 
-export function clearSave(): void {
+export function clearSlot(slot: number): void {
   try {
-    localStorage.removeItem(SAVE_KEY);
+    localStorage.removeItem(key(slot));
   } catch {
     // Storage unavailable; nothing to clear.
   }

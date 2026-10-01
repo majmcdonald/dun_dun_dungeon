@@ -72,3 +72,6 @@ export const SHAMAN: CombatantDef = {
 
 // Positions fill column by column: 0-2 front, 3-5 middle, 6-8 back.
 export const TEST_ENCOUNTER: CombatantDef[] = [SLIME, SLIME, SLIME, BAT, ORC, BAT, ARCHER, SHAMAN, ARCHER];
+
+// Every map fight until Phase 6 content: one of each enemy, melee in front, casters behind.
+export const MAP_ENCOUNTER: CombatantDef[] = [SLIME, ORC, BAT, ARCHER, SHAMAN];

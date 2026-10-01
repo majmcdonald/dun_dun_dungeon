@@ -7,11 +7,11 @@ import { CLASSES, type ClassDef } from '../content/classes';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
 import { describeEffect, describeTarget } from '../game/describe';
-import { recruit } from '../game/state';
+import { saveRun, startRun } from '../run/run';
 import { drawBackground } from '../ui/background';
 import { drawText, LINE_HEIGHT, textWidth } from '../ui/font';
 import { drawButton, drawPanel, inside, type Button, type Rect } from '../ui/widgets';
-import { PreBattleScene } from './PreBattleScene';
+import { MapScene } from './MapScene';
 
 const TITLE = 'CHOOSE YOUR PARTY';
 const PARTY_SIZE = 3;
@@ -50,13 +50,17 @@ export class RosterScene implements Scene {
   private picked: ClassDef[] = [];
   private focus: ClassDef | null = null;
 
-  constructor(private game: GameContext) {}
+  constructor(
+    private game: GameContext,
+    private slot: number,
+  ) {}
 
   update(): void {
     for (const click of this.game.input.consumeClicks()) {
       if (this.picked.length === PARTY_SIZE && inside(click, BEGIN)) {
-        this.game.state.party = this.picked.map(recruit);
-        return this.game.scenes.switchTo(new PreBattleScene(this.game));
+        startRun(this.game.state, this.slot, this.picked, Math.floor(Math.random() * 2 ** 31));
+        saveRun(this.game.state);
+        return this.game.scenes.switchTo(new MapScene(this.game));
       }
       const chip = this.chips.find((c) => inside(click, c.rect));
       if (!chip) continue;

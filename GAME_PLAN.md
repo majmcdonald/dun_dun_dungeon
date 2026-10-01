@@ -1,6 +1,6 @@
 # Autobattler Game — Design & Development Plan
 
-Status: Phase 2 complete. Phase 3 next.
+Status: Phase 3 complete. Phase 4 in progress.
 
 ## Confirmed Decisions
 
@@ -36,7 +36,9 @@ Status: Phase 2 complete. Phase 3 next.
 | Floating numbers | One line per target: damage (red), absorbed (cyan, in parentheses), barrier gain (cyan); hits within 0.25s merge and pop to 2x size; rise 32px/s |
 | Animation | One generic attack animation per sprite; powerful skills get distinct special VFX |
 | Audio | In scope from the start (SFX + music) |
+| Name | Dun-Dun-Dungeon |
 | Scope | MVP = 3 levels, each ending in a boss |
+| Debug screen | Kept in every phase from Phase 4 on: pick any party, give them any equipment and skills from the whole game, and start a fight |
 
 Balancing is done in three passes: Phase 3 (stat budgets and skill power formulas), Phase 6 (encounter and economy tuning), Phase 8 (full-run tuning). Earlier phases only make test encounters winnable enough to exercise mechanics.
 
@@ -112,6 +114,18 @@ Progress: Phase 3 complete. Approved and built: 12 classes, 400 skills (69 syner
 
 **Phase 4 — Map & Run Structure**
 Branching map generator, node types, full-map visibility, run save/resume, post-battle reward flow (heal/skill draft/equipment draft/gold). Art: map screen, node icons, reward screen, and VFX for the Phase 3 expansion effects (summon, transform, shapeshift, slow/haste, damage over time, chaos).
+
+Phase 4 design:
+- Map: per level, 15 floors on a Slay the Spire–style grid (7 columns, 6 paths drawn bottom to top that may merge), then a boss node. The whole map is visible from the start; the player picks one connected node per floor.
+- Node mix: Battle ~50%, Epic Monster ~15%, Event ~25%, Store ~10%. Room 1 is always Battle; room 7 is always Treasure on every path, and Treasure appears nowhere else. The player-facing name for a floor is "room".
+- Store and Event nodes are "coming soon" placeholders that simply continue the run until Phase 5.
+- Encounters: every Battle, Epic Monster, and Boss node uses one of each enemy (Slime, Orc, Bat front; Archer, Shaman behind) until Phase 6 content.
+- After a won fight: full heal, then the reward screen: automatic gold (Battle 15–25, Epic 40–60, Boss 100, plus Gold skill bonuses); choose 1 of 3 skills (only skills at least one party member can use; rarity weights Common 60 / Rare 25 / Epic 12 / Legendary 3; Skip allowed); choose 1 of 2 items (only items someone in the party can wear; same weights, better odds after Epic Monsters). Treasure nodes give a reward without a fight.
+- Run flow: title screen (New Run / Continue / Debug) → roster picker → map → nodes → rewards. Beating the level 3 boss shows a victory screen; losing the whole party shows a Run Over screen.
+- Save: 3 save slots in localStorage, autosaved after every node.
+- Debug screen: any 1–3 classes including locked ones; every item and skill available without limit (duplicates allowed across characters); pick the encounter (test encounter, or build one enemy by enemy); FIGHT, then return to the debug screen.
+- Art for approval: title screen, map screen and node icons (battle, epic, event, store, treasure, boss), reward screen, run over and victory screens, then the 6 moved VFX.
+- Work order: run engine (map generator, run state, rewards, save slots) + tests → title and save-slot screen → map screen → reward flow → run over/victory → debug screen → VFX.
 
 **Phase 5 — Shops & Events**
 Randomized-refresh shop (buy/sell), text-choice event system with stat-based outcomes. Art: shop screen, event screen.

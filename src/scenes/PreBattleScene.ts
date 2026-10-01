@@ -1,7 +1,7 @@
 import { PALETTE } from '../art/palette';
 import { spriteCanvas } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
-import { TEST_ENCOUNTER } from '../content/enemies';
+import { MAP_ENCOUNTER } from '../content/enemies';
 import type { CombatantDef } from '../combat/types';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
@@ -9,12 +9,14 @@ import { drawBackground } from '../ui/background';
 import { drawText, textWidth } from '../ui/font';
 import { cardIconOrigin, drawEquipmentTooltip, drawPartyCard, hoveredSlot, partyCardRect } from '../ui/partyCard';
 import { drawButton, drawPanel, inside, type Button, type Rect } from '../ui/widgets';
+import { pendingNode } from '../run/flow';
 import { BattleScene } from './BattleScene';
 import { PartyScene } from './PartyScene';
 
 const UPDATE: Button = { x: 106, y: 228, w: 128, h: 22, label: 'UPDATE PARTY' };
 const FIGHT: Button = { x: 246, y: 228, w: 128, h: 22, label: 'FIGHT' };
 const TITLE = 'PREPARE FOR BATTLE';
+const NODE_TITLE: Partial<Record<string, string>> = { epic: 'EPIC MONSTER AHEAD', boss: 'BOSS FIGHT' };
 const ENEMY_PANEL: Rect = { x: 10, y: 44, w: 460, h: 56 };
 const ENEMY_CHIP_W = 64;
 const CARDS_TOP = 106;
@@ -22,7 +24,7 @@ const CARDS_TOP = 106;
 export class PreBattleScene implements Scene {
   // Each enemy type once, in order of first appearance: the player learns what, not how many.
   private enemyTypes: { def: CombatantDef; sprite: HTMLCanvasElement }[] = [
-    ...new Map(TEST_ENCOUNTER.map((d) => [d.id, d])).values(),
+    ...new Map(MAP_ENCOUNTER.map((d) => [d.id, d])).values(),
   ].map((def) => ({ def, sprite: spriteCanvas(SPRITES[def.id], 'idle') }));
 
   constructor(private game: GameContext) {}
@@ -40,7 +42,8 @@ export class PreBattleScene implements Scene {
 
   render(ctx: CanvasRenderingContext2D): void {
     drawBackground(ctx);
-    drawText(ctx, TITLE, (NATIVE_WIDTH - textWidth(TITLE)) / 2, 16, PALETTE.sand);
+    const title = NODE_TITLE[pendingNode(this.game)?.type ?? ''] ?? TITLE;
+    drawText(ctx, title, (NATIVE_WIDTH - textWidth(title)) / 2, 16, PALETTE.sand);
     this.drawEnemies(ctx);
 
     const party = this.game.state.party;
