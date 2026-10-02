@@ -10,6 +10,11 @@ import { WRAITH_SPRITE } from './wraith';
 import { IMP_SPRITE } from './imp';
 import { CRITTER_SPRITE } from './critter';
 import { SHOPKEEPER_SPRITE } from './shopkeeper';
+import { RAT_SPRITE } from './rat';
+import { MUSHROOM_SPRITE } from './mushroom';
+import { GOBLIN_SPRITE } from './goblin';
+import { GHOST_SPRITE } from './ghost';
+import { SPIDER_SPRITE } from './spider';
 import { ARCHER_SPRITE } from './archer';
 import { BARBARIAN_SPRITE } from './barbarian';
 import { BARD_SPRITE } from './bard';
@@ -57,4 +62,9 @@ export const SPRITES: Record<string, SpriteDef> = {
   imp: IMP_SPRITE,
   critter: CRITTER_SPRITE,
   shopkeeper: SHOPKEEPER_SPRITE,
+  rat: RAT_SPRITE,
+  mushroom: MUSHROOM_SPRITE,
+  goblin: GOBLIN_SPRITE,
+  ghost: GHOST_SPRITE,
+  spider: SPIDER_SPRITE,
 };

@@ -13,9 +13,9 @@ const renderer = new Renderer(canvas);
 const input = new Input(canvas);
 const ctx = renderer.ctx;
 
-const REVIEW_ORDER = ['wolf', 'hawk', 'bear', 'boar', 'owl', 'skeleton', 'zombie', 'wraith', 'imp', 'critter'];
+const REVIEW_ORDER = ['goblin', 'ghost', 'spider'];
 const ids = [...REVIEW_ORDER, ...Object.keys(SPRITES).filter((id) => !REVIEW_ORDER.includes(id))];
-const PAGE_TITLES = ['NEW - FOR REVIEW', 'NEW - FOR REVIEW', 'APPROVED', 'APPROVED'];
+const PAGE_TITLES = ['NEW - FOR REVIEW'];
 
 const COLUMNS = 3;
 const PER_PAGE = 9;

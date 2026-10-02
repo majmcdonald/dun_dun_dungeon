@@ -13,7 +13,6 @@ import { spriteCanvas, TRANSPARENT, type SpriteDef } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
 import { Battle, gridCell, isSummon, MECHANIC } from '../combat/battle';
 import { CREATURES } from '../content/creatures';
-import { MAP_ENCOUNTER } from '../content/enemies';
 import { EQUIP_SLOTS, type BattleEvent, type Combatant, type CombatantDef, type EquipSlot } from '../combat/types';
 import { NATIVE_HEIGHT, NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
@@ -22,6 +21,7 @@ import { CHAR_ADVANCE, drawText, textWidth } from '../ui/font';
 import { drawEquipmentIcons, drawEquipmentTooltip, hoveredSlot, ICON_STEP } from '../ui/partyCard';
 import { dotVfxId, VFX } from '../vfx/effects';
 import { loseRun, winNode } from '../run/flow';
+import { currentEncounter } from '../run/encounters';
 import { takeNextFight } from '../run/events';
 import { itemRef } from '../run/run';
 import { PreBattleScene } from './PreBattleScene';
@@ -128,7 +128,7 @@ export class BattleScene implements Scene {
   // The debug screen passes its own encounter, and `done` to return to it after the fight.
   constructor(
     private game: GameContext,
-    private encounter: (CombatantDef | null)[] = MAP_ENCOUNTER,
+    private encounter?: (CombatantDef | null)[],
     private done?: () => Scene,
   ) {
     for (const [id, def] of Object.entries(SPRITES)) {
@@ -148,7 +148,8 @@ export class BattleScene implements Scene {
   private start(): void {
     // Wounded/blessed effects from events apply to this fight only.
     const party = this.game.state.run ? takeNextFight(this.game.state) : undefined;
-    this.battle = new Battle(this.game.state.party, this.encounter, Math.random, { creatures: CREATURES, party });
+    const enemies = this.encounter ?? currentEncounter(this.game.state);
+    this.battle = new Battle(this.game.state.party, enemies, Math.random, { creatures: CREATURES, party });
     this.anims.clear();
     this.floats = [];
     this.vfx = [];

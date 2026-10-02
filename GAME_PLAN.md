@@ -1,6 +1,6 @@
 # Autobattler Game — Design & Development Plan
 
-Status: Phase 5 complete. Phase 6 next.
+Status: Phase 5 complete. Phase 6 in progress.
 
 ## Confirmed Decisions
 
@@ -154,6 +154,24 @@ Progress: Phase 5 complete. Built and approved: store (buy, sell, repair, enchan
 
 **Phase 6 — Content: 3 Levels**
 Populate each level's enemies/elites/boss, event pool, shop weighting, difficulty curve, and which milestone unlocks which roster character. Balancing pass 2: enemy stats, group sizes, elite/boss curve, gold and drop rates. Art: level backgrounds, boss sprites, level-specific enemies.
+
+Phase 6 design:
+- No level themes. Each level ("act") gets its own battle backdrop and a tinted map for variety only.
+- Encounters: 12 hand-written Battle encounters per act, in three groups of 4 by room (1–5, 6–10, 11–15). A Battle room picks one of its group's 4 at random without repeating within the run (if a group runs out, the least recently used repeats). Designed one group at a time; each group's monsters, abilities, and art are reviewed before the next.
+- Difficulty: each act's enemies are simply stronger; no per-room scaling.
+- Epic Monsters: 3 per act, separate from the Battle encounters. No repeats within a run until all 3 of the act have been met; then all 3 become available again.
+- Monsters: each group adds new monsters and encounters get steadily harder through the act. Every group of 4 follows this mix:
+  - 1 fight of mostly or all returning monsters, in larger numbers to reach the group's difficulty (their stats never rise);
+  - 1 fight of a single returning monster type plus new monster(s);
+  - 2 fights of only new monsters.
+- Act 1, Group 1 (rooms 1–5, approved): Slime Puddle (Slime ×3 front); Rat Pack (Rat ×2 front, ×2 middle); Bone Sentries (Slime front, Archer ×2 back); Spore Patch (Mushroom ×2 front, Bat ×2 middle). New: Rat (22/7/0/2/2; Nibble 80% ATK front every 1.0s; fire weak) and Mushroom (45/4/6/3/8; Spore Puff poison over time on a random hero every 4s; fire weak, resists poison).
+- Act 1, Group 2 (rooms 6–10, approved): Vermin Horde (Slime ×3 front, Rat ×3 middle, Mushroom ×2 back); Goblin Gang (Goblin ×3 front, Archer ×2 back); Haunted Webs (Spider ×2 front, Ghost ×2 middle); Goblin Den (Goblin ×2 front, Spider middle, Ghost back). New: Goblin (40/11/0/6/4; Stab 100% ATK front every 1.4s; Dirty Trick −3 DEF on the front hero 4s every 6s; lightning weak), Ghost (45/0/10/20/4; Wail 70% MAG shadow to a hero row every 4s; holy weak, resists shadow and poison), Spider (35/9/0/5/5; Bite 90% ATK front every 1.3s; Web slows a random hero to 70% for 3s every 5s; fire weak, resists poison).
+- Bosses: 3 possible bosses per act, one picked at random per run; options for each discussed when we reach them.
+- Events: 4 act-specific events per act (12 new, with illustrations) alongside the 16 shared ones.
+- Stores: the same stock rules on every act.
+- Class unlocks (saved once for the whole game, shared by all slots; locked classes show their condition on the roster): Paladin — beat the act 1 boss; Necromancer — beat the act 2 boss; Warlock — win a run; Monk — defeat 10 Epic Monsters (across runs); Bard — hold 500 gold at once; Druid — complete 15 events (across runs).
+- Balancing pass 2: automated fight simulations for parties typical at each point of a run, tuned toward win rates of about Battle 90% / Epic 70% / Boss 60%, then a playtest.
+- Art: reviewed in batches of 4, as before.
 
 **Phase 7 — Audio**
 SFX (hits, skill activation, UI, victory/defeat) and music (map/battle/boss) across everything built so far.

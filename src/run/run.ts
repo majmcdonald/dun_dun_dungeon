@@ -38,6 +38,9 @@ export interface RunState {
   seenEvents: string[];
   // Wounded/blessed effects from events, applied to the next fight.
   nextFight: PartyStart | null;
+  // The fight picked for the room being played, and every fight used this run (oldest first).
+  encounter: { node: string; id: string } | null;
+  usedEncounters: string[];
 }
 
 export interface StoreVisit {
@@ -77,7 +80,7 @@ export interface LastReward {
 export function startRun(state: GameState, slot: number, classes: ClassDef[], seed: number): void {
   state.party = classes.map(recruit);
   state.inventory = { skills: [], items: [] };
-  state.run = { slot, seed, level: 0, map: levelMap(seed, 0), position: null, path: [], pending: null, gold: 0, result: null, lastReward: null, stats: { ...NO_STATS }, broken: [], store: null, event: null, seenEvents: [], nextFight: null };
+  state.run = { slot, seed, level: 0, map: levelMap(seed, 0), position: null, path: [], pending: null, gold: 0, result: null, lastReward: null, stats: { ...NO_STATS }, broken: [], store: null, event: null, seenEvents: [], nextFight: null, encounter: null, usedEncounters: [] };
 }
 
 function levelMap(seed: number, level: number): RunMap {
@@ -115,6 +118,7 @@ export function beginNode(run: RunState, node: MapNode): void {
   run.pending = node.id;
   if (run.store?.node !== node.id) run.store = null;
   if (run.event?.node !== node.id) run.event = null;
+  if (run.encounter?.node !== node.id) run.encounter = null;
 }
 
 export function pendingNodeOf(run: RunState): MapNode | null {
@@ -280,6 +284,8 @@ export function fromSave(saved: SavedRun, state: GameState): void {
     event: saved.run.event ?? null,
     seenEvents: saved.run.seenEvents ?? [],
     nextFight: saved.run.nextFight ?? null,
+    encounter: saved.run.encounter ?? null,
+    usedEncounters: saved.run.usedEncounters ?? [],
   };
   state.party = saved.party.map(
     (m): PartyMember => ({

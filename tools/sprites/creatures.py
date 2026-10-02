@@ -605,6 +605,253 @@ def shopkeeper():
          {'idle': g, 'attack': g})
 
 
+# ------------------------------------------------------------------ Act 1 enemies (face left, toward the party)
+
+def ellipse(g, cx, cy, rx, ry, c):
+    for y in range(int(cy - ry), int(cy + ry) + 1):
+        for x in range(int(cx - rx), int(cx + rx) + 1):
+            if ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1:
+                g.px(x, y, c)
+
+
+# Sewer rat: wedge head with big round pink ears, arched back, pink feet and a drooping tail.
+# (Redrawn after an art review; the attack gapes and reaches rather than shifting, as the snout sits at x=1.)
+RAT = [
+    (14, '.........LM.....................'),
+    (15, '........LPPA....................'),
+    (16, '........LPpA....LLLL............'),
+    (17, '........MPpA..LLHHMMLL..........'),
+    (18, '.....LLLMMAALLHLMMMMMML.........'),
+    (19, '....LHLMMMMMLLMMMMMMMMMM........'),
+    (20, '...LMMMMMMMMMMMMMMMMMMMMA.......'),
+    (21, '..LMMRMMMMMMMMMMMMMMMMMMMA......'),
+    (22, '.PMMMMMMMMAMMMMMMMMMMMMMAA......'),
+    (23, '..pMMMMMMAAMMMMMMMMMAMMAAA......'),
+    (24, '...AWMMMAA.AMMMMMMMAMMMAAAP.....'),
+    (25, '.....AAA...AAAMMMMMAMMAANN.P....'),
+    (26, '............AAAAAAAAAANNN...P.p.'),
+    (27, '............NA.....AAN.......pp.'),
+    (28, '...........PPA....PAN...........'),
+    (29, '..........PP.....PP.............'),
+]
+RAT_ATTACK = [
+    (15, '..........LMA...................'),
+    (16, '.........LPPA....LLLL...........'),
+    (17, '.........MPpA..LLHHMMLL.........'),
+    (18, '......LLLMMAALLHLMMMMMML........'),
+    (19, '....LLHLMMMMMLLMMMMMMMMMM.......'),
+    (20, '...LMMMMMMMMMMMMMMMMMMMMMA......'),
+    (21, '..LMMRMMMMMMMMMMMMMMMMMMMMA.....'),
+    (22, '.PMMMMMMMMMAMMMMMMMMMMMMMAA.....'),
+    (23, '..WWMMMMMMAAMMMMMMMMMAMMAAAP....'),
+    (24, '...rrrrMAA..AMMMMMMMAMMMAAN.P...'),
+    (25, '...WrrMAA...AAAMMMMMAMMANN...P..'),
+    (26, '....AAAA....AAAAAAAAAANNN.....P.'),
+    (27, '..........NA........AAN.......p.'),
+    (28, '........PPA...........NP......p.'),
+    (29, '.......PP..............PP.......'),
+]
+
+
+def rat():
+    emit(f'{OUT}/rat.ts', 'RAT_SPRITE',
+         {'K': 'black', 'H': 'lightGray', 'L': 'gray', 'M': 'slate', 'A': 'darkSlate', 'N': 'night',
+          'P': 'pink', 'p': 'skinShade', 'W': 'white', 'R': 'red', 'r': 'darkRed'},
+         frames(RAT, RAT_ATTACK))
+
+
+def mushroom_frame(puff):
+    g = Grid()
+    squish = 1 if puff else 0
+    g.rect(12, 18 + squish, 19, 29, 'S')            # stem
+    g.rect(12, 18 + squish, 13, 29, 'T')            # stem shade (left, away from the light... the light is top-left)
+    g.rect(18, 18 + squish, 19, 29, 's')
+    ellipse(g, 15.5, 14 + squish, 11, 7 - squish, 'R')   # cap
+    ellipse(g, 13, 11 + squish, 6, 3 - squish * 0.5, 'O')   # lit dome
+    g.rect(5, 17 + squish, 26, 18 + squish, 'r')    # cap rim shade
+    for x, y in ((9, 13), (15, 9), (21, 12), (12, 16), (19, 16)):   # white spots
+        g.rect(x, y + squish, x + 1, y + 1 + squish, 'W')
+    g.px(13, 22, 'K'); g.px(17, 22, 'K')            # eyes
+    g.rect(14, 25, 16, 25, 'K') if puff else g.px(15, 25, 'K')   # mouth
+    g.rect(10, 29, 21, 30, 'T')                     # foot
+    if puff:
+        for x, y in ((3, 10), (6, 6), (2, 15), (8, 3), (24, 5), (27, 9)):
+            g.px(x, y, 'G'); g.px(x + 1, y, 'g')    # spores drifting off
+    return g.outline()
+
+
+def mushroom():
+    emit(f'{OUT}/mushroom.ts', 'MUSHROOM_SPRITE',
+         {'K': 'black', 'R': 'red', 'r': 'darkRed', 'O': 'orange', 'W': 'white', 'S': 'sand', 's': 'tan',
+          'T': 'skinShade', 'G': 'green', 'g': 'midGreen'},
+         {'idle': mushroom_frame(False), 'attack': mushroom_frame(True)})
+
+
+# Goblin, Ghost, and Spider: redrawn after an art review (goblin face, ghost and spider shading).
+GOBLIN = [
+    (7, '.............GGGgg..............'),
+    (8, '............GGGGgggd............'),
+    (9, '...........GGGGgggggd...........'),
+    (10, '.....Gg....GGGggggggdd.....gd...'),
+    (11, '.....gGGg..GGgggggggdddggggd....'),
+    (12, '......gdGGGttgggttggdddgdd......'),
+    (13, '..........GgYYgggYYgddt.........'),
+    (14, '..........GgKYgggKYgddt.........'),
+    (15, '..........GggggGgggggdt.........'),
+    (16, '..........gggggdggggddt.........'),
+    (17, '...........gdWWtWWtddt..........'),
+    (18, '...........dgtWrrrWtdt..........'),
+    (19, '............ggdddd..............'),
+    (20, '..........GGgOOBBBbggdd.........'),
+    (21, '........gGgdOOBBBBbbgdd.........'),
+    (22, '..WLLLLnGGg.OBBBBBbb.gd.........'),
+    (23, '.......ngd..nnnonnnn.gd.........'),
+    (24, '............OBBBBbbn.Gd.........'),
+    (25, '............BBbBBbn..dd.........'),
+    (26, '............Ggbbbbgd............'),
+    (27, '............Gd...gd.............'),
+    (28, '............gd....gd............'),
+    (29, '..........Ggd....Ggd............'),
+]
+GOBLIN_ATTACK = [
+    (8, '...........GGGgg................'),
+    (9, '..........GGGGgggd..............'),
+    (10, '.........GGGGgggggd.............'),
+    (11, '...Gg....GGGggggggdd.....gd.....'),
+    (12, '...gGGg..GGgggggggdddggggd......'),
+    (13, '....gdGGGttgggttggdddgdd........'),
+    (14, '........GgYYgggYYgddt...........'),
+    (15, '........GgKYgggKYgddt...........'),
+    (16, '........GggggGgggggdt...........'),
+    (17, '........gggggdggggddt...........'),
+    (18, '.........gdWWtWWtddt............'),
+    (19, '.........dtrrrrrrtdt............'),
+    (20, '........GdgWrrrWtdtdd...........'),
+    (21, 'WLLLLnGGGgggddddbbgdd...........'),
+    (22, '.....ngdddOOBBBBbb.gd...........'),
+    (23, '..........nnnonnnn.Gd...........'),
+    (24, '..........OBBBBbbn.dd...........'),
+    (25, '.........GBBbBBbn...............'),
+    (26, '........Ggbbbbbgd...............'),
+    (27, '.......Gd.......gd..............'),
+    (28, '......gd.........gd.............'),
+    (29, '....Ggd..........Ggd............'),
+]
+
+
+def goblin():
+    emit(f'{OUT}/goblin.ts', 'GOBLIN_SPRITE', {'K': 'black', 'G': 'green', 'g': 'midGreen', 'd': 'darkGreen', 't': 'deepTeal', 'Y': 'yellow', 'W': 'white', 'r': 'darkRed', 'O': 'orangeBrown', 'B': 'brown', 'b': 'darkBrown', 'n': 'deepBrown', 'L': 'lightGray', 'M': 'gray', 'o': 'gold'}, frames(GOBLIN, GOBLIN_ATTACK))
+
+
+GHOST = [
+    (6, '............WWWWWL..............'),
+    (7, '..........WWWWWWWWLL............'),
+    (8, '.........WWWWWWWWWWLL...........'),
+    (9, '........WWWWWWWWWWWLLM..........'),
+    (10, '........WKKWWWKKWWWWLM..........'),
+    (11, '........WKCWWWKCWWWWLM..........'),
+    (12, '........WLLWWWLLWWWWLLM.........'),
+    (13, '........WWWKKKWWWWWWLLM.........'),
+    (14, '.......WWWWAKAWWWWWWLLM.........'),
+    (15, '.....WWWWWWWWWWWWWWWLLM.........'),
+    (16, '...WWWWLWWWWWWWWWWWWLLM.........'),
+    (17, '...LM..WWWWWWWWWWWWWLLM.........'),
+    (18, '........WWWWWWWWWWWWWLLM........'),
+    (19, '........WWWWWWWWWWWWWLLMM.......'),
+    (20, '........WWWWWWWWWWWWWWLLM.......'),
+    (21, '.........WWWWWWWWWWWWWLLMM......'),
+    (22, '.........WWWWWWWWWWWWWWLLMA.....'),
+    (23, '.........WWWL.WWWL.WWLM.MMA.....'),
+    (24, '..........WWL..WWL..WLM..MA.....'),
+    (25, '...........WL...WL...LM...A.....'),
+    (26, '............L....L....M.........'),
+]
+GHOST_ATTACK = [
+    (6, '..........WWWWWL................'),
+    (7, '........WWWWWWWWLL..............'),
+    (8, '.......WWWWWWWWWWLL.............'),
+    (9, '......WWWWWWWWWWWLLM............'),
+    (10, '......WKKWWWKKWWWWLM............'),
+    (11, '......WKCWWWKCWWWWLM............'),
+    (12, '......WLLWWWLLWWWWLLM...........'),
+    (13, '......WWKKKKWWWWWWLLM...........'),
+    (14, '.C...WWWKKKKWWWWWWLLM...........'),
+    (15, 'C.WWWWWWAKKAWWWWWWLLM...........'),
+    (16, '.BLLMMWWWWWWWWWWWWLLM...........'),
+    (17, 'C....WWWWWWWWWWWWWLLM...........'),
+    (18, '.......WWWWWWWWWWWWWLLM.........'),
+    (19, '.......WWWWWWWWWWWWWLLMM........'),
+    (20, '.......WWWWWWWWWWWWWWLLM........'),
+    (21, '........WWWWWWWWWWWWWLLMM.......'),
+    (22, '.........WWWWWWWWWWWWWWLLMA.....'),
+    (23, '..........WWWL.WWWL.WWLM.MMA....'),
+    (24, '...........WWL..WWL..WLM..MA....'),
+    (25, '............WL...WL...LM...A....'),
+    (26, '.............L....L....M........'),
+]
+
+
+def ghost():
+    emit(f'{OUT}/ghost.ts', 'GHOST_SPRITE', {'K': 'black', 'W': 'white', 'L': 'lightGray', 'M': 'gray', 'A': 'slate', 'C': 'cyan', 'B': 'blue'}, frames(GHOST, GHOST_ATTACK))
+
+
+SPIDER = [
+    (8, '.........M...........M..........'),
+    (9, '.........A...........A..........'),
+    (10, '.........Aa.........aA..........'),
+    (11, '....M....Aa.........aA.....M....'),
+    (12, '....Aa..A.a.........a.A...aA....'),
+    (13, '....Aa..A..a.......a..A...aA....'),
+    (14, '...A..a.A..a.......aAAAAAa..A...'),
+    (15, '...A...aA..a......AMMaaAAAA.A...'),
+    (16, '...A...aA...a....aaaaaaaaAAAA...'),
+    (17, '...A....A...a...AaaaaaaaaAAAA...'),
+    (18, '...A....AaAAA...AAaaaaaaAAAAA...'),
+    (19, '...A...AARaaaAAAAAAAARRRAAAAAA..'),
+    (20, '..A....ARaraaaAnnAAAAARAAAAAnA..'),
+    (21, '..A....rAAAAAAAAnAAAARRRAAAAnn..'),
+    (22, '..A....AAAAAAAAnnAAAAAAAAAAnnA..'),
+    (23, '..A....nnnAAAAn...AnAAAAAnnn.A..'),
+    (24, '..A....W.Wnnn.......nnnnnnn..A..'),
+    (25, '..A....A...............A.....A..'),
+    (26, '.A....A.................A.....A.'),
+    (27, '.A....A.................A.....A.'),
+    (28, '.n....A.................A.....n.'),
+    (29, '......n.................n.......'),
+]
+SPIDER_ATTACK = [
+    (5, '........M.......................'),
+    (6, '.......Aa.......................'),
+    (7, '...M..A..a......................'),
+    (8, '...AaA...a...........M..........'),
+    (9, '..A.aA...a...........A..........'),
+    (10, '..A.Aa....a.........aA..........'),
+    (11, '.A.n.a....a.........aA.....M....'),
+    (12, '.A....a...a.........a.A...aA....'),
+    (13, 'A.....a....a.......a..A...aA....'),
+    (14, 'n......a...a.......aAAAAAa..A...'),
+    (15, '........a..a......AMMaaAAAA.A...'),
+    (16, '........a...a....aaaaaaaaAAAA...'),
+    (17, '.........a..a...AaaaaaaaaAAAA...'),
+    (18, '.........aAAA...AAaaaaaaAAAAA...'),
+    (19, '........ARaaaAAAAAAAARRRAAAAAA..'),
+    (20, '........RaraaaAnnAAAAARAAAAAnA..'),
+    (21, '.......rAAAAAAAAnAAAARRRAAAAnn..'),
+    (22, '........AAAAAAAnnAAAAAAAAAAnnA..'),
+    (23, '.......nnnAAAAn...AnAAAAAnnn.A..'),
+    (24, '......W..nnnn.......nnnnnnn..A..'),
+    (25, '.........W.............A.....A..'),
+    (26, '........................A.....A.'),
+    (27, '........................A.....A.'),
+    (28, '........................A.....n.'),
+    (29, '........................n.......'),
+]
+
+
+def spider():
+    emit(f'{OUT}/spider.ts', 'SPIDER_SPRITE', {'K': 'black', 'n': 'night', 'A': 'darkSlate', 'a': 'slate', 'M': 'gray', 'R': 'red', 'r': 'darkRed', 'W': 'white'}, frames(SPIDER, SPIDER_ATTACK))
+
+
 if __name__ == '__main__':
     for name in sys.argv[1:]:
         globals()[name]()

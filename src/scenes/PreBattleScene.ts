@@ -1,7 +1,6 @@
 import { PALETTE } from '../art/palette';
 import { spriteCanvas } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
-import { MAP_ENCOUNTER } from '../content/enemies';
 import type { CombatantDef } from '../combat/types';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
@@ -9,6 +8,7 @@ import { drawBackground } from '../ui/background';
 import { drawText, textWidth } from '../ui/font';
 import { cardIconOrigin, drawEquipmentTooltip, drawPartyCard, hoveredSlot, partyCardRect } from '../ui/partyCard';
 import { drawButton, drawPanel, inside, type Button, type Rect } from '../ui/widgets';
+import { currentEncounter } from '../run/encounters';
 import { pendingNode } from '../run/flow';
 import { BattleScene } from './BattleScene';
 import { PartyScene } from './PartyScene';
@@ -23,11 +23,15 @@ const CARDS_TOP = 106;
 
 export class PreBattleScene implements Scene {
   // Each enemy type once, in order of first appearance: the player learns what, not how many.
-  private enemyTypes: { def: CombatantDef; sprite: HTMLCanvasElement }[] = [
-    ...new Map(MAP_ENCOUNTER.map((d) => [d.id, d])).values(),
-  ].map((def) => ({ def, sprite: spriteCanvas(SPRITES[def.id], 'idle') }));
+  private enemyTypes: { def: CombatantDef; sprite: HTMLCanvasElement }[];
 
-  constructor(private game: GameContext) {}
+  constructor(private game: GameContext) {
+    const enemies = currentEncounter(game.state).filter((d): d is CombatantDef => !!d);
+    this.enemyTypes = [...new Map(enemies.map((d) => [d.id, d])).values()].map((def) => ({
+      def,
+      sprite: spriteCanvas(SPRITES[def.id], 'idle'),
+    }));
+  }
 
   enter(): void {
     this.game.input.consumeKeys();

@@ -10,6 +10,7 @@ import { PreBattleScene } from '../scenes/PreBattleScene';
 import { RewardScene } from '../scenes/RewardScene';
 import { RunEndScene } from '../scenes/RunEndScene';
 import { StoreScene } from '../scenes/StoreScene';
+import { pickEncounter } from './encounters';
 import { openEvent } from './events';
 import { openStore } from './store';
 import type { MapNode } from './map';
@@ -27,6 +28,7 @@ export function enterNode(game: GameContext, node: MapNode): void {
     case 'battle':
     case 'epic':
     case 'boss':
+      pickEncounter(game.state, node);
       return game.scenes.switchTo(new PreBattleScene(game));
     case 'event':
       openEvent(game.state, node, EVENT_LIBRARY);

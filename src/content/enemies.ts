@@ -31,6 +31,30 @@ const hex = enemySkill(
   true,
 );
 
+const nibble = enemySkill('nibble', 'Nibble', 1, { side: 'enemy', select: 'front', area: 'single' }, physical(0.8));
+const sporePuff = enemySkill(
+  'sporePuff',
+  'Spore Puff',
+  4,
+  { side: 'enemy', select: 'random', area: 'single' },
+  { kind: 'dot', stat: 'magic', scaling: 0.4, duration: 4, element: 'poison' },
+  true,
+);
+
+const front = { side: 'enemy', select: 'front', area: 'single' } as const;
+const stab = enemySkill('stab', 'Stab', 1.4, front, physical(1));
+const dirtyTrick = enemySkill('dirtyTrick', 'Dirty Trick', 6, front, { kind: 'debuff', stat: 'defense', amount: 3, duration: 4 });
+const wail = enemySkill(
+  'wail',
+  'Wail',
+  4,
+  { side: 'enemy', select: 'random', area: 'row' },
+  { kind: 'damage', damageType: 'magic', stat: 'magic', scaling: 0.7, element: 'shadow' },
+  true,
+);
+const spiderBite = enemySkill('spiderBite', 'Bite', 1.3, front, physical(0.9));
+const web = enemySkill('web', 'Web', 5, { side: 'enemy', select: 'random', area: 'single' }, { kind: 'speed', factor: 0.7, duration: 3 });
+
 export const SLIME: CombatantDef = {
   id: 'slime',
   name: 'Slime',
@@ -70,8 +94,50 @@ export const SHAMAN: CombatantDef = {
   resist: { shadow: 0.5, poison: 0.3 },
 };
 
+export const RAT: CombatantDef = {
+  id: 'rat',
+  name: 'Rat',
+  stats: { hp: 22, attack: 7, magic: 0, defense: 2, resistance: 2 },
+  skills: [nibble],
+  resist: { fire: -0.5 },
+};
+
+export const MUSHROOM: CombatantDef = {
+  id: 'mushroom',
+  name: 'Mushroom',
+  stats: { hp: 45, attack: 4, magic: 6, defense: 3, resistance: 8 },
+  skills: [sporePuff],
+  resist: { fire: -0.5, poison: 0.5 },
+};
+
+export const GOBLIN: CombatantDef = {
+  id: 'goblin',
+  name: 'Goblin',
+  stats: { hp: 40, attack: 11, magic: 0, defense: 6, resistance: 4 },
+  skills: [stab, dirtyTrick],
+  resist: { lightning: -0.5 },
+};
+
+// High DEF and low RES: physical attacks struggle, magic gets through.
+export const GHOST: CombatantDef = {
+  id: 'ghost',
+  name: 'Ghost',
+  stats: { hp: 45, attack: 0, magic: 10, defense: 20, resistance: 4 },
+  skills: [wail],
+  resist: { holy: -0.5, shadow: 0.5, poison: 0.5 },
+};
+
+export const SPIDER: CombatantDef = {
+  id: 'spider',
+  name: 'Spider',
+  stats: { hp: 35, attack: 9, magic: 0, defense: 5, resistance: 5 },
+  skills: [spiderBite, web],
+  resist: { fire: -0.5, poison: 0.5 },
+};
+
 // Every enemy type, for pickers.
-export const ENEMIES: CombatantDef[] = [SLIME, BAT, ORC, ARCHER, SHAMAN];
+export const ENEMIES: CombatantDef[] = [SLIME, BAT, ORC, ARCHER, SHAMAN, RAT, MUSHROOM, GOBLIN, GHOST, SPIDER];
+export const ENEMIES_BY_ID: Record<string, CombatantDef> = Object.fromEntries(ENEMIES.map((e) => [e.id, e]));
 
 // Positions fill column by column: 0-2 front, 3-5 middle, 6-8 back.
 export const TEST_ENCOUNTER: CombatantDef[] = [SLIME, SLIME, SLIME, BAT, ORC, BAT, ARCHER, SHAMAN, ARCHER];
