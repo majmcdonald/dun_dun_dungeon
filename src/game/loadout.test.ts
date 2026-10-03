@@ -48,9 +48,23 @@ describe('slots and duplicates', () => {
     expect(placeSkillBlock(m, skill('a'), 0)).toBeNull();
   });
 
-  it('only appends into the next free slot, up to four', () => {
-    expect(placeSkillBlock(member([skill('a')]), skill('b'), 3)).toBe('NO FREE SLOT');
-    expect(placeSkillBlock(member([skill('a'), skill('b'), skill('c'), skill('d')]), skill('e'), 4)).toBe('NO FREE SLOT');
+  it('only appends into the next free timed slot, up to three', () => {
+    expect(placeSkillBlock(member([skill('a')]), skill('b'), 2)).toBe('NO FREE SLOT');
+    expect(placeSkillBlock(member([skill('a'), skill('b'), skill('c')]), skill('e'), 3)).toBe('TRIGGERS ONLY');
+  });
+
+  it('keeps triggers in slot 4 and slot 4 for triggers', () => {
+    const counter = skill('counter', { trigger: { kind: 'whenHit' } });
+    expect(placeSkillBlock(member([skill('a')]), counter, 1)).toBe('TRIGGER SLOT ONLY');
+    expect(placeSkillBlock(member([skill('a')]), counter, 3)).toBeNull();
+    expect(placeSkillBlock(member([skill('a')]), skill('b'), 3)).toBe('TRIGGERS ONLY');
+  });
+
+  it('counts the trigger as equipped for duplicates and prerequisites', () => {
+    const counter = skill('counter', { trigger: { kind: 'whenHit' } });
+    const m = { ...member([skill('a')]), trigger: counter };
+    expect(placeSkillBlock(m, skill('upgrade', { prerequisite: 'counter' }), 1)).toBeNull();
+    expect(removeSkillBlock({ ...m, skills: [...m.skills, skill('upgrade', { prerequisite: 'counter' })] }, 3)).toBe('UPGRADE NEEDS IT');
   });
 });
 

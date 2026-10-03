@@ -72,24 +72,26 @@ describe('mitigate', () => {
 });
 
 describe('timers', () => {
+  // A hero's first skill sits in slot 1, which runs x1.25: a 2s skill fires every 1.6s.
   it('fires a skill exactly when its cooldown elapses', () => {
     const battle = new Battle([member(unit('a', {}, [slash]))], [unit('b', { hp: 9999 })], NO_JITTER);
-    expect(runFor(battle, 1.99).some((e) => e.type === 'skill')).toBe(false);
+    expect(runFor(battle, 1.59).some((e) => e.type === 'skill')).toBe(false);
     expect(runFor(battle, 0.02).some((e) => e.type === 'skill')).toBe(true);
   });
 
   it('delays each first activation by less than 200ms', () => {
     const battle = new Battle([member(unit('a', {}, [slash]))], [unit('b', { hp: 9999 })], () => 0.999);
-    expect(runFor(battle, 2.0).some((e) => e.type === 'skill')).toBe(false);
+    expect(runFor(battle, 1.6).some((e) => e.type === 'skill')).toBe(false);
     expect(runFor(battle, 0.2).some((e) => e.type === 'skill')).toBe(true);
   });
 
+  // Slots 1–3 run x1.25, x1, and x0.75: every 1.6s, 4s, and 8s here.
   it('runs slot timers independently and in parallel', () => {
     const skills = [slash, hit('bash', 'front', 'single', 4), guard];
     const battle = new Battle([member(unit('a', {}, skills))], [unit('b', { hp: 9999 })], NO_JITTER);
     const events = runFor(battle, 12);
     const count = (id: string) => events.filter((e) => e.type === 'skill' && e.skill === id).length;
-    expect([count('slash'), count('bash'), count('guard')]).toEqual([6, 3, 2]);
+    expect([count('slash'), count('bash'), count('guard')]).toEqual([7, 3, 1]);
   });
 });
 
@@ -223,7 +225,8 @@ describe('taunt', () => {
 describe('effects', () => {
   it('barrier absorbs damage before HP', () => {
     const battle = new Battle(
-      [member(unit('g', { defense: 20, hp: 1000 }, [guard]))],
+      // A filler in slot 1 puts the guard in the normal-speed slot 2.
+      [member(unit('g', { defense: 20, hp: 1000 }, [hit('wait', 'front', 'single', 999), guard]))],
       [unit('h', { attack: 30, hp: 1000 }, [hit('x', 'front', 'single', 1.5)])],
       NO_JITTER,
     );

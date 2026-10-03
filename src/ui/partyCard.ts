@@ -2,9 +2,11 @@ import { EQUIP_ICONS } from '../art/icons';
 import { PALETTE } from '../art/palette';
 import { spriteCanvas } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
-import { EQUIP_SLOTS, type Equipment, type EquipmentDef, type EquipSlot, type PartyMember, type Stats } from '../combat/types';
+import { EQUIP_SLOTS, type Equipment, type EquipmentDef, type EquipSlot, type PartyMember, type SkillDef, type Stats } from '../combat/types';
 import { NATIVE_HEIGHT, NATIVE_WIDTH } from '../engine/renderer';
+import { SLOT_RATES } from '../combat/battle';
 import { describeEnchantment } from '../game/describe';
+import { skillInSlot, TRIGGER_SLOT } from '../game/loadout';
 import { drawText, textWidth } from './font';
 import { drawFrame, drawPanel, inside, RARITY_COLOR, type Rect } from './widgets';
 
@@ -96,15 +98,26 @@ export function drawPartyCard(
 
   for (let i = 0; i < SKILL_SLOTS; i++) {
     const rowY = y + 68 + i * 11;
-    const skill = member.skills[i];
+    const skill = skillInSlot(member, i);
     if (!skill) {
-      drawText(ctx, '- EMPTY -', x + 6, rowY, PALETTE.night, null);
+      drawText(ctx, i === TRIGGER_SLOT ? '- TRIGGER -' : '- EMPTY -', x + 6, rowY, PALETTE.night, null);
       continue;
     }
-    drawText(ctx, skill.name, x + 6, rowY, skill.category === 'spell' ? PALETTE.cyan : PALETTE.lightGray);
-    const cd = `${skill.cooldown.toFixed(1)}S`;
+    drawText(ctx, skill.name, x + 6, rowY, skillColor(skill));
+    const cd = `${slotCooldown(skill, i).toFixed(1)}S`;
     drawText(ctx, cd, x + w - 6 - textWidth(cd), rowY, PALETTE.slate);
   }
+}
+
+// Spells cyan, triggers orange, other skills light gray.
+export function skillColor(skill: SkillDef): string {
+  if (skill.trigger) return PALETTE.orange;
+  return skill.category === 'spell' ? PALETTE.cyan : PALETTE.lightGray;
+}
+
+// Seconds between uses in that slot: slot 1 runs fast and slot 3 slow; triggers recharge at their own pace.
+export function slotCooldown(skill: SkillDef, slot: number): number {
+  return slot === TRIGGER_SLOT ? skill.cooldown : skill.cooldown / (SLOT_RATES[slot] ?? 1);
 }
 
 

@@ -1,10 +1,11 @@
 import type { PartyStart } from '../combat/battle';
-import type { EquipmentDef, EquipSlot, PartyMember } from '../combat/types';
+import type { EquipmentDef, EquipSlot, PartyMember, SkillDef } from '../combat/types';
 import { CLASSES_BY_ID, type ClassDef } from '../content/classes';
 import { ITEMS_BY_ID } from '../content/items';
 import { SKILLS_BY_ID } from '../content/skills';
 import { seededRng } from '../engine/random';
 import { loadSlot, saveSlot } from '../engine/save';
+import { equippedSkills } from '../game/loadout';
 import { recruit, type GameState } from '../game/state';
 import { findNode, FLOORS, generateMap, reachable, type MapNode, type NodeType, type RunMap } from './map';
 import type { EventVisit } from './events';
@@ -194,7 +195,7 @@ export function setRewardPicks(state: GameState, skill: string | null, item: str
 export function pickHolder(state: GameState, kind: 'skill' | 'item', id: string): PartyMember | null {
   if (kind === 'skill') {
     if (state.inventory.skills.some((s) => s.id === id)) return null;
-    return state.party.find((m) => m.skills.some((s) => s.id === id)) ?? null;
+    return state.party.find((m) => equippedSkills(m).some((s) => s.id === id)) ?? null;
   }
   if (state.inventory.items.some((i) => i.id === id)) return null;
   return state.party.find((m) => Object.values(m.equipment).some((i) => i?.id === id)) ?? null;
@@ -206,13 +207,14 @@ function takeBackSkill(state: GameState, id: string): void {
     state.inventory.skills.splice(index, 1);
     return;
   }
-  const holder = state.party.find((m) => m.skills.some((s) => s.id === id));
+  const holder = state.party.find((m) => equippedSkills(m).some((s) => s.id === id));
   if (!holder) return;
   // Skills that needed it can't stay equipped without it.
-  const dependents = holder.skills.filter((s) => s.prerequisite === id);
-  state.inventory.skills.push(...dependents);
-  const skills = holder.skills.filter((s) => s.id !== id && s.prerequisite !== id);
-  state.party = state.party.map((m) => (m === holder ? { ...m, skills } : m));
+  const gone = (s: SkillDef) => s.id === id || s.prerequisite === id;
+  state.inventory.skills.push(...equippedSkills(holder).filter((s) => s.prerequisite === id));
+  const skills = holder.skills.filter((s) => !gone(s));
+  const trigger = holder.trigger && !gone(holder.trigger) ? holder.trigger : null;
+  state.party = state.party.map((m) => (m === holder ? { ...m, skills, trigger } : m));
 }
 
 function takeBackItem(state: GameState, id: string): void {
@@ -250,6 +252,7 @@ export function withBoost(item: EquipmentDef, boost: NonNullable<EquipmentDef['b
 interface SavedMember {
   classId: string;
   skills: string[];
+  trigger?: string | null;
   equipment: Partial<Record<EquipSlot, ItemRef>>;
 }
 
@@ -266,6 +269,7 @@ export function toSave(state: GameState): SavedRun {
     party: state.party.map((m) => ({
       classId: m.def.id,
       skills: m.skills.map((s) => s.id),
+      trigger: m.trigger?.id ?? null,
       equipment: Object.fromEntries(Object.entries(m.equipment).map(([slot, item]) => [slot, itemRef(item!)])),
     })),
     inventory: { skills: state.inventory.skills.map((s) => s.id), items: state.inventory.items.map(itemRef) },
@@ -292,6 +296,7 @@ export function fromSave(saved: SavedRun, state: GameState): void {
     (m): PartyMember => ({
       def: CLASSES_BY_ID[m.classId],
       skills: m.skills.map((id) => SKILLS_BY_ID[id]).filter(Boolean),
+      trigger: (m.trigger && SKILLS_BY_ID[m.trigger]) || null,
       equipment: Object.fromEntries(
         Object.entries(m.equipment).flatMap(([slot, ref]) => {
           const item = itemFromRef(ref!);

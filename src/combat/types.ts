@@ -80,12 +80,24 @@ export type SkillEffect = BaseEffect & { self?: boolean; onSummons?: boolean };
 export type SkillAccess = { kind: 'shared' } | { kind: 'tag'; tag: Tag } | { kind: 'class'; classId: string };
 
 // Event skills only advance their timer when the event happens (or while the state holds).
+// Hero triggers (slot 4) fire the moment their event happens, then wait out their cooldown.
+export type TriggerEvent =
+  | 'battleStart'
+  | 'whenHit'
+  | 'allyHurt'
+  | 'allyFalls'
+  | 'partyLow'
+  | 'selfLow'
+  | 'onKill'
+  | 'enemyDies'
+  | 'whenHealed'
+  | 'barrierBreaks'
+  | 'castSpell'
+  | 'onDefeat';
+
 export type Trigger =
-  | { kind: 'whenHit'; perEvent: number }
-  | { kind: 'allyHurt'; perEvent: number }
-  | { kind: 'partyLow'; threshold: number }
-  | { kind: 'onDefeat' }
-  // Fires once, the moment the user drops below this share of its max HP.
+  | { kind: TriggerEvent }
+  // Enemies only: fires once, the moment the user drops below this share of its max HP.
   | { kind: 'belowHp'; threshold: number };
 
 // Conditional skills fill their timer, then wait until the condition holds.
@@ -161,12 +173,18 @@ export type Equipment = Partial<Record<EquipSlot, EquipmentDef>>;
 export interface PartyMember {
   def: CombatantDef;
   equipment: Equipment;
+  // Slots 1–3: timed skills, in slot order.
   skills: SkillDef[];
+  // Slot 4: a trigger skill, or none.
+  trigger?: SkillDef | null;
 }
 
 export interface SkillSlot {
   def: SkillDef;
   timer: number;
+  // Which of the 4 slots it sits in (0–2 timed, 3 the trigger) and how fast its timer runs there.
+  position: number;
+  rate: number;
   // A one-time trigger (belowHp) that has already fired.
   spent?: boolean;
 }

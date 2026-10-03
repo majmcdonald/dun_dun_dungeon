@@ -8,6 +8,7 @@ import { ITEM_LIBRARY } from '../content/items';
 import { SKILL_LIBRARY } from '../content/skills';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
+import { equippedSkills } from '../game/loadout';
 import { recruit } from '../game/state';
 import { drawBackground } from '../ui/background';
 import { drawText, textWidth } from '../ui/font';
@@ -225,7 +226,7 @@ export class DebugScene implements Scene {
     drawPanel(ctx, row, border);
     ctx.drawImage(this.sprite(member.def.id), row.x + 4, row.y + (row.h - 32) / 2);
     drawText(ctx, `${index + 1} ${member.def.name.toUpperCase()}`, row.x + 40, row.y + 5, PALETTE.white);
-    const names = member.skills.map((s) => s.name.toUpperCase());
+    const names = equippedSkills(member).map((s) => s.name.toUpperCase());
     drawText(ctx, clip(names.slice(0, 2).join(', '), 21), row.x + 40, row.y + 16, PALETTE.lightGray);
     drawText(ctx, clip(names.slice(2).join(', '), 21), row.x + 40, row.y + 26, PALETTE.lightGray);
     drawEquipmentIcons(ctx, member.equipment, row.x + 41, row.y + 40);

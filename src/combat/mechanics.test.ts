@@ -107,7 +107,7 @@ describe('familiar', () => {
     runFor(battle, 5.1);
     const imp = battle.combatants.find((c) => c.familiar)!;
     imp.hp = 1;
-    battle.get('enemy-0').slots.push({ def: skill('snipe', [hit()], { target: { side: 'enemy', select: 'front', area: 'single' } }), timer: 1 });
+    battle.get('enemy-0').slots.push({ def: skill('snipe', [hit()], { target: { side: 'enemy', select: 'front', area: 'single' } }), timer: 1, position: 1, rate: 1 });
     runFor(battle, 0.1);
     expect(battle.get('party-0').channel).toBeGreaterThan(4);
   });
@@ -152,29 +152,55 @@ describe('meters', () => {
   });
 });
 
-describe('event skills', () => {
+describe('trigger skills', () => {
   const honor = (trigger: Trigger) => skill('honor', [hit()], { cooldown: 3, trigger });
+  const poker = () => unit('e', {}, [skill('poke', [hit()], { cooldown: 1 })]);
 
-  it('whenHit timers only fill when the owner is hit', () => {
-    const knight = unit('knight', {}, [honor({ kind: 'whenHit', perEvent: 1 })]);
+  it('whenHit fires the moment the owner is hit, then waits out its cooldown', () => {
+    const knight = unit('knight', {}, [honor({ kind: 'whenHit' })]);
     const quiet = new Battle([member(knight)], [unit('e', { attack: 0 })], NO_JITTER);
     expect(fired(runFor(quiet, 10), 'honor')).toBe(0);
-    const busy = new Battle([member(knight)], [unit('e', {}, [skill('poke', [hit()], { cooldown: 1 })])], NO_JITTER);
-    expect(fired(runFor(busy, 3.1), 'honor')).toBe(1);
+    const busy = new Battle([member(knight)], [poker()], NO_JITTER);
+    const first = runFor(busy, 1.05);
+    expect(fired(first, 'honor')).toBe(1);
+    expect(fired(runFor(busy, 2.9), 'honor')).toBe(0);
+    expect(fired(runFor(busy, 1.2), 'honor')).toBe(1);
   });
 
-  it('allyHurt timers fill when another party member is hurt', () => {
-    const paladin = unit('pal', {}, [honor({ kind: 'allyHurt', perEvent: 1 })]);
-    const battle = new Battle([member(unit('front')), member(paladin)], [unit('e', {}, [skill('poke', [hit()], { cooldown: 1 })])], NO_JITTER);
-    expect(fired(runFor(battle, 3.1), 'honor')).toBe(1);
+  it('allyHurt fires when another party member is hurt', () => {
+    const paladin = unit('pal', {}, [honor({ kind: 'allyHurt' })]);
+    const battle = new Battle([member(unit('front')), member(paladin)], [poker()], NO_JITTER);
+    expect(fired(runFor(battle, 1.05), 'honor')).toBe(1);
   });
 
-  it('partyLow timers only run while the party is below the threshold', () => {
-    const cleric = unit('cleric', {}, [honor({ kind: 'partyLow', threshold: 0.35 })]);
+  it('partyLow fires whenever ready while the party is below 35%', () => {
+    const cleric = unit('cleric', {}, [honor({ kind: 'partyLow' })]);
     const battle = new Battle([member(cleric)], [unit('e', { attack: 0 })], NO_JITTER);
     expect(fired(runFor(battle, 5), 'honor')).toBe(0);
     battle.get('party-0').hp = 300;
-    expect(fired(runFor(battle, 3.1), 'honor')).toBe(1);
+    expect(fired(runFor(battle, 3.1), 'honor')).toBe(2);
+  });
+
+  it('battleStart fires once as the fight opens', () => {
+    const opener = unit('opener', {}, [honor({ kind: 'battleStart' })]);
+    const battle = new Battle([member(opener)], [unit('e')], NO_JITTER);
+    expect(fired(runFor(battle, 0.05), 'honor')).toBe(1);
+    expect(fired(runFor(battle, 10), 'honor')).toBe(0);
+  });
+
+  it('onKill fires for the hero who lands the killing blow, enemyDies for the whole party', () => {
+    const slayer = unit('slayer', { attack: 999 }, [skill('chop', [hit()], { cooldown: 1 }), skill('kill', [hit(0)], { cooldown: 1, trigger: { kind: 'onKill' } })]);
+    const watcher = unit('watcher', {}, [skill('cheer', [hit(0)], { cooldown: 1, trigger: { kind: 'enemyDies' } })]);
+    const battle = new Battle([member(slayer), member(watcher)], [unit('e1', { hp: 10 }), unit('e2', { hp: 10000 })], NO_JITTER);
+    const events = runFor(battle, 1.05);
+    expect([fired(events, 'kill'), fired(events, 'cheer')]).toEqual([1, 1]);
+  });
+
+  it('castSpell fires after the owner casts a spell', () => {
+    const bolt = skill('bolt', [hit(0)], { cooldown: 1, category: 'spell' });
+    const mage = unit('mage', {}, [bolt, skill('echo', [hit(0)], { cooldown: 5, trigger: { kind: 'castSpell' } })]);
+    const battle = new Battle([member(mage)], [unit('e')], NO_JITTER);
+    expect(fired(runFor(battle, 1.05), 'echo')).toBe(1);
   });
 
   it('onDefeat skills fire once when the owner falls', () => {
@@ -183,10 +209,37 @@ describe('event skills', () => {
       target: { side: 'ally', select: 'front', area: 'all' },
     });
     const knight = unit('knight', { hp: 5, defense: 50 }, [lastWord]);
-    const battle = new Battle([member(knight), member(unit('friend'))], [unit('e', {}, [skill('poke', [hit()], { cooldown: 1 })])], NO_JITTER);
+    const battle = new Battle([member(knight), member(unit('friend'))], [poker()], NO_JITTER);
     const events = runFor(battle, 1.1);
     expect(fired(events, 'lastWord')).toBe(1);
     expect(battle.get('party-1').barrier?.amount).toBe(50);
+  });
+});
+
+describe('skill slots', () => {
+  it('run slot 1 at x1.25, slot 2 normal, slot 3 at x0.75', () => {
+    const a = skill('a', [hit(0)], { cooldown: 1 });
+    const b = skill('b', [hit(0)], { cooldown: 1 });
+    const c = skill('c', [hit(0)], { cooldown: 1 });
+    const battle = new Battle([member(unit('h', {}, [a, b, c]))], [unit('e')], NO_JITTER);
+    const events = runFor(battle, 4.02);
+    expect([fired(events, 'a'), fired(events, 'b'), fired(events, 'c')]).toEqual([5, 4, 3]);
+  });
+
+  it('put the trigger in slot 4 whatever list position it came from', () => {
+    const t = skill('t', [hit(0)], { cooldown: 2, trigger: { kind: 'whenHit' } });
+    const battle = new Battle([{ def: unit('h'), equipment: {}, skills: [skill('a', [hit(0)])], trigger: t }], [unit('e')], NO_JITTER);
+    expect(battle.get('party-0').slots.map((s) => [s.def.id, s.position])).toEqual([
+      ['a', 0],
+      ['t', 3],
+    ]);
+  });
+
+  it('leave enemy skills at normal speed', () => {
+    const e = unit('e', {}, [skill('x', [hit(0)], { cooldown: 1 }), skill('y', [hit(0)], { cooldown: 1 }), skill('z', [hit(0)], { cooldown: 1 })]);
+    const battle = new Battle([member(unit('h'))], [e], NO_JITTER);
+    const events = runFor(battle, 4.02);
+    expect([fired(events, 'x'), fired(events, 'y'), fired(events, 'z')]).toEqual([4, 4, 4]);
   });
 });
 
@@ -214,7 +267,7 @@ describe('control effects', () => {
     const events = runFor(battle, 101.1);
     expect(fired(events, 'poke')).toBeGreaterThan(90);
     const b2 = new Battle([member(unit('m', {}, [polymorph]))], [unit('e', {}, [skill('poke', [hit()], { cooldown: 1 })])], NO_JITTER);
-    runFor(b2, 100);
+    runFor(b2, 80);
     expect(fired(runFor(b2, 4), 'poke')).toBe(0);
   });
 
@@ -239,9 +292,9 @@ describe('control effects', () => {
     const bear = skill('bear', [{ kind: 'shapeshift', duration: 5, bonus: 1 }], { cooldown: 100, target: { side: 'self' } });
     const maul = skill('maul', [hit(1)], { cooldown: 1, form: true });
     const spell = skill('spell', [hit(1)], { cooldown: 1 });
-    const druid = unit('d', { attack: 50 }, [maul, spell, bear]);
+    const druid = unit('d', { attack: 50 }, [bear, maul, spell]);
     const battle = new Battle([member(druid)], [unit('e', { hp: 100000 })], NO_JITTER);
-    runFor(battle, 100);
+    runFor(battle, 80);
     const events = runFor(battle, 3);
     expect(fired(events, 'spell')).toBe(0);
     expect(damageTo(events, 'enemy-0')[0].amount).toBe(100);
@@ -281,7 +334,8 @@ describe('thief and misc effects', () => {
 
   it('glory grows with fight length', () => {
     const glory = skill('glory', [hit(1)], { cooldown: 10, glory: 0.05 });
-    const battle = new Battle([member(unit('p', { attack: 100 }, [glory]))], [unit('e', { hp: 100000 })], NO_JITTER);
+    const wait = skill('wait', [hit(0)], { cooldown: 999 });
+    const battle = new Battle([member(unit('p', { attack: 100 }, [wait, glory]))], [unit('e', { hp: 100000 })], NO_JITTER);
     const amounts = damageTo(runFor(battle, 20), 'enemy-0').map((d) => d.amount);
     expect(amounts).toEqual([110, 120]);
   });
@@ -357,7 +411,7 @@ describe('boss mechanics', () => {
     expect(t.hp).toBeGreaterThanOrEqual(59);
     expect(t.hp).toBeLessThanOrEqual(60);
     const burn = skill('burn', [{ kind: 'damage', damageType: 'magic', stat: 'magic', scaling: 0, element: 'fire' }], { cooldown: 99 });
-    battle.get('party-0').slots.push({ def: burn, timer: 99 });
+    battle.get('party-0').slots.push({ def: burn, timer: 99, position: 1, rate: 1 });
     runFor(battle, 1.5);
     expect(t.hp).toBeLessThanOrEqual(60);
     runFor(battle, 2);

@@ -175,7 +175,17 @@ Phase 6 design:
 - Balancing pass 2: automated fight simulations for parties typical at each point of a run, then a playtest. Act 1 targets (approved): Group 1 100% win, ~15s, ~25% party HP lost; Group 2 90%, ~20s, ~35% HP lost; Group 3 90%, ~25s, ~45%; Epic Monsters ~70%, ~30s, ~55%, often 1 KO; Boss ~60%, ~40s, ~60%, often 1 KO. First simulation (before tuning): every Act 1 fight won ~100% in 5–10s — monsters' HP and damage are far too low. Balance once Act 1's bosses exist, so the whole act is tuned together.
 - Act 1 bosses (approved; one picked at random per run; 48×48 sprites): Goblin King (with 2 Goblins in front; 420/18/0/14/10; Scepter Bash 110% ATK front every 2s; Call the Horde summons 2 Goblins into empty cells every 10s, at most 6 on the field; War Cry all enemy timers ×1.4 for 4s every 12s; lightning weak), Slime King (alone; 600/16/0/8/8; Body Slam 120% ATK to the front column every 3.5s; Acid Spit poison over time on a random hero every 5s; Split: 2 Slimes at 66% and 33% HP; Burst: 3 Slimes on death; fire weak, resists poison), Troll (alone; 700/22/0/16/8; Club 120% ATK front every 2.5s; Regenerate ~2% max HP/s, stopped for 4s by fire or poison damage; Enrage at 50% HP: +6 ATK and timers ×1.5 for the rest of the fight; fire weak). Engine additions: enemy summons into empty cells (capped), HP-threshold triggers, on-death abilities for enemies, element-blocked regeneration, 48×48 sprites in battle.
 - Act 1 boss sprites approved (48×48, drawn by the art reviewer); bosses replace the stand-in.
-- Temporary: runs end after Act 1 (LEVELS = 1) with a stand-in boss (Ogre Warlord) until Acts 2–3 and the real bosses exist.
+- Temporary: runs end after Act 1 (LEVELS = 1) until Acts 2–3 have their encounters.
+- Skill slots rework (approved, before the Act 1 balance pass):
+  - Slot 1: the skill's timer runs ×1.25. Slot 2: normal. Slot 3: timer ×0.75. Slot 4: trigger skills only (and triggers can only go in slot 4), so each hero carries one trigger.
+  - Triggers fire the moment their event happens, then wait out their cooldown before they can fire again.
+  - Trigger events: start of battle, when hit, when an ally is hurt, when an ally falls, party HP below 35%, own HP below 50%, when you defeat an enemy, when any enemy dies, when healed, when your barrier breaks, when you cast a spell, on your own defeat.
+  - The 27 existing trigger skills (Knight 13, Paladin 7, Cleric 6, Bard 1) become normal timed skills except the best 3 per class, which stay triggers.
+  - New triggers: 10 shared (any class), 20 tag-restricted (Caster, Martial, etc.), and 3 per class (36). Nobody starts with a trigger.
+  - Triggers get their own budget rule: power per activation scales with how rarely the event happens.
+  - Recruits' 2 starting skills go in slots 1–2.
+  - The loadout screen lets skills be dragged between slots to swap them.
+  - Done: 10 shared, 20 tag, and 26 new class triggers (every class has exactly 3); 17 old triggers became timed skills. Library: 456 skills. "When an ally falls" counts heroes only (not summons).
 - Art: reviewed in batches of 4, as before.
 
 **Phase 7 — Audio**

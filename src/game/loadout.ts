@@ -1,6 +1,18 @@
 import type { EquipmentDef, PartyMember, SkillDef } from '../combat/types';
 
 export const MAX_SKILLS = 4;
+// Slots 0–2 hold timed skills (kept in order, no gaps); slot 3 holds a trigger skill.
+export const TIMED_SLOTS = 3;
+export const TRIGGER_SLOT = 3;
+
+// Every skill a hero has equipped, the trigger included.
+export function equippedSkills(member: PartyMember): SkillDef[] {
+  return member.trigger ? [...member.skills, member.trigger] : member.skills;
+}
+
+export function skillInSlot(member: PartyMember, slot: number): SkillDef | undefined {
+  return slot === TRIGGER_SLOT ? (member.trigger ?? undefined) : member.skills[slot];
+}
 
 // Each check returns a player-facing reason when the action is not allowed, or null when it is.
 
@@ -11,25 +23,30 @@ export function skillAccessBlock(member: PartyMember, skill: SkillDef): string |
   return null;
 }
 
-// Placing into `slot` replaces whatever is there (slot === skills.length appends).
+// Placing into `slot` replaces whatever is there (a timed slot at skills.length appends).
 export function placeSkillBlock(member: PartyMember, skill: SkillDef, slot: number): string | null {
-  if (slot > member.skills.length || slot >= MAX_SKILLS) return 'NO FREE SLOT';
+  if (slot === TRIGGER_SLOT) {
+    if (!skill.trigger) return 'TRIGGERS ONLY';
+  } else {
+    if (skill.trigger) return 'TRIGGER SLOT ONLY';
+    if (slot > member.skills.length || slot >= TIMED_SLOTS) return 'NO FREE SLOT';
+  }
   const access = skillAccessBlock(member, skill);
   if (access) return access;
 
-  const others = member.skills.filter((_, i) => i !== slot);
+  const replaced = skillInSlot(member, slot);
+  const others = equippedSkills(member).filter((s) => s !== replaced);
   if (others.some((s) => s.id === skill.id)) return 'ALREADY EQUIPPED';
   if (skill.prerequisite && !others.some((s) => s.id === skill.prerequisite)) return 'NEEDS PREREQUISITE';
 
-  const replaced = member.skills[slot];
   if (replaced) return removeSkillBlock(member, slot);
   return null;
 }
 
 export function removeSkillBlock(member: PartyMember, slot: number): string | null {
-  const skill = member.skills[slot];
+  const skill = skillInSlot(member, slot);
   if (!skill) return null;
-  const dependent = member.skills.find((s, i) => i !== slot && s.prerequisite === skill.id);
+  const dependent = equippedSkills(member).find((s) => s !== skill && s.prerequisite === skill.id);
   return dependent ? `${dependent.name} NEEDS IT` : null;
 }
 

@@ -5,7 +5,7 @@ type Spec = Omit<SkillSpec, 'access' | 'category'> & { category?: SkillSpec['cat
 const p = (spec: Spec): SkillDef => skill({ category: 'skill', ...spec, access: cls('paladin') });
 
 const holy = (extra: object = {}) => ({ element: 'holy', ...extra }) as const;
-const ALLY_HURT = { kind: 'allyHurt', perEvent: 1 } as const;
+const ALLY_HURT = { kind: 'allyHurt' } as const;
 const GLORY = 0.05;
 
 // Devotion: protect and strengthen the party.
@@ -22,12 +22,12 @@ const devotion: SkillDef[] = [
 // Vengeance: fills whenever an ally is hurt, and strikes back at the biggest threat.
 const vengeance: SkillDef[] = [
   p({ id: 'avenge', name: 'Avenge', theme: 'vengeance', rarity: 'common', cooldown: 3, trigger: ALLY_HURT, target: foe('mostDamage'), fx: [dmg(1, holy())] }),
-  p({ id: 'retribution', name: 'Retribution', theme: 'vengeance', rarity: 'common', cooldown: 4, trigger: ALLY_HURT, target: foe('mostDamage'), fx: [dmg(1)] }),
+  p({ id: 'retribution', name: 'Retribution', theme: 'vengeance', rarity: 'common', cooldown: 4, target: foe('mostDamage'), fx: [dmg(1)] }),
   p({ id: 'righteousAnger', name: 'Righteous Anger', theme: 'vengeance', rarity: 'common', cooldown: 5, trigger: ALLY_HURT, target: SELF, fx: [buff('attack', 1, 5)] }),
-  p({ id: 'hammerOfJustice', name: 'Hammer of Justice', theme: 'vengeance', rarity: 'rare', cooldown: 5, trigger: ALLY_HURT, target: foe('mostDamage'), fx: [dmg(0.6), delay(0.4)], synergy: { with: 'avenge', bonus: 0.3 } }),
-  p({ id: 'vengefulLight', name: 'Vengeful Light', theme: 'vengeance', rarity: 'rare', category: 'spell', cooldown: 5, trigger: ALLY_HURT, target: foe('mostDamage', 'row'), fx: [dmg(1, { type: 'magic', element: 'holy' })] }),
+  p({ id: 'hammerOfJustice', name: 'Hammer of Justice', theme: 'vengeance', rarity: 'rare', cooldown: 5, target: foe('mostDamage'), fx: [dmg(0.6), delay(0.4)], synergy: { with: 'avenge', bonus: 0.3 } }),
+  p({ id: 'vengefulLight', name: 'Vengeful Light', theme: 'vengeance', rarity: 'rare', category: 'spell', cooldown: 5, target: foe('mostDamage', 'row'), fx: [dmg(1, { type: 'magic', element: 'holy' })] }),
   p({ id: 'wrath', name: 'Wrath', theme: 'vengeance', rarity: 'epic', cooldown: 7, trigger: ALLY_HURT, target: foe('front', 'all'), fx: [dmg(1, holy())] }),
-  p({ id: 'oathOfVengeance', name: 'Oath of Vengeance', theme: 'vengeance', rarity: 'legendary', cooldown: 5, trigger: ALLY_HURT, target: foe('mostDamage'), fx: [dmg(1, holy({ hits: 2 }))], prerequisite: 'avenge' }),
+  p({ id: 'oathOfVengeance', name: 'Oath of Vengeance', theme: 'vengeance', rarity: 'legendary', cooldown: 5, target: foe('mostDamage'), fx: [dmg(1, holy({ hits: 2 }))], prerequisite: 'avenge' }),
 ];
 
 // Glory: every Glory skill grows stronger the longer the fight lasts.

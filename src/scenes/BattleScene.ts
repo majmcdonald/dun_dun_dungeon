@@ -11,14 +11,14 @@ import {
 import { PALETTE } from '../art/palette';
 import { spriteCanvas, TRANSPARENT, type SpriteDef } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
-import { Battle, gridCell, isSummon, MECHANIC } from '../combat/battle';
+import { Battle, gridCell, isSummon, MECHANIC, TRIGGER_SLOT } from '../combat/battle';
 import { CREATURES } from '../content/creatures';
 import { EQUIP_SLOTS, type BattleEvent, type Combatant, type CombatantDef, type EquipSlot } from '../combat/types';
 import { NATIVE_HEIGHT, NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
 import { drawBackground } from '../ui/background';
 import { CHAR_ADVANCE, drawText, textWidth } from '../ui/font';
-import { drawEquipmentIcons, drawEquipmentTooltip, hoveredSlot, ICON_STEP } from '../ui/partyCard';
+import { drawEquipmentIcons, drawEquipmentTooltip, hoveredSlot, ICON_STEP, skillColor } from '../ui/partyCard';
 import { dotVfxId, VFX } from '../vfx/effects';
 import { loseRun, winNode } from '../run/flow';
 import { ENEMIES_BY_ID } from '../content/enemies';
@@ -493,14 +493,14 @@ export class BattleScene implements Scene {
     const anim = this.anim(c.uid);
     for (let i = 0; i < SKILL_SLOTS; i++) {
       const rowY = cy + 24 + i * 11;
-      const slot = c.slots[i];
+      const index = c.slots.findIndex((s) => s.position === i);
+      const slot = c.slots[index];
       if (!slot) {
-        drawText(ctx, '- EMPTY -', inner, rowY, PALETTE.night, null);
+        drawText(ctx, i === TRIGGER_SLOT ? '- TRIGGER -' : '- EMPTY -', inner, rowY, PALETTE.night, null);
         continue;
       }
-      const nameColor = !alive ? PALETTE.slate : slot.def.category === 'spell' ? PALETTE.cyan : PALETTE.lightGray;
-      drawText(ctx, slot.def.name, inner, rowY, nameColor);
-      const justFired = !this.battle.result && this.battle.elapsed - anim.lastFired[i] < FIRE_HIGHLIGHT;
+      drawText(ctx, slot.def.name, inner, rowY, alive ? skillColor(slot.def) : PALETTE.slate);
+      const justFired = !this.battle.result && this.battle.elapsed - anim.lastFired[index] < FIRE_HIGHLIGHT;
       const fill = !alive ? 0 : justFired ? 1 : slot.timer / slot.def.cooldown;
       drawBar(ctx, inner, rowY + 8, innerW, 2, fill, justFired ? PALETTE.white : PALETTE.gold, false);
     }

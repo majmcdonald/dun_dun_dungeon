@@ -17,7 +17,7 @@ import { wrap } from '../ui/describeLines';
 
 describe('skill library', () => {
   it('has about 100 skills with unique ids', () => {
-    expect(SKILL_LIBRARY.length).toBe(400);
+    expect(SKILL_LIBRARY.length).toBe(456);
     expect(new Set(SKILL_LIBRARY.map((s) => s.id)).size).toBe(SKILL_LIBRARY.length);
   });
 
@@ -98,9 +98,12 @@ describe('classes', () => {
     for (const c of CLASSES) expect(SPRITES, c.id).toHaveProperty(c.id);
   });
 
-  it.each(CLASSES.map((c) => [c.id] as const))('%s has 30 class skills', (id) => {
+  it.each(CLASSES.map((c) => [c.id] as const))('%s has 30 timed class skills and 3 class triggers', (id) => {
     const own = SKILL_LIBRARY.filter((s) => s.access.kind === 'class' && s.access.classId === id);
-    expect(own).toHaveLength(30);
+    const triggers = own.filter((s) => s.trigger);
+    expect(triggers).toHaveLength(3);
+    // Knight, Paladin, and Cleric turned 3 of their original 30 into triggers; the others gained new ones.
+    expect(own.length - triggers.length).toBe(['knight', 'paladin', 'cleric'].includes(id) ? 27 : id === 'bard' ? 29 : 30);
   });
 
   it('every creature and the transform critter have a sprite', () => {

@@ -5,7 +5,7 @@ type Spec = Omit<SkillSpec, 'access' | 'category'> & { category?: SkillSpec['cat
 const c = (spec: Spec): SkillDef => skill({ category: 'spell', ...spec, access: cls('cleric') });
 
 const holy = { type: 'magic', element: 'holy' } as const;
-const PARTY_LOW = { kind: 'partyLow', threshold: 0.35 } as const;
+const PARTY_LOW = { kind: 'partyLow' } as const;
 
 // Light: holy magic that crosses into offense, or lends the party striking power.
 const light: SkillDef[] = [
@@ -32,11 +32,11 @@ const order: SkillDef[] = [
 // Life: help that only comes when the party is close to falling.
 const life: SkillDef[] = [
   c({ id: 'secondChance', name: 'Second Chance', theme: 'life', rarity: 'common', cooldown: 4, trigger: PARTY_LOW, target: ally('lowestHpPct'), fx: [heal(1)], vfx: 'heal' }),
-  c({ id: 'guardianLight', name: 'Guardian Light', theme: 'life', rarity: 'common', cooldown: 4, trigger: PARTY_LOW, target: ally('lowestHpPct'), fx: [barrier(1, 4, 'resistance')] }),
+  c({ id: 'guardianLight', name: 'Guardian Light', theme: 'life', rarity: 'common', cooldown: 4, target: ally('lowestHpPct'), fx: [barrier(1, 4, 'resistance')] }),
   c({ id: 'lifeline', name: 'Lifeline', theme: 'life', rarity: 'rare', cooldown: 6, trigger: PARTY_LOW, target: ally('front', 'all'), fx: [heal(1)], vfx: 'heal' }),
-  c({ id: 'prayerOfHope', name: 'Prayer of Hope', theme: 'life', rarity: 'rare', cooldown: 7, trigger: PARTY_LOW, target: ally('front', 'all'), fx: [regen(1, 5)], vfx: 'heal' }),
+  c({ id: 'prayerOfHope', name: 'Prayer of Hope', theme: 'life', rarity: 'rare', cooldown: 7, target: ally('front', 'all'), fx: [regen(1, 5)], vfx: 'heal' }),
   c({ id: 'divineIntervention', name: 'Divine Intervention', theme: 'life', rarity: 'epic', cooldown: 8, trigger: PARTY_LOW, target: ally('front', 'all'), fx: [heal(0.6), barrier(0.4, 4, 'resistance')], vfx: 'heal' }),
-  c({ id: 'resurgence', name: 'Resurgence', theme: 'life', rarity: 'legendary', cooldown: 10, trigger: PARTY_LOW, target: ally('front', 'all'), fx: [heal(0.5), haste(0.5, 4)], prerequisite: 'heal', vfx: 'heal' }),
+  c({ id: 'resurgence', name: 'Resurgence', theme: 'life', rarity: 'legendary', cooldown: 10, target: ally('front', 'all'), fx: [heal(0.5), haste(0.5, 4)], prerequisite: 'heal', vfx: 'heal' }),
 ];
 
 const general: SkillDef[] = [

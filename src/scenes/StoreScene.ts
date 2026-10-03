@@ -6,7 +6,7 @@ import { ITEMS_BY_ID } from '../content/items';
 import { SKILLS_BY_ID } from '../content/skills';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
-import { equipItemBlock, skillAccessBlock } from '../game/loadout';
+import { equipItemBlock, equippedSkills, skillAccessBlock } from '../game/loadout';
 import type { GameState } from '../game/state';
 import { completeNode } from '../run/flow';
 import { saveRun, type StoreVisit } from '../run/run';
@@ -330,7 +330,7 @@ function users(party: PartyMember[], can: (m: PartyMember) => boolean): string {
 function ownedText(state: GameState, pick: Pick): string | null {
   const id = pick.kind === 'skill' ? pick.skill.id : pick.item.id;
   const holders = state.party.filter((m) =>
-    pick.kind === 'skill' ? m.skills.some((s) => s.id === id) : Object.values(m.equipment).some((i) => i?.id === id),
+    pick.kind === 'skill' ? equippedSkills(m).some((s) => s.id === id) : Object.values(m.equipment).some((i) => i?.id === id),
   );
   const spare = (pick.kind === 'skill' ? state.inventory.skills : state.inventory.items).filter((x) => x.id === id).length;
   const where = [

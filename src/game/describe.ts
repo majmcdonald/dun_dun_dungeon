@@ -67,19 +67,25 @@ export function describeEffect(e: SkillEffect): string {
   return e.self ? `SELF: ${describeBase(e)}` : describeBase(e);
 }
 
+const TRIGGER_TEXT: Record<Exclude<Trigger['kind'], 'belowHp'>, string> = {
+  battleStart: 'AT THE START OF BATTLE',
+  whenHit: 'WHEN HIT',
+  allyHurt: 'WHEN AN ALLY IS HURT',
+  allyFalls: 'WHEN AN ALLY FALLS',
+  partyLow: 'WHILE PARTY HP IS BELOW 35%',
+  selfLow: 'WHILE OWN HP IS BELOW 50%',
+  onKill: 'WHEN YOU DEFEAT AN ENEMY',
+  enemyDies: 'WHEN ANY ENEMY DIES',
+  whenHealed: 'WHEN HEALED',
+  barrierBreaks: 'WHEN YOUR BARRIER BREAKS',
+  castSpell: 'WHEN YOU CAST A SPELL',
+  onDefeat: 'WHEN DEFEATED',
+};
+
+// Triggers fire at once on their event, then recharge over the skill's cooldown.
 export function describeTrigger(t: Trigger): string {
-  switch (t.kind) {
-    case 'whenHit':
-      return `FILLS ${t.perEvent}S EACH TIME HIT`;
-    case 'allyHurt':
-      return `FILLS ${t.perEvent}S EACH TIME AN ALLY IS HURT`;
-    case 'partyLow':
-      return `RUNS WHILE PARTY HP BELOW ${pct(t.threshold)}`;
-    case 'onDefeat':
-      return 'FIRES WHEN DEFEATED';
-    case 'belowHp':
-      return `FIRES ONCE BELOW ${pct(t.threshold)} HP`;
-  }
+  if (t.kind === 'belowHp') return `FIRES ONCE BELOW ${pct(t.threshold)} HP`;
+  return `TRIGGER: ${TRIGGER_TEXT[t.kind]}`;
 }
 
 export function describeCondition(c: Condition): string {

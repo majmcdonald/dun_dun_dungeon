@@ -16,6 +16,7 @@ import type {
   SkillEffect,
   StatKey,
   Stats,
+  TriggerEvent,
   Ticking,
   Timed,
 } from './types';
@@ -28,6 +29,12 @@ export const ENEMY_ROWS = 3;
 const MAX_RESIST = 0.9;
 export const FIRST_SUMMON_POSITION = 3;
 export const SUMMONS_PER_MEMBER = 2;
+// Hero skill slots 1–3 run their timers at these speeds; slot 4 holds a trigger.
+export const SLOT_RATES = [1.25, 1, 0.75];
+export const TRIGGER_SLOT = 3;
+// Party HP share for partyLow triggers, own HP share for selfLow.
+const PARTY_LOW = 0.35;
+const SELF_LOW = 0.5;
 
 export const MECHANIC = {
   rageMax: 100,
@@ -134,6 +141,7 @@ export class Battle {
   gold = 0;
   private summonCount = 0;
   private spawnCount = 0;
+  private started = false;
   private bestiary: Record<string, CombatantDef>;
   private creatures: Record<string, CombatantDef>;
 
@@ -149,7 +157,7 @@ export class Battle {
     const bonus = options.party?.bonus;
     const boosted = bonus ? party.map((m) => ({ ...m, def: { ...m.def, stats: addStats(m.def.stats, bonus) } })) : party;
     this.combatants = [
-      ...boosted.map((m, i) => createCombatant(m.def, m.skills, 'party', i, { ...m.equipment }, rng)),
+      ...boosted.map((m, i) => heroCombatant(m, i, rng)),
       ...enemies.flatMap((def, i) => (def ? [createCombatant(def, def.skills, 'enemy', i, {}, rng)] : [])),
     ];
     for (const c of this.combatants) if (c.def.familiar) c.channel = MECHANIC.channelSeconds;
@@ -164,6 +172,10 @@ export class Battle {
     this.elapsed += dt;
     const events: BattleEvent[] = [];
 
+    if (!this.started) {
+      this.started = true;
+      for (const c of this.alive()) this.fireTrigger(c, 'battleStart', events);
+    }
     for (const c of this.alive()) this.tickStatuses(c, dt, events);
     this.tickPeriodic(dt, events);
 
@@ -174,10 +186,12 @@ export class Battle {
         if (actor.hp <= 0 || this.result) break;
         const skill = slot.def;
         if (actor.shapeshift && !skill.form) continue;
-        const trigger = skill.trigger;
-        if (trigger?.kind === 'onDefeat' || trigger?.kind === 'belowHp') continue;
-        const running = !trigger || (trigger.kind === 'partyLow' && this.partyHpRatio() < trigger.threshold);
-        if (running) slot.timer += dt * rate;
+        // Triggers recharge in real time and fire only on their event (see fireTrigger).
+        if (skill.trigger) {
+          slot.timer = Math.min(skill.cooldown, slot.timer + dt);
+          continue;
+        }
+        slot.timer += dt * rate * slot.rate;
         if (slot.timer + TIMER_EPSILON < skill.cooldown) continue;
         if (!this.conditionMet(actor, skill.condition)) {
           slot.timer = skill.cooldown;
@@ -187,6 +201,13 @@ export class Battle {
         if (skill.condition?.kind === 'souls') actor.meter -= skill.condition.cost;
         this.useSkill(actor, skill, events);
       }
+    }
+
+    // Low-HP triggers fire whenever they are ready while the condition holds.
+    for (const c of this.alive()) {
+      if (this.result) break;
+      if (this.sideHpRatio(c.side) < PARTY_LOW) this.fireTrigger(c, 'partyLow', events);
+      if (c.hp / c.maxHp < SELF_LOW) this.fireTrigger(c, 'selfLow', events);
     }
 
     return events;
@@ -211,7 +232,11 @@ export class Battle {
   }
 
   partyHpRatio(): number {
-    const party = this.combatants.filter((c) => c.side === 'party' && !isSummon(c));
+    return this.sideHpRatio('party');
+  }
+
+  sideHpRatio(side: Side): number {
+    const party = this.combatants.filter((c) => c.side === side && !isSummon(c));
     const max = party.reduce((s, c) => s + c.maxHp, 0);
     return max === 0 ? 0 : party.reduce((s, c) => s + Math.max(0, c.hp), 0) / max;
   }
@@ -233,6 +258,17 @@ export class Battle {
         return this.summonsOf(actor).length > 0;
       case 'shapeshifted':
         return actor.shapeshift !== null;
+    }
+  }
+
+  // A ready trigger skill fires at once when its event happens, then recharges over its cooldown.
+  private fireTrigger(c: Combatant, event: TriggerEvent, events: BattleEvent[]): void {
+    for (const slot of c.slots) {
+      if (this.result) return;
+      if (slot.def.trigger?.kind !== event || slot.timer + TIMER_EPSILON < slot.def.cooldown) continue;
+      if (c.hp <= 0 && event !== 'onDefeat') return;
+      slot.timer = 0;
+      this.useSkill(c, slot.def, events);
     }
   }
 
@@ -344,6 +380,7 @@ export class Battle {
         this.applyEffect(actor, skill.id, effect, target, mult, events, true);
       }
     }
+    if (skill.category === 'spell' && !skill.trigger) this.fireTrigger(actor, 'castSpell', events);
   }
 
   // `direct` is false for effects triggered by enchantments, which must not trigger further on-hit enchantments.
@@ -547,6 +584,7 @@ export class Battle {
     const amount = Math.min(target.maxHp - target.hp, raw);
     target.hp += amount;
     events.push({ type: 'heal', source: source.uid, target: target.uid, amount, ...(periodic && { periodic }) });
+    if (amount > 0) this.fireTrigger(target, 'whenHealed', events);
   }
 
   private triggerOnHit(actor: Combatant, target: Combatant, events: BattleEvent[]): void {
@@ -618,7 +656,10 @@ export class Battle {
     if (target.barrier) {
       absorbed = Math.min(target.barrier.amount, amount);
       target.barrier.amount -= absorbed;
-      if (target.barrier.amount <= 0) target.barrier = null;
+      if (target.barrier.amount <= 0) {
+        target.barrier = null;
+        this.fireTrigger(target, 'barrierBreaks', events);
+      }
     }
     const dealt = Math.min(target.hp, amount - absorbed);
     source.damageDealt += dealt;
@@ -653,25 +694,25 @@ export class Battle {
     }
 
     if (target.def.mechanic === 'rage') this.gainRage(target, (dealt / target.maxHp) * 100, events);
+    if (target.hp <= 0) return this.onDeath(target, events, source);
     if (!selfInflicted) {
-      for (const slot of target.slots) if (slot.def.trigger?.kind === 'whenHit') slot.timer += slot.def.trigger.perEvent;
-      for (const ally of this.alive(target.side)) {
-        if (ally === target) continue;
-        for (const slot of ally.slots) if (slot.def.trigger?.kind === 'allyHurt') slot.timer += slot.def.trigger.perEvent;
-      }
+      this.fireTrigger(target, 'whenHit', events);
+      for (const ally of this.alive(target.side)) if (ally !== target) this.fireTrigger(ally, 'allyHurt', events);
     }
-    if (target.hp <= 0) this.onDeath(target, events);
   }
 
-  private onDeath(target: Combatant, events: BattleEvent[]): void {
+  private onDeath(target: Combatant, events: BattleEvent[], killer?: Combatant): void {
     events.push({ type: 'death', target: target.uid });
     this.breakEquipment(target, events);
     for (const c of this.alive()) {
       if (c.def.mechanic === 'souls') c.meter = Math.min(MECHANIC.soulsMax, c.meter + 1);
     }
 
-    for (const slot of target.slots) {
-      if (slot.def.trigger?.kind === 'onDefeat' && !this.result) this.useSkill(target, slot.def, events);
+    this.fireTrigger(target, 'onDefeat', events);
+    if (killer && killer.hp > 0 && killer.side !== target.side) this.fireTrigger(killer, 'onKill', events);
+    for (const c of this.alive()) {
+      if (c.side === target.side && !isSummon(target)) this.fireTrigger(c, 'allyFalls', events);
+      if (c.side !== target.side) this.fireTrigger(c, 'enemyDies', events);
     }
 
     if (target.familiar && target.summoner) {
@@ -759,6 +800,16 @@ function expandArea(primary: Combatant, area: Area, pool: Combatant[]): Combatan
 }
 
 // A negative starting timer delays the first activation so identical units don't fire in lockstep.
+// A hero's 3 timed slots run at their slot speeds; the trigger (if any) sits in slot 4.
+function heroCombatant(m: PartyMember, index: number, rng: Rng): Combatant {
+  const c = createCombatant(m.def, m.trigger ? [...m.skills, m.trigger] : m.skills, 'party', index, { ...m.equipment }, rng);
+  c.slots.forEach((slot, i) => {
+    if (slot.def.trigger) slot.position = TRIGGER_SLOT;
+    else slot.rate = SLOT_RATES[i] ?? 1;
+  });
+  return c;
+}
+
 function createCombatant(
   def: CombatantDef,
   skills: SkillDef[],
@@ -781,7 +832,8 @@ function createCombatant(
     dots: [],
     regens: [],
     speed: [],
-    slots: skills.map((s) => ({ def: s, timer: s.trigger ? 0 : -rng() * MAX_START_DELAY })),
+    // Triggers start the fight ready; timed skills start with a small random offset.
+    slots: skills.map((s, i) => ({ def: s, timer: s.trigger ? s.cooldown : -rng() * MAX_START_DELAY, position: i, rate: 1 })),
     damageDealt: 0,
     lastAttacker: null,
     castSpell: false,

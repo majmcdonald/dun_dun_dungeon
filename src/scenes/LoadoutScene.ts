@@ -11,12 +11,21 @@ import {
 import { CLASSES_BY_ID } from '../content/classes';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
-import { equipItemBlock, MAX_SKILLS, placeSkillBlock, removeSkillBlock, skillAccessBlock } from '../game/loadout';
+import {
+  equipItemBlock,
+  MAX_SKILLS,
+  placeSkillBlock,
+  removeSkillBlock,
+  skillAccessBlock,
+  skillInSlot,
+  TIMED_SLOTS,
+  TRIGGER_SLOT,
+} from '../game/loadout';
 import type { Inventory } from '../game/state';
 import { drawBackground } from '../ui/background';
 import { itemLines, skillLines, wrap } from '../ui/describeLines';
 import { drawText, textWidth } from '../ui/font';
-import { drawItemIcon, equipIcon, SLOT_LABEL, STAT_LABEL } from '../ui/partyCard';
+import { drawItemIcon, equipIcon, skillColor, SLOT_LABEL, slotCooldown, STAT_LABEL } from '../ui/partyCard';
 import { drawButton, drawFrame, drawPanel, inside, RARITY_COLOR, type Button, type Rect } from '../ui/widgets';
 import { PartyScene } from './PartyScene';
 
@@ -37,6 +46,9 @@ const NEXT: Button = { x: 70, y: 242, w: 56, h: 20, label: 'NEXT' };
 const UNEQUIP: Button = { x: 192, y: 242, w: 86, h: 20, label: 'UNEQUIP' };
 const DONE: Button = { x: 392, y: 242, w: 80, h: 20, label: 'DONE' };
 const MESSAGE_TIME = 2;
+// Slot markers: 1 runs fast, 2 normal, 3 slow, 4 holds a trigger.
+const SLOT_TAG = ['1', '2', '3', 'T'];
+const SLOT_TAG_COLOR = [PALETTE.green, PALETTE.lightGray, PALETTE.red, PALETTE.orange];
 
 type SortKey = 'cooldown' | 'name' | 'rarity';
 const SKILL_SORTS: SortKey[] = ['cooldown', 'name', 'rarity'];
@@ -55,6 +67,8 @@ export class LoadoutScene implements Scene {
   private message = '';
   private messageAge = 0;
   private search = '';
+  // A timed skill being dragged to another of slots 1–3; `moved` once it has left its row.
+  private drag: { from: number; grabX: number; grabY: number; startX: number; startY: number; moved: boolean } | null = null;
   private skillSort: SortKey = 'rarity';
   private gearSort: SortKey = 'rarity';
 
@@ -67,6 +81,7 @@ export class LoadoutScene implements Scene {
 
   enter(): void {
     this.game.input.consumeClicks();
+    this.game.input.consumePresses();
     this.game.input.consumeWheel();
     this.game.input.consumeTyped();
   }
@@ -86,6 +101,26 @@ export class LoadoutScene implements Scene {
     const entries = this.entries();
     const maxScroll = Math.max(0, entries.length - LIST_ROWS);
     this.scroll = Math.min(maxScroll, Math.max(0, this.scroll + input.consumeWheel()));
+
+    for (const press of input.consumePresses()) {
+      const from = [...Array(TIMED_SLOTS).keys()].find((i) => inside(press, skillRow(i)) && this.member.skills[i]);
+      if (from === undefined) continue;
+      const r = skillRow(from);
+      this.drag = { from, grabX: press.x - r.x, grabY: press.y - r.y, startX: press.x, startY: press.y, moved: false };
+    }
+    if (this.drag) {
+      const p = input.pointer;
+      if (Math.abs(p.x - this.drag.startX) + Math.abs(p.y - this.drag.startY) > 3) this.drag.moved = true;
+      if (p.down) return;
+      const drag = this.drag;
+      this.drag = null;
+      if (drag.moved) {
+        input.consumeClicks();
+        const to = [...Array(TIMED_SLOTS).keys()].find((i) => inside(p, skillRow(i)));
+        if (to !== undefined && to !== drag.from) this.moveSkill(drag.from, to);
+        return;
+      }
+    }
 
     for (const click of input.consumeClicks()) {
       if (inside(click, DONE)) return this.game.scenes.switchTo(this.done());
@@ -161,11 +196,16 @@ export class LoadoutScene implements Scene {
       this.member = { ...m, equipment: { ...m.equipment, [entry.item.slot]: entry.item } };
       return;
     }
+    inventory.skills = take(inventory, inventory.skills, entry.skill);
+    if (this.selectedSkillIndex() === TRIGGER_SLOT) {
+      if (m.trigger) give(inventory, inventory.skills, m.trigger);
+      this.member = { ...m, trigger: entry.skill };
+      return;
+    }
     const index = Math.min(this.selectedSkillIndex(), m.skills.length);
     const skills = [...m.skills];
     const old = skills[index];
     skills[index] = entry.skill;
-    inventory.skills = take(inventory, inventory.skills, entry.skill);
     if (old) give(inventory, inventory.skills, old);
     this.member = { ...m, skills };
   }
@@ -183,12 +223,28 @@ export class LoadoutScene implements Scene {
       return;
     }
     const index = this.selection.index;
-    const old = m.skills[index];
+    const old = skillInSlot(m, index);
     if (!old) return;
     const block = removeSkillBlock(m, index);
     if (block) return this.say(block);
     give(inventory, inventory.skills, old);
-    this.member = { ...m, skills: m.skills.filter((_, i) => i !== index) };
+    if (index === TRIGGER_SLOT) this.member = { ...m, trigger: null };
+    else this.member = { ...m, skills: m.skills.filter((_, i) => i !== index) };
+  }
+
+  // Dropping onto a filled slot swaps the two; onto an empty slot, the skill moves to the last filled position.
+  private moveSkill(from: number, to: number): void {
+    const m = this.member;
+    const skills = [...m.skills];
+    if (to < skills.length) [skills[from], skills[to]] = [skills[to], skills[from]];
+    else skills.push(...skills.splice(from, 1));
+    this.member = { ...m, skills };
+    if (this.selection.kind === 'skill' && this.selection.index === from) this.selection = { kind: 'skill', index: Math.min(to, skills.length - 1) };
+  }
+
+  // Timed skills stay packed in slots 1–3, so an empty timed slot means "the next free one".
+  private targetSlot(index: number): number {
+    return index === TRIGGER_SLOT ? TRIGGER_SLOT : Math.min(index, this.member.skills.length);
   }
 
   private selectedSkillIndex(): number {
@@ -206,8 +262,9 @@ export class LoadoutScene implements Scene {
             .filter((item) => item.slot === selection.slot)
             .map((item): Entry => ({ kind: 'item', item, block: equipItemBlock(m, item) }))
         : inventory.skills
-            .filter((skill) => !skillAccessBlock(m, skill))
-            .map((skill): Entry => ({ kind: 'skill', skill, block: placeSkillBlock(m, skill, Math.min(selection.index, m.skills.length)) }));
+            // Slot 4 lists only triggers; slots 1–3 only timed skills.
+            .filter((skill) => !skillAccessBlock(m, skill) && !!skill.trigger === (selection.index === TRIGGER_SLOT))
+            .map((skill): Entry => ({ kind: 'skill', skill, block: placeSkillBlock(m, skill, this.targetSlot(selection.index)) }));
     const sort = this.activeSort();
     return entries
       .filter((e) => matches(e, this.search))
@@ -243,7 +300,7 @@ export class LoadoutScene implements Scene {
       const item = m.equipment[this.selection.slot];
       return item && { kind: 'item', item, block: null };
     }
-    const skill = m.skills[this.selection.index];
+    const skill = skillInSlot(m, this.selection.index);
     return skill && { kind: 'skill', skill, block: null };
   }
 
@@ -299,17 +356,28 @@ export class LoadoutScene implements Scene {
     });
 
     drawText(ctx, 'SKILLS', x, SKILLS_TOP - 10, PALETTE.sand);
+    const note = 'DRAG TO SWAP';
+    drawText(ctx, note, LEFT.x + LEFT.w - 6 - textWidth(note), SKILLS_TOP - 10, PALETTE.slate);
+    const dragging = this.drag?.moved ? this.drag.from : -1;
     for (let i = 0; i < MAX_SKILLS; i++) {
       const r = skillRow(i);
-      const skill = m.skills[i];
-      this.drawSlotFrame(ctx, r, this.selection.kind === 'skill' && this.selection.index === i, inside(pointer, r));
-      if (!skill) {
-        drawText(ctx, '- EMPTY -', r.x + 3, r.y + 2, PALETTE.slate);
+      const skill = skillInSlot(m, i);
+      const dropTarget = dragging >= 0 && i < TIMED_SLOTS && inside(pointer, r);
+      this.drawSlotFrame(ctx, r, (this.selection.kind === 'skill' && this.selection.index === i) || dropTarget, inside(pointer, r));
+      drawText(ctx, SLOT_TAG[i], r.x + 3, r.y + 2, SLOT_TAG_COLOR[i]);
+      if (!skill || i === dragging) {
+        drawText(ctx, i === TRIGGER_SLOT ? '- TRIGGER -' : '- EMPTY -', r.x + 15, r.y + 2, PALETTE.slate);
         continue;
       }
-      drawText(ctx, skill.name.toUpperCase(), r.x + 3, r.y + 2, skill.category === 'spell' ? PALETTE.cyan : PALETTE.white);
-      const cd = `${skill.cooldown.toFixed(1)}S`;
-      drawText(ctx, cd, r.x + r.w - 3 - textWidth(cd), r.y + 2, PALETTE.slate);
+      drawText(ctx, skill.name.toUpperCase(), r.x + 15, r.y + 2, skillColor(skill));
+      const cd = `${slotCooldown(skill, i).toFixed(1)}S`;
+      drawText(ctx, cd, r.x + r.w - 3 - textWidth(cd), r.y + 2, SLOT_TAG_COLOR[i]);
+    }
+    if (dragging >= 0) {
+      const skill = m.skills[dragging];
+      const r = { ...skillRow(dragging), x: pointer.x - this.drag!.grabX, y: pointer.y - this.drag!.grabY };
+      drawPanel(ctx, r, PALETTE.gold);
+      drawText(ctx, skill.name.toUpperCase(), r.x + 15, r.y + 2, skillColor(skill));
     }
   }
 

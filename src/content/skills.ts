@@ -12,6 +12,7 @@ import { RANGER_ARCHETYPES } from './archetypes/ranger';
 import { ROGUE_ARCHETYPES } from './archetypes/rogue';
 import { WARLOCK_ARCHETYPES } from './archetypes/warlock';
 import { ally, barrier, buff, cls, debuff, dmg, dot, foe, heal, regen, SELF, SHARED, skill, tag } from './build';
+import { CLASS_TRIGGERS, SHARED_TRIGGERS, TAG_TRIGGERS } from './triggers';
 
 const magic = (element?: 'fire' | 'ice' | 'lightning' | 'holy' | 'shadow' | 'poison') =>
   ({ type: 'magic', ...(element && { element }) }) as const;
@@ -168,6 +169,9 @@ const warlock: SkillDef[] = [
 
 export const SKILL_LIBRARY: SkillDef[] = [
   ...shared,
+  ...SHARED_TRIGGERS,
+  ...TAG_TRIGGERS,
+  ...CLASS_TRIGGERS,
   ...tagged,
   ...knight,
   ...mage,
