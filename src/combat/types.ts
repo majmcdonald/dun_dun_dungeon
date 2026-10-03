@@ -59,6 +59,8 @@ type BaseEffect =
   | { kind: 'debuff'; stat: StatKey; amount: number; duration: number }
   | { kind: 'speed'; factor: number; duration: number }
   | { kind: 'summon'; creature: string; share: number }
+  // Enemies only: calls `count` more of an enemy type into empty grid cells, never above `cap` alive at once.
+  | { kind: 'spawn'; enemy: string; count: number; cap: number }
   | { kind: 'transform'; duration: number }
   | { kind: 'steal' }
   | { kind: 'siphon'; stat: StatKey; amount: number; duration: number }
@@ -82,7 +84,9 @@ export type Trigger =
   | { kind: 'whenHit'; perEvent: number }
   | { kind: 'allyHurt'; perEvent: number }
   | { kind: 'partyLow'; threshold: number }
-  | { kind: 'onDefeat' };
+  | { kind: 'onDefeat' }
+  // Fires once, the moment the user drops below this share of its max HP.
+  | { kind: 'belowHp'; threshold: number };
 
 // Conditional skills fill their timer, then wait until the condition holds.
 export type Condition =
@@ -124,6 +128,8 @@ export interface CombatantDef {
   resist?: Partial<Record<Element, number>>;
   mechanic?: Mechanic;
   familiar?: string;
+  // Passive regeneration: this share of max HP each second, paused for `blockSeconds` after damage of these elements.
+  regeneration?: { perSecond: number; blockedBy: Element[]; blockSeconds: number };
 }
 
 export type EquipSlot = 'armor' | 'helmet' | 'boots' | 'weapon' | 'jewelry';
@@ -161,6 +167,8 @@ export interface PartyMember {
 export interface SkillSlot {
   def: SkillDef;
   timer: number;
+  // A one-time trigger (belowHp) that has already fired.
+  spent?: boolean;
 }
 
 export interface Barrier {
@@ -217,6 +225,9 @@ export interface Combatant {
   channel: number;
   meter: number;
   burst: number;
+  // Seconds left before passive regeneration resumes, and healing built up below one whole point.
+  regenBlocked: number;
+  regenCarry: number;
 }
 
 export type BattleResult = 'victory' | 'defeat';

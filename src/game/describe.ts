@@ -53,6 +53,8 @@ function describeBase(e: SkillEffect): string {
       return `LOSE ${pct(e.fraction)} MAX HP`;
     case 'summon':
       return `SUMMON ${e.creature.toUpperCase()} (${pct(e.share)} OF STATS)`;
+    case 'spawn':
+      return `CALL ${e.count} ${e.enemy.toUpperCase()} (MAX ${e.cap})`;
     case 'consumeSummon':
       return 'SACRIFICE A SUMMON';
     case 'chaos':
@@ -75,6 +77,8 @@ export function describeTrigger(t: Trigger): string {
       return `RUNS WHILE PARTY HP BELOW ${pct(t.threshold)}`;
     case 'onDefeat':
       return 'FIRES WHEN DEFEATED';
+    case 'belowHp':
+      return `FIRES ONCE BELOW ${pct(t.threshold)} HP`;
   }
 }
 

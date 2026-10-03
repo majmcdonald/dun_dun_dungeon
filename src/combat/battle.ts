@@ -123,6 +123,8 @@ export interface PartyStart {
 export interface BattleOptions {
   party?: PartyStart;
   creatures?: Record<string, CombatantDef>;
+  // Enemy types that enemy abilities can call in (spawn effects).
+  bestiary?: Record<string, CombatantDef>;
 }
 
 export class Battle {
@@ -131,6 +133,8 @@ export class Battle {
   result: BattleResult | null = null;
   gold = 0;
   private summonCount = 0;
+  private spawnCount = 0;
+  private bestiary: Record<string, CombatantDef>;
   private creatures: Record<string, CombatantDef>;
 
   constructor(
@@ -141,6 +145,7 @@ export class Battle {
     options: BattleOptions = {},
   ) {
     this.creatures = options.creatures ?? {};
+    this.bestiary = options.bestiary ?? {};
     const bonus = options.party?.bonus;
     const boosted = bonus ? party.map((m) => ({ ...m, def: { ...m.def, stats: addStats(m.def.stats, bonus) } })) : party;
     this.combatants = [
@@ -170,7 +175,7 @@ export class Battle {
         const skill = slot.def;
         if (actor.shapeshift && !skill.form) continue;
         const trigger = skill.trigger;
-        if (trigger?.kind === 'onDefeat') continue;
+        if (trigger?.kind === 'onDefeat' || trigger?.kind === 'belowHp') continue;
         const running = !trigger || (trigger.kind === 'partyLow' && this.partyHpRatio() < trigger.threshold);
         if (running) slot.timer += dt * rate;
         if (slot.timer + TIMER_EPSILON < skill.cooldown) continue;
@@ -232,6 +237,7 @@ export class Battle {
   }
 
   private tickStatuses(c: Combatant, dt: number, events: BattleEvent[]): void {
+    this.tickRegeneration(c, dt, events);
     if (c.barrier) {
       c.barrier.remaining -= dt;
       if (c.barrier.remaining <= TIMER_EPSILON) c.barrier = null;
@@ -332,7 +338,9 @@ export class Battle {
     }
     for (const target of targets) {
       for (const effect of skill.effects.filter((e) => !e.self && !e.onSummons)) {
-        if (this.result || target.hp <= 0) break;
+        if (this.result) return;
+        // Spawning works from a fallen caster too (a boss bursting into minions as it dies).
+        if (target.hp <= 0 && effect.kind !== 'spawn') break;
         this.applyEffect(actor, skill.id, effect, target, mult, events, true);
       }
     }
@@ -446,6 +454,9 @@ export class Battle {
       case 'summon':
         this.summon(actor, effect.creature, effect.share * mult, events, false);
         return;
+      case 'spawn':
+        this.spawn(actor, effect.enemy, effect.count, effect.cap, events);
+        return;
       case 'consumeSummon': {
         const victim = this.summonsOf(actor)[0];
         if (!victim) return;
@@ -460,6 +471,23 @@ export class Battle {
     target.buffs = target.buffs.filter((b) => b.source !== source || b.stat !== stat);
     target.buffs.push({ source, stat, amount, remaining: duration });
     events.push({ type: 'buff', target: target.uid, stat, amount });
+  }
+
+  // Enemy reinforcements fill empty grid cells front to back, up to `cap` of that type alive at once.
+  private spawn(actor: Combatant, enemyId: string, count: number, cap: number, events: BattleEvent[]): void {
+    const def = this.bestiary[enemyId];
+    if (!def || actor.side !== 'enemy') return;
+    for (let i = 0; i < count; i++) {
+      const alive = this.alive('enemy');
+      if (alive.filter((c) => c.def.id === enemyId).length >= cap) return;
+      const taken = new Set(alive.map((c) => c.position));
+      const position = [...Array(ENEMY_ROWS * ENEMY_ROWS).keys()].find((p) => !taken.has(p));
+      if (position === undefined) return;
+      const unit = createCombatant(def, def.skills, 'enemy', position, {}, this.rng);
+      unit.uid = `enemy-spawn-${++this.spawnCount}`;
+      this.combatants.push(unit);
+      events.push({ type: 'summon', summoner: actor.uid, unit: unit.uid });
+    }
   }
 
   private summon(owner: Combatant, creatureId: string, share: number, events: BattleEvent[], familiar: boolean): void {
@@ -564,6 +592,19 @@ export class Battle {
   }
 
   // Returns the total damage landed (barrier absorption included) so drain and thorns can scale from it.
+  // Passive regeneration heals in whole points as they build up, unless a blocking element hit it recently.
+  private tickRegeneration(c: Combatant, dt: number, events: BattleEvent[]): void {
+    const regen = c.def.regeneration;
+    c.regenBlocked = Math.max(0, c.regenBlocked - dt);
+    if (!regen || c.regenBlocked > 0 || c.hp >= c.maxHp) return;
+    c.regenCarry += c.maxHp * regen.perSecond * dt;
+    const amount = Math.min(Math.floor(c.regenCarry), c.maxHp - c.hp);
+    if (amount < 1) return;
+    c.regenCarry -= amount;
+    c.hp += amount;
+    events.push({ type: 'heal', source: c.uid, target: c.uid, amount, periodic: true });
+  }
+
   private applyDamage(
     source: Combatant,
     target: Combatant,
@@ -571,6 +612,8 @@ export class Battle {
     events: BattleEvent[],
     opts: { element?: Element; direct: boolean; periodic?: boolean },
   ): number {
+    const regen = target.def.regeneration;
+    if (regen && opts.element && regen.blockedBy.includes(opts.element)) target.regenBlocked = regen.blockSeconds;
     let absorbed = 0;
     if (target.barrier) {
       absorbed = Math.min(target.barrier.amount, amount);
@@ -600,6 +643,14 @@ export class Battle {
     const dealt = selfInflicted ? Math.min(amount, target.hp - 1) : Math.min(amount, target.hp);
     if (dealt <= 0) return;
     target.hp -= dealt;
+    if (target.hp > 0) {
+      for (const slot of target.slots) {
+        const trigger = slot.def.trigger;
+        if (trigger?.kind !== 'belowHp' || slot.spent || target.hp / target.maxHp >= trigger.threshold) continue;
+        slot.spent = true;
+        this.useSkill(target, slot.def, events);
+      }
+    }
 
     if (target.def.mechanic === 'rage') this.gainRage(target, (dealt / target.maxHp) * 100, events);
     if (!selfInflicted) {
@@ -743,6 +794,8 @@ function createCombatant(
     channel: 0,
     meter: 0,
     burst: 0,
+    regenBlocked: 0,
+    regenCarry: 0,
   };
 }
 

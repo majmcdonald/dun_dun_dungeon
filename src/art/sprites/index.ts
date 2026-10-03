@@ -15,6 +15,15 @@ import { MUSHROOM_SPRITE } from './mushroom';
 import { GOBLIN_SPRITE } from './goblin';
 import { GHOST_SPRITE } from './ghost';
 import { SPIDER_SPRITE } from './spider';
+import { SKELETON_KNIGHT_SPRITE } from './skeletonKnight';
+import { GHOUL_SPRITE } from './ghoul';
+import { CULTIST_SPRITE } from './cultist';
+import { OGRE_SPRITE } from './ogre';
+import { SPIDER_QUEEN_SPRITE } from './spiderQueen';
+import { BONE_MAGE_SPRITE } from './boneMage';
+import { GOBLIN_KING_SPRITE } from './goblinKing';
+import { SLIME_KING_SPRITE } from './slimeKing';
+import { TROLL_SPRITE } from './troll';
 import { ARCHER_SPRITE } from './archer';
 import { BARBARIAN_SPRITE } from './barbarian';
 import { BARD_SPRITE } from './bard';
@@ -67,4 +76,13 @@ export const SPRITES: Record<string, SpriteDef> = {
   goblin: GOBLIN_SPRITE,
   ghost: GHOST_SPRITE,
   spider: SPIDER_SPRITE,
+  skeletonKnight: SKELETON_KNIGHT_SPRITE,
+  ghoul: GHOUL_SPRITE,
+  cultist: CULTIST_SPRITE,
+  ogre: OGRE_SPRITE,
+  spiderQueen: SPIDER_QUEEN_SPRITE,
+  boneMage: BONE_MAGE_SPRITE,
+  goblinKing: GOBLIN_KING_SPRITE,
+  slimeKing: SLIME_KING_SPRITE,
+  troll: TROLL_SPRITE,
 };

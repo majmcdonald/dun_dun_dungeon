@@ -13,7 +13,7 @@ const renderer = new Renderer(canvas);
 const input = new Input(canvas);
 const ctx = renderer.ctx;
 
-const REVIEW_ORDER = ['goblin', 'ghost', 'spider'];
+const REVIEW_ORDER = ['goblinKing', 'slimeKing', 'troll'];
 const ids = [...REVIEW_ORDER, ...Object.keys(SPRITES).filter((id) => !REVIEW_ORDER.includes(id))];
 const PAGE_TITLES = ['NEW - FOR REVIEW'];
 
@@ -40,8 +40,10 @@ startLoop({
     entries.slice(page * PER_PAGE, (page + 1) * PER_PAGE).forEach((e, i) => {
       const x = (i % COLUMNS) * CELL_W + 12;
       const y = Math.floor(i / COLUMNS) * CELL_H + 4;
-      ctx.drawImage(e.idle, x, y, 32 * SCALE, 32 * SCALE);
-      ctx.drawImage(e.attack, x + 68, y, 32 * SCALE, 32 * SCALE);
+      // 32x32 sprites at 2x; the 48x48 bosses at 1x so they fit the cell.
+      const size = e.idle.width === 32 ? 32 * SCALE : e.idle.width;
+      ctx.drawImage(e.idle, x, y + 64 - size, size, size);
+      ctx.drawImage(e.attack, x + 68, y + 64 - size, size, size);
       drawText(ctx, e.id, x, y + 66, PALETTE.sand);
     });
     const footer = `${PAGE_TITLES[page] ?? ''}  PAGE ${page + 1}/${pages}  CLICK FOR NEXT`;

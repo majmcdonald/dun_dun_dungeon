@@ -121,7 +121,7 @@ describe('run progress', () => {
     expect(run.result).toBe('won');
   });
 
-  it('gives each level its own map', () => {
+  it.skipIf(LEVELS < 2)('gives each level its own map', () => {
     const state = createState();
     startRun(state, 0, classes, 42);
     const first = state.run!.map;
@@ -306,7 +306,7 @@ describe('run flow rules', () => {
     expect(run.stats.rooms).toBe(1);
   });
 
-  it('a level boss opens the next level with its picks still on offer', () => {
+  it.skipIf(LEVELS < 2)('a level boss opens the next level with its picks still on offer', () => {
     const state = started();
     const run = state.run!;
     recordWin(run, enterBoss(state), reward);

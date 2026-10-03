@@ -852,6 +852,716 @@ def spider():
     emit(f'{OUT}/spider.ts', 'SPIDER_SPRITE', {'K': 'black', 'n': 'night', 'A': 'darkSlate', 'a': 'slate', 'M': 'gray', 'R': 'red', 'r': 'darkRed', 'W': 'white'}, frames(SPIDER, SPIDER_ATTACK))
 
 
+# ------------------------------------------------------------------ Act 1, group 3 enemies
+
+# Skeleton Knight and Cultist: redrawn after an art review.
+SKELETON_KNIGHT = [
+    (3, '..............RRRr..............'),
+    (4, '.............RRRRrrr....W.......'),
+    (5, '............MMMAAARrr...WL......'),
+    (6, '...........MMAAAAAaarr..WL......'),
+    (7, '...........MAAAAAaaa.r..WL......'),
+    (8, '..........MMMMAAAaan....WL......'),
+    (9, '...........HKWHKaaan....WL......'),
+    (10, '...........WLKWLaan.....WL......'),
+    (11, '...........WKWKWLan.....WL......'),
+    (12, '............LWLMan......WL......'),
+    (13, '...MMMMMMMAaMALMMMAAa...WL......'),
+    (14, '...MRRRRRrraMMMAAAMMAa..WL......'),
+    (15, '...MRRWWWrraMMAAAaAAan..WL......'),
+    (16, '...MRWWWLrdaMAAAAaaWL...WL......'),
+    (17, '...MRWKWKddaMAAAaaaLWLAMMAAa....'),
+    (18, '...MrrWLWddaAAAaaan...MAAAa.....'),
+    (19, '...MrrLrLddaAAaOaan.....Bb......'),
+    (20, '...Arrrdddda.aWLWan.....Aa......'),
+    (21, '....Arrddda.bbBbbbbd............'),
+    (22, '....Arrddna.MAAaAAan............'),
+    (23, '.....Arddn...WL..LM.............'),
+    (24, '.....Addan...WL..LM.............'),
+    (25, '......Aan...MAa..Aan............'),
+    (26, '.......n....MAa..Aan............'),
+    (27, '............MAa..Aan............'),
+    (28, '............MAa..aan............'),
+    (29, '..........MMAAa.AAan............'),
+]
+SKELETON_KNIGHT_ATTACK = [
+    (0, '............................WL..'),
+    (1, '...........................WL...'),
+    (2, '..........................WL....'),
+    (3, '.............RRRr........WL.....'),
+    (4, '............RRRRrrr.....WL......'),
+    (5, '...........MMMAAARrr...WL.......'),
+    (6, '..........MMAAAAAaarr.WL........'),
+    (7, '..........MAAAAAaaa.MWL.........'),
+    (8, '.........MMMMAAAaanMAA..........'),
+    (9, '..........HKWHKaaabAaM..........'),
+    (10, '..........WLKWLaan.WL...........'),
+    (11, '..........WKWKWLanWL............'),
+    (12, '...........LWLManWL.............'),
+    (13, '..MMMMMMMAaMALMMMAAa............'),
+    (14, '..MRRRRRrraMMMAAAMMAa...........'),
+    (15, '..MRRWWWrraMMAAAaAAan...........'),
+    (16, '..MRWWWLrdaMAAAAaa..............'),
+    (17, '..MRWKWKddaMAAAaaa..............'),
+    (18, '..MrrWLWddaAAAaaan..............'),
+    (19, '..MrrLrLddaAAaOaan..............'),
+    (20, '..Arrrdddda.aWLWan..............'),
+    (21, '...Arrddda.bbBbbbbd.............'),
+    (22, '...Arrddna.MAAaAAan.............'),
+    (23, '....Arddn....WL..LM.............'),
+    (24, '....Addan....WL..LM.............'),
+    (25, '.....Aan....MAa..Aan............'),
+    (26, '......n.....MAa..Aan............'),
+    (27, '............MAa..Aan............'),
+    (28, '............MAa..aan............'),
+    (29, '..........MMAAa.AAan............'),
+]
+
+
+def skeletonKnight():
+    emit(f'{OUT}/skeletonKnight.ts', 'SKELETON_KNIGHT_SPRITE', {'K': 'black', 'W': 'white', 'L': 'lightGray', 'M': 'gray', 'A': 'slate', 'a': 'darkSlate', 'n': 'night', 'H': 'hotRed', 'R': 'red', 'r': 'darkRed', 'd': 'deepBrown', 'B': 'brown', 'b': 'darkBrown', 'O': 'rust'},
+         frames(SKELETON_KNIGHT, SKELETON_KNIGHT_ATTACK))
+
+
+def ghoul_frame(lunge):
+    g = Grid()
+    dx = -3 if lunge else 0
+    def P(x, y, c): g.px(x + dx, y, c)
+    def R(x0, y0, x1, y1, c): g.rect(x0 + dx, y0, x1 + dx, y1, c)
+    def L(x0, y0, x1, y1, c): g.line(x0 + dx, y0, x1 + dx, y1, c)
+    # back arm (in shade) hangs behind
+    L(20, 15, 23, 21, 'A'); L(21, 15, 24, 21, 'A'); P(23, 22, 'W'); P(25, 22, 'W')
+    R(15, 10, 21, 13, 'M'); R(16, 10, 20, 10, 'L'); R(21, 11, 22, 14, 'A')                   # hunched back
+    R(12, 13, 21, 16, 'M'); R(12, 13, 15, 13, 'L')                                            # shoulders
+    R(13, 17, 20, 21, 'M'); R(19, 17, 20, 21, 'A')                                            # torso
+    for y in (17, 19):                                                                        # ribs
+        R(14, y, 18, y, 'a')
+    R(13, 22, 20, 23, 'b')                                                                    # loincloth
+    L(14, 24, 12, 28, 'M'); L(15, 24, 13, 28, 'M'); R(10, 29, 13, 29, 'A')                   # front leg
+    L(19, 24, 20, 28, 'A'); L(20, 24, 21, 28, 'A'); R(19, 29, 22, 29, 'a')                   # back leg
+    R(11, 12, 13, 14, 'M')                                                                    # neck
+    R(6, 8, 12, 13, 'M'); R(6, 8, 11, 8, 'L'); R(6, 9, 6, 11, 'L'); R(12, 9, 12, 13, 'A')    # head, thrust forward
+    R(7, 9, 11, 9, 'a')                                                                       # heavy brow
+    P(7, 10, 'Y'); P(10, 10, 'Y')                                                             # eyes
+    if lunge:
+        R(7, 12, 11, 14, 'r'); P(7, 12, 'W'); P(9, 12, 'W'); P(11, 12, 'W'); P(8, 14, 'W'); P(10, 14, 'W')
+        L(14, 13, 10, 4, 'M'); L(15, 13, 11, 4, 'M')                                          # claw raised over its head
+        P(8, 3, 'W'); P(9, 2, 'W'); P(10, 2, 'W'); P(12, 2, 'W')
+    else:
+        R(7, 12, 10, 13, 'r'); P(7, 12, 'W'); P(9, 12, 'W'); P(8, 13, 'W')
+        L(13, 17, 8, 23, 'M'); L(14, 17, 9, 23, 'M')                                          # claw hanging from the shoulder
+        P(6, 24, 'W'); P(7, 25, 'W'); P(8, 25, 'W')
+    return g.outline()
+
+
+def ghoul():
+    emit(f'{OUT}/ghoul.ts', 'GHOUL_SPRITE',
+         {'K': 'black', 'M': 'gray', 'L': 'lightGray', 'A': 'slate', 'a': 'darkSlate', 'Y': 'yellow',
+          'r': 'darkRed', 'W': 'white', 'b': 'darkBrown'},
+         {'idle': ghoul_frame(False), 'attack': ghoul_frame(True)})
+
+
+CULTIST = [
+    (4, '..............PPpp..............'),
+    (5, '............PPPpppd.............'),
+    (6, '...........PPppppppd............'),
+    (7, '..........PPpppppppdd...........'),
+    (8, '.........PPpppppppddn...........'),
+    (9, '.........pnnnnnpppddn...........'),
+    (10, '..........KHKHKppddn.n..........'),
+    (11, '..........KKKKKppddn.n..........'),
+    (12, '..HR.......KKKpppdn..dn.........'),
+    (13, '.HnPr.....PPpppppppddn..........'),
+    (14, '.rnnr....PPPpppppppdn...........'),
+    (15, '..rr..PPpp.Ppppppppdn...........'),
+    (16, '...SspppddPpppppppppdn..........'),
+    (17, '..SS.ddn..Ppppppppppdn..........'),
+    (18, '..........Ppppppppppdn..........'),
+    (19, '..........RRRRRRRRRRrdn.........'),
+    (20, '..........rrrrrrrrrrdsS.........'),
+    (21, '..........PRrPdppdpddnL.........'),
+    (22, '.........PpRrPdppdppddL.........'),
+    (23, '.........PprpPdpppdpddM.........'),
+    (24, '.........Ppprdppppddddn.........'),
+    (25, '........PpppPdppppdpdddn........'),
+    (26, '........PpppPdppppdpdddn........'),
+    (27, '........PppPdpppppdpdddn........'),
+    (28, '.......rRRRRRrrrrrrrrrrd........'),
+    (29, '.........nnd...nn...............'),
+]
+CULTIST_ATTACK = [
+    (4, '..............PPpp..............'),
+    (5, '............PPPpppd.............'),
+    (6, '..H........PPppppppd............'),
+    (7, '.HHR.r....PPpppppppdd...........'),
+    (8, 'HnPnR....PPpppppppddn...........'),
+    (9, 'HnnnrR...pnnnnnpppddn...........'),
+    (10, 'Rnnnr.....KHKHKppddn.n..........'),
+    (11, '.rrr.SsPPPpKKKKppddn.n..........'),
+    (12, '....SSpppddKKKpppdn..dn.........'),
+    (13, '........ddPPpppppppddn..........'),
+    (14, '...........Ppppppppdn...........'),
+    (15, '...........Ppppppppdn...........'),
+    (16, '..........Ppppppppppdn..........'),
+    (17, '..........Ppppppppppdn..........'),
+    (18, '..........Ppppppppppdn..........'),
+    (19, '..........RRRRRRRRRRrdn.........'),
+    (20, '..........rrrrrrrrrrdsS.........'),
+    (21, '..........PRrPdppdpddnL.........'),
+    (22, '.........PpRrPdppdppddL.........'),
+    (23, '.........PprpPdpppdpddM.........'),
+    (24, '.........Ppprdppppddddn.........'),
+    (25, '........PpppPdppppdpdddn........'),
+    (26, '........PpppPdppppdpdddn........'),
+    (27, '........PppPdpppppdpdddn........'),
+    (28, '.......rRRRRRrrrrrrrrrrd........'),
+    (29, '.........nnd...nn...............'),
+]
+
+
+def cultist():
+    emit(f'{OUT}/cultist.ts', 'CULTIST_SPRITE', {'K': 'black', 'P': 'magenta', 'p': 'plum', 'd': 'deepBrown', 'n': 'night', 'R': 'red', 'r': 'darkRed', 'H': 'hotRed', 'S': 'skin', 's': 'skinShade', 'L': 'lightGray', 'M': 'gray'}, frames(CULTIST, CULTIST_ATTACK))
+
+
+# ------------------------------------------------------------------ Act 1 Epic Monsters (drawn by the art reviewer)
+OGRE = [
+    (4, '..............dd................'),
+    (5, '.............SSsss..............'),
+    (6, '........SSSbSSsssssbssB.........'),
+    (7, '.....SSSSssbSbbsbbBbsssssB......'),
+    (8, '....SSSSsssbsRbsRbBbssssssBB....'),
+    (9, '...SSSsssssbSsBBBsBbsssssssBB...'),
+    (10, '..SSsssssBbbsWKKKWBbssssssBBb...'),
+    (11, '..SssssBbSSSbBsssBbsssbSsssBBb..'),
+    (12, '..SssssBbSSdWdddWdsssBbsssssBb..'),
+    (13, '..SsssBbbsBBWsssWsBBBsbssssBBb..'),
+    (14, '.SSsssBbbSSssssssssssBbSsssBBb..'),
+    (15, '.SSSssBbbSsssssssssssBbSssssBb..'),
+    (16, '.sBsBsBbbssssssBssssBBbsssssBb..'),
+    (17, '.bBbBbbbbsssssssssssBBbssssBBb..'),
+    (18, '...bdn..bBsssssssssBBbbssssBBb..'),
+    (19, '...bdn..ddddddddYdddddbSSssBBb..'),
+    (20, '...bdn...AAaaaaaaaaaan.sBsBsBb..'),
+    (21, '..bbdn...Aaaaaaaaaaann.bBbBbbb..'),
+    (22, '..bbddn..SAaaaaaaaaanB..........'),
+    (23, '.Lbbddn..SsssAaaansssBb.........'),
+    (24, '.bbLddnL.sssBaaaanssBBb.........'),
+    (25, '.bbbddnn.sssBbaanbsssBb.........'),
+    (26, '.LbbdddM.sSssBb..sSssBb.........'),
+    (27, '.bbbdMnn.sssBBb..sssBBb.........'),
+    (28, '.bLbddnnSSsssBb.SSsssBb.........'),
+    (29, '..dddnn.BBBBbbb.BBBBbbb.........'),
+]
+OGRE_ATTACK = [
+    (1, '..SSssB.......LbbbLbbbbLbbbbd...'),
+    (2, '.SSsssBbbbbbBbbbbbbbbbbbbbbdn...'),
+    (3, '.sBsBsbddddddbdddddddddddddnn...'),
+    (4, '..SssBb.......ndnnMnnnnnMnnnn...'),
+    (5, '..SssBb......SSsss..............'),
+    (6, '..SsssBbSSSbSSsssssbssB.........'),
+    (7, '..SssssBsssbSbbsbbBbsssssB......'),
+    (8, '..SssssssssbsRbsRbBbssssssBB....'),
+    (9, '..sssssssssbSsBBBsBbsssssssBB...'),
+    (10, '..BsssssssBbsWKrKWBbssssssBBb...'),
+    (11, '.....BbbbSSSbBsssBbsssbSsssBBb..'),
+    (12, '........bSSdWdddWdsssBbsssssBb..'),
+    (13, '........bsBBWsssWsBBBsbssssBBb..'),
+    (14, '........bSSssssssssssBbSsssBBb..'),
+    (15, '........bSsssssssssssBbSssssBb..'),
+    (16, '........bssssssBssssBBbsssssBb..'),
+    (17, '........bsssssssssssBBbssssBBb..'),
+    (18, '........bBsssssssssBBbbssssBBb..'),
+    (19, '........ddddddddYdddddbSSssBBb..'),
+    (20, '.........AAaaaaaaaaaan.sBsBsBb..'),
+    (21, '.........Aaaaaaaaaaann.bBbBbbb..'),
+    (22, '.........SAaaaaaaaaanB..........'),
+    (23, '.........SsssAaaansssBb.........'),
+    (24, '.........sssBaaaanssBBb.........'),
+    (25, '.........sssBbaanbsssBb.........'),
+    (26, '.........sSssBb..sSssBb.........'),
+    (27, '.........sssBBb..sssBBb.........'),
+    (28, '........SSsssBb.SSsssBb.........'),
+    (29, '........BBBBbbb.BBBBbbb.........'),
+]
+
+
+def ogre():
+    emit(f'{OUT}/ogre.ts', 'OGRE_SPRITE', {'K': 'black', 'S': 'sand', 's': 'tan', 'B': 'brown', 'b': 'darkBrown', 'd': 'deepBrown', 'n': 'night', 'A': 'slate', 'a': 'darkSlate', 'L': 'lightGray', 'M': 'gray', 'W': 'white', 'R': 'red', 'r': 'darkRed', 'Y': 'gold'},
+         frames(OGRE, OGRE_ATTACK))
+
+
+SPIDER_QUEEN = [
+    (2, '................................'),
+    (3, '................................'),
+    (4, '....M...............MMMMM.......'),
+    (5, '...aa.............MMMaaaMMa.....'),
+    (6, '...a.a...........MMaaaaaaaaA....'),
+    (7, '..a..a..........MLMaaaaaaaAAA...'),
+    (8, '..a..a.........MLaaaaaaaaAAAAA..'),
+    (9, '.a...a.........MaaaaaaaaAAAAAA..'),
+    (10, '.n....a.......MMaaaaaaaAAAAAAAA.'),
+    (11, '......a.y.y.y.MaaaaaaaaAAAAAAAA.'),
+    (12, '......a.YYYYO.MaaaaaaaaAAAAAAAn.'),
+    (13, '.......aORYRO.MaaaaAaaaAAAAAAnn.'),
+    (14, '......MMMMMMaanaaaAAAaAAAAAAnnn.'),
+    (15, '.....MaHaHaaaAnaAAAAAAAAAAAnnnn.'),
+    (16, '.....MHaaaaaAAnAAAAAAAAAAnnnnnn.'),
+    (17, '.....aaaaaaAAAnAAAAAAAAAnnnnnn..'),
+    (18, '.....aaaaAAAAnnAAAAAAAAnnnnnnn..'),
+    (19, '....aaAaAAAnnnn.AAAAAAnnnnnnn...'),
+    (20, '....AAnAAnnnnn...AAAnnnnnnnnAa..'),
+    (21, '....rnrAnnnnn.a..aAnnnnannn..M..'),
+    (22, '....W.Wa.nn...a...a.nnnna.....L.'),
+    (23, '....G.La.A....a...a...A..aa.....'),
+    (24, '....g.a..A...a.....a..A....M....'),
+    (25, '......M.A....a.....M...a...a....'),
+    (26, '......a.a....M.....a....A...a...'),
+    (27, '.....a..A....a......a...A...a...'),
+    (28, '.....a.A....a.......a....A...a..'),
+    (29, '.....n.n....n.......n....n...n..'),
+]
+SPIDER_QUEEN_ATTACK = [
+    (1, '......nAA.......................'),
+    (2, '...M.....AAa....................'),
+    (3, '..aa.......A....................'),
+    (4, '..a.a......A........MMMMM.......'),
+    (5, '.a..a.......A.....MMMaaaMMa.....'),
+    (6, '.n..a.......A....MMaaaaaaaaA....'),
+    (7, '.....a......A...MLMaaaaaaaAAA...'),
+    (8, '.....a..y.y.yA.MLaaaaaaaaAAAAA..'),
+    (9, '.....a..YYYYOA.MaaaaaaaaAAAAAA..'),
+    (10, '......a.ORYROAMMaaaaaaaAAAAAAAA.'),
+    (11, '......MMMMMMaanaaaaaaaaAAAAAAAA.'),
+    (12, '.....MaHaHaaaAnaaaaaaaaAAAAAAAn.'),
+    (13, '.....MHaaaaaAAnaaaaAaaaAAAAAAnn.'),
+    (14, '.g...aaaaaaAAAnaaaAAAaAAAAAAnnn.'),
+    (15, '.gG.aaaaaAAAAnnaAAAAAAAAAAAnnnn.'),
+    (16, '.G.GAaAaAAAnnnnAAAAAAAAAAnnnnnn.'),
+    (17, '.GgGrnrAAnnnnn.AAAAAAAAAnnnnnn..'),
+    (18, '..GGW.W.nnnnn..AAAAAAAAnnnnnnn..'),
+    (19, '.Gg.L....nn.A...AAAAAAnnnnnnn...'),
+    (20, '.g......a...A.a..AAAnnnnnnnnAa..'),
+    (21, '........a...A.a..aAnnnnannn..M..'),
+    (22, '..G.....a..A..a...a.nnnna.....L.'),
+    (23, '.......a...A...a..a...A..aa.....'),
+    (24, '.......M...A...a...a..A....M....'),
+    (25, '.......a...a...M...M...a...a....'),
+    (26, '.......a...A...a...a....A...a...'),
+    (27, '......a...A...a.....a...A...a...'),
+    (28, '......a...A...a.....a....A...a..'),
+    (29, '......n...n...n.....n....n...n..'),
+]
+
+
+def spiderQueen():
+    emit(f'{OUT}/spiderQueen.ts', 'SPIDER_QUEEN_SPRITE', {'K': 'black', 'n': 'night', 'A': 'darkSlate', 'a': 'slate', 'M': 'gray', 'R': 'red', 'r': 'darkRed', 'W': 'white', 'L': 'lightGray', 'H': 'hotRed', 'G': 'green', 'g': 'midGreen', 'Y': 'gold', 'y': 'yellow', 'O': 'orange'},
+         frames(SPIDER_QUEEN, SPIDER_QUEEN_ATTACK))
+
+
+BONE_MAGE = [
+    (1, '..L.C.M.....AAaa.n..............'),
+    (2, '..LCWCM...AAAaaaann.............'),
+    (3, '..LCCBM..AAaaaaaann.............'),
+    (4, '..MBBbM..AWWWWWWLnan............'),
+    (5, '...WLM...aWWWWWLMnaan...........'),
+    (6, '....LM....HKWHKLMnaan...........'),
+    (7, '....LM....KKWKKLMnaann..........'),
+    (8, '....LM....WWKWLMMnaann..........'),
+    (9, '....LM.....KWKWKMnaann..........'),
+    (10, '....LM.....LWLWMnaaann..........'),
+    (11, '....LM...aAaLMaaaaann...........'),
+    (12, '...WLM..AAaanLWnaaann...........'),
+    (13, '...WLWLAAAaanWLWnaaKnn..........'),
+    (14, '...LMLMAaaaanKKKnaaKnn..........'),
+    (15, '....LMAaaannLWLnaaKann..........'),
+    (16, '....LMaaannAnKnaaaKann..........'),
+    (17, '....LMnnnAaaaaaaaaKann..........'),
+    (18, '....LM..arrrrrLrrrrrrnn.........'),
+    (19, '....LM..AAaaaKaaaaaKann.........'),
+    (20, '....LM.AAaaaaKaaaaaKann.........'),
+    (21, '....LM.AAaaaKaaaaaaaKann........'),
+    (22, '...WLMAAaaaaKaaaaaaaKann........'),
+    (23, '....LMAAaaaKaaaaaaaaKaann.......'),
+    (24, '....LMAaaaaKaaaaaaaaKaan........'),
+    (25, '....LMAaaaKaaaaaaaaaKaann.......'),
+    (26, '....LMaaaaKaaaaaaaaaKaann.......'),
+    (27, '....LMaaaKaaaaaaaaaaKaan.n......'),
+    (28, '....LM.aaKnb.aaaanb.aKnbn.......'),
+    (29, '....LM..b..b...b...b..b.........'),
+]
+BONE_MAGE_ATTACK = [
+    (1, '.....L.C.M......AAaa.n..........'),
+    (2, '.....LCWCM....AAAaaaann.........'),
+    (3, '.....LCCBM...AAaaaaaann.........'),
+    (4, '.....MBBbM...AWWWWWWLnan........'),
+    (5, '......WLM....aWWWWWLMnaan.......'),
+    (6, '....p..LM.....HKWHKLMnaan.......'),
+    (7, '..bBp..LM.....KKWKKLMnaann......'),
+    (8, '.bCCB...LM....WWKWLMMnaann......'),
+    (9, '.CWWCb..LM.....KWKWKMnaann......'),
+    (10, '.CWWCBp.LM.....LWLWMnaaann......'),
+    (11, '.bCCBp..LM...aAaLMaaaaann.......'),
+    (12, '..bp.....LAAaAaanLWnaaann.......'),
+    (13, '.......WLWLAaaaanWLWnaaKnn......'),
+    (14, '.......LMLMaanaanKKKnaaKnn......'),
+    (15, '.........LMaaannLWLnaaKann......'),
+    (16, '.........nLMannAnKnaaaKann......'),
+    (17, '..........LMnAaaaaaaaaKann......'),
+    (18, '..........LMarrrrrLrrrrrrnn.....'),
+    (19, '..........LMAAaaaKaaaaaKann.....'),
+    (20, '...........LMaaaaKaaaaaKann.....'),
+    (21, '...........LMaaaKaaaaaaaKann....'),
+    (22, '..........WLMaaaKaaaaaaaKann....'),
+    (23, '..........ALMaaKaaaaaaaaKaann...'),
+    (24, '.........AAaLMaKaaaaaaaaKaan....'),
+    (25, '.........AAaLMKaaaaaaaaaKaann...'),
+    (26, '........AAaaLMKaaaaaaaaaKaann...'),
+    (27, '........AAaaLMaaaaaaaaaaKaan.n..'),
+    (28, '........Ab.aaLMb.aaaanb.aKnbn...'),
+    (29, '........b...bLMb...b...b..b.....'),
+]
+
+
+def boneMage():
+    emit(f'{OUT}/boneMage.ts', 'BONE_MAGE_SPRITE', {'K': 'black', 'W': 'white', 'L': 'lightGray', 'M': 'gray', 'H': 'hotRed', 'r': 'darkRed', 'A': 'slate', 'a': 'darkSlate', 'n': 'night', 'C': 'cyan', 'B': 'blue', 'b': 'navy', 'p': 'plum'},
+         frames(BONE_MAGE, BONE_MAGE_ATTACK))
+
+
+# ------------------------------------------------------------------ Act 1 bosses (48x48, drawn by the art reviewer)
+BOSS_SIZE = 48
+
+
+def boss_frame(rows):
+    """48x48 version of sprite(): fill rows, then the same single black outline rule as Grid.outline()."""
+    g = [['.'] * BOSS_SIZE for _ in range(BOSS_SIZE)]
+    for y, line in rows:
+        assert len(line) == BOSS_SIZE, (y, len(line))
+        g[y] = list(line)
+    out = [r[:] for r in g]
+    for y in range(BOSS_SIZE):
+        for x in range(BOSS_SIZE):
+            if g[y][x] != '.':
+                continue
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < BOSS_SIZE and 0 <= ny < BOSS_SIZE and g[ny][nx] not in '.K':
+                    out[y][x] = 'K'
+                    break
+    return [''.join(r) for r in out]
+
+
+def emit_boss(name, const, legend, idle_rows, attack_rows):
+    frames = {'idle': boss_frame(idle_rows), 'attack': boss_frame(attack_rows)}
+    used = set(''.join(''.join(f) for f in frames.values())) - {'.'}
+    assert not used - set(legend), (const, used - set(legend))
+    out = ["import type { SpriteDef } from '../sprite';", '', f'export const {const}: SpriteDef = {{',
+           f'  width: {BOSS_SIZE},', f'  height: {BOSS_SIZE},', '  legend: {']
+    out += [f"    {k}: '{v}'," for k, v in legend.items() if k in used]
+    out += ['  },', '  frames: {']
+    for frame, rows in frames.items():
+        out.append(f'    {frame}: [')
+        out += [f"      '{r}'," for r in rows]
+        out.append('    ],')
+    out += ['  },', '};', '']
+    open(f'{OUT}/{name}.ts', 'w').write('\n'.join(out))
+
+
+GOBLIN_KING = [
+    (1, '...............Y................................'),
+    (2, '...............YO....Y..........................'),
+    (3, '...............YoO..YoO....Y....................'),
+    (4, '...............YooOYYoO...YO....................'),
+    (5, '...............YoooooooOYYoO....................'),
+    (6, '...............YRroYoooooooO....................'),
+    (7, '......G.......GxxxxxCcoYRooO...........d........'),
+    (8, '......GGg....GGGGGGGxxxxxroOd........ddg........'),
+    (9, '.......GGgg..GGGGGGggggggxxxdd.....ddggd........'),
+    (10, '........gGGggGGGGGggggggggddddd..ddgggd.........'),
+    (11, '.........ddgGGGtttttggttttgdddddgggdd...........'),
+    (12, '.....Y....ddGGKYYYdggKYYYddddtdddd..............'),
+    (13, '...YYoOO...GGgKKYYdggKKYYgddddt.................'),
+    (14, '..YooooOOGGGGgdgggggGggggggdddt.................'),
+    (15, '..YoRRroOGGggdggggggggggggggddt.................'),
+    (16, '.YYoRrroOxtgddgdggggggggggggddt.................'),
+    (17, '..YoorroOdddgtWWtWWtWWtWWtggdt..................'),
+    (18, '..OooooOx...dtWrrrrrrrrrrWtddt..................'),
+    (19, '...OOxxx....ddtWtWttWtttWtddt...................'),
+    (20, '.....xO......ddddddddddddddtWWWWWMRRe...........'),
+    (21, '.....oO......WWWWWWWWWWWWWWWWWWWWWWWWM..........'),
+    (22, '......oO....MWGWtWWWWWWWWWWWKWWWWWWWWMM.........'),
+    (23, '......oO....RGGGtWWWWWKWWWWWWWWWWWKWMMt.........'),
+    (24, '......YO....GGggtMWKMMWMMKWMMMWKMMMMMgt.........'),
+    (25, '.......oO..RGgggtGMMGGMMGGMMggMMddMGgggt........'),
+    (26, '.......oO..GGgggtGGGGGGGGGGggggggddGgggt........'),
+    (27, '.......oO..GgggttGGGGGGGGGGgggggggddtgggt.......'),
+    (28, '........oOGGgggtGGGGGGGGGGGGggggggddtgggt.......'),
+    (29, '........oGGGggttGGGGGGGGGGGggggggggddtgggt......'),
+    (30, '........GGggGttgGGGGGGGGGGGggggggggddtgggt......'),
+    (31, '.......GdddddtgggGGGGGGGGGggggggggdddtgggt......'),
+    (32, '........GggtttgggggGGGGGggggggggggdddtGggt......'),
+    (33, '.........tttrGdgggggggggdtgggggggdddttooooo.....'),
+    (34, '.........RoOrrGdggggggggggggggggddddtrOOOOO.....'),
+    (35, '........RRoOrrGddggggggYYYoggggddddttrGggt......'),
+    (36, '........RrYOrrrYYYYYYYYoxxoOYYYYYYYxrrGGGGt.....'),
+    (37, '........RrroOrrYooooooYxRrxOooooooxxrrGGggG.....'),
+    (38, '.......RRrroOrrrxxxxxxxOOOxxxxxxxxxrrGGgggtt....'),
+    (39, '.......RrrroOrrrxBBBBBBBBbBBBBBBbeerrrGggtt.....'),
+    (40, '.......RrrrroOrrrxBBBBBBBbBBBBBbberrrrrttte.....'),
+    (41, '......RRrrrxxrrrrxbbbbbbbbbbbbbbeerrrrrreee.....'),
+    (42, '......RrrrrrrrrrrGeeeeeeebeeeeeeerrrrrrreee.....'),
+    (43, '......ReeeeeeeeeeGgggteeeeeeGgggteeeeeeeeee.....'),
+    (44, '.....RReeeeeeeeGGGGGGteeeeGGGGGGteeeeeeeeeee....'),
+    (45, '.....LLLLLLLLLLGgggggtLLLLGgggggtLLLLLLLLLLL....'),
+    (46, '...............ttttttt....ttttttt...............'),
+]
+GOBLIN_KING_ATTACK = [
+    (2, '.............Y..................................'),
+    (3, '.............YO....Y............................'),
+    (4, '.............YoO..YoO....Y......................'),
+    (5, '.............YooOYYoO...YO......................'),
+    (6, '.............YoooooooOYYoO..............GG......'),
+    (7, '.............YRroYoooooooO.............GGgG.....'),
+    (8, '....G.......GxxxxxCcoYRooO...........ddddddt....'),
+    (9, '....GGg....GGGGGGGxxxxxroOd........ddgGggggt....'),
+    (10, '.....GGgg..GGGGGGggggggxxxdd.....ddggddddddt....'),
+    (11, '......gGGggGGGGGggggggggddddd..ddgggd.GGgtt.....'),
+    (12, '.......ddgGGGGtttggggtttgdddddgggdd...Ggttt.....'),
+    (13, '........ddGtKYYYtggtKYYYdddtdddd......Gggt......'),
+    (14, '.........GGgdKKYdggdKKYgddddt.........ooooo.....'),
+    (15, '.......GGGGgdgggggGggggggdddt.........OOOOO.....'),
+    (16, '......GGGggdggggggggggggggddt.........Gggt......'),
+    (17, '.....GGgtgdtKKKKKKKKKKKKKgddt........GGggt......'),
+    (18, '......ddddtKWWKWWKWWKWWKKtdt........GGgggt......'),
+    (19, '..........tKKKrrrrrrrrKKKtdt........Ggggtt......'),
+    (20, '..........dtKrrRRRRRrrrKtdtWWWWWWMRGGgggt.......'),
+    (21, '..........ddtKWWKKKKWWKtddtWWWWWWWWWWMgtt.......'),
+    (22, '.....Y.....dddttttttttdddtWWKWWWWWWWWMMt........'),
+    (23, '...YYoOO....RMWWWWWWWWKWWWWWWWWWWWKWMMtt........'),
+    (24, '..YooooOO...RrGGGGtKMMWMMKWMMMWKMMMMMgt.........'),
+    (25, '..YoRRroO..RRrrGggtMGGMMGGMMggMMddMggtt.........'),
+    (26, '.YYoRrroOxYYrrGGGgtGGGGGGGGggggggddGtte.........'),
+    (27, '..YoorroOxooYGGggGtGGGGGGGGgggggggddtee.........'),
+    (28, '..OooooOx.xxGGgggttGGGGGGGGGggggggddtee.........'),
+    (29, '...OOxxx..RrrGggtttGGGGGGGGggggggggddtee........'),
+    (30, '.....x....RrrGtttttGGGGGGGGggggggggddtee........'),
+    (31, '.........RRrrGgggGGGGGGGGGggggggggdddtee........'),
+    (32, '.........RrrrGgggggGGGGGggggggggggdddtee........'),
+    (33, '.........RrrrGdgggggggggdtgggggggdddtteee.......'),
+    (34, '.........RrrrrGdggggggggggggggggddddtreee.......'),
+    (35, '........RRrrrrGddggggggYYYoggggddddttreee.......'),
+    (36, '........RrrrrrrYYYYYYYYoxxoOYYYYYYYxrreee.......'),
+    (37, '........RrrrrrrYooooooYxRrxOooooooxxrrreee......'),
+    (38, '.......RRrrrrrrrxxxxxxxOOOxxxxxxxxxrrrreee......'),
+    (39, '.......RrrrrrrrrxBBBBBBBBbBBBBBBbeerrrreee......'),
+    (40, '.......RrrrrrrrrrxBBBBBBBbBBBBBbberrrrrreee.....'),
+    (41, '......RRrrrrrrrrrxbbbbbbbbbbbbbbeerrrrrreee.....'),
+    (42, '......RrrrrrrrrrrGeeeeeeebeeeeeeerrrrrrreee.....'),
+    (43, '......ReeeeeeeeeeGgggteeeeeeGgggteeeeeeeeee.....'),
+    (44, '.....RReeeeeeeeGGGGGGteeeeGGGGGGteeeeeeeeeee....'),
+    (45, '.....LLLLLLLLLLGgggggtLLLLGgggggtLLLLLLLLLLL....'),
+    (46, '...............ttttttt....ttttttt...............'),
+]
+
+
+def goblinKing():
+    emit_boss('goblinKing', 'GOBLIN_KING_SPRITE', {'B': 'brown', 'C': 'cyan', 'G': 'green', 'K': 'black', 'L': 'lightGray', 'M': 'gray', 'O': 'orange', 'R': 'red', 'W': 'white', 'Y': 'yellow', 'b': 'darkBrown', 'c': 'blue', 'd': 'darkGreen', 'e': 'deepBrown', 'g': 'midGreen', 'o': 'gold', 'r': 'darkRed', 't': 'deepTeal', 'x': 'orangeBrown'}, GOBLIN_KING, GOBLIN_KING_ATTACK)
+
+
+SLIME_KING = [
+    (2, '...............................Y................'),
+    (3, '........................Y.....YO................'),
+    (4, '.................Y.....YoO...YoO................'),
+    (5, '.................YO....YoO...YoO................'),
+    (6, '.................YoO...ooOO..ooO................'),
+    (7, '.................YoO..YoooOOYooO................'),
+    (8, '.................YooOYoooooooooO................'),
+    (9, '.................YoooooooooooRrO................'),
+    (10, '.................YoooooCcoooouoO................'),
+    (11, '.................YRrooYccooooooO................'),
+    (12, '.................Yrroooooooooxxx................'),
+    (13, '.................YoooooxxxxxxGGG................'),
+    (14, '................GxxxxxxGGGGGGGGG................'),
+    (15, '..............GGGGWGGWGGGGGGGGGGgd..............'),
+    (16, '............GGGGGGGGGGGGGGGGGGGGGGgd............'),
+    (17, '...........GGGGGGGGGGGGGGGGGGGGGGGGgd...........'),
+    (18, '..........GGWWGGGGGGGGGGGGGGGGGGGGGGgd..........'),
+    (19, '.........GGWGGGGGGGGGGGGGGGGGGGGGGGGGgd.........'),
+    (20, '........GGWGGGGGGGGGGGGGGGGGGGGGGGGGGGgd........'),
+    (21, '.......GGWGGGGGGGGGGGGGGGGGGGGGGGGGGGGGgd.......'),
+    (22, '.......GWGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGgd.......'),
+    (23, '......GWGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGgd......'),
+    (24, '......GWddGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGgd......'),
+    (25, '.....GWGddddGGGGGGGGGGGGddGGGGGGGGGGGGGGGgd.....'),
+    (26, '.....GWGGddddddGGGGGGGddddGGGGGGGGGGGGGGGgd.....'),
+    (27, '.....GGGGGGGddddGGGGdddddGGGoGGGGGGGGGGGGgd.....'),
+    (28, '....GGWGGGGGGGddGGGddddGGGGGGeGGbGGGGGGGGGgd....'),
+    (29, '....GGWGGGWWKKGGGGGddGGGGGGGGGebGGGGGGGGGGgd....'),
+    (30, '....GGGGGGKKKKGGGGGGWWKKGGggggbLLggggGGGGGgd....'),
+    (31, '....GGGGGGKKKKGGGGGGKKKKgggggbgLMLgggggGGGgd....'),
+    (32, '...GGGGGGGGGGGGGGGGGKKKKggggggggLMLggggggYYgd...'),
+    (33, '...GGGGGGGGGGGGGGGGGGggggggggggggLMLggggYoood...'),
+    (34, '...GGGGGGGGGGGGGGGGGggggggggggggggLMLgggYooOd...'),
+    (35, '...GGGGGGGGGGGKKKKKKgggggggggggggggLMLgggOOgd...'),
+    (36, '...GGGGGGGGGGKGggggGKgGgggggggggggggSSSgggggd...'),
+    (37, '...GGGGGGGGGKGGGGGGggKgggggggggggggSSSSsggggd...'),
+    (38, '...GGGGGGGGGGGGGGGGGgggggggggggggggSKSKsggggd...'),
+    (39, '...GGGGGGGGGGGGGGGGGggggggggggggggggSSsgggggd...'),
+    (40, '...GGGGGGGGGGGGGGGGSSgggggggSSggggggsgsgggggd...'),
+    (41, '...GGGGGGGGGGGGGGGGGSSSSSSSSsgggggggggggggGgd...'),
+    (42, '...GGGGGGGGGGGGGGGGssGggggggssgggGgggggggGGgd...'),
+    (43, '...GGGGGGGGGGGGGGGGGGGGGgggggggggggggggGGGGgd...'),
+    (44, '..gggggggggggggggggggggggggggggggggggggggggggg..'),
+    (45, '..dddddddddddddddddddddddddddddddddddddddddddd..'),
+    (46, '.dddddddddddddddddddddddddddddddddddddddddddddd.'),
+]
+SLIME_KING_ATTACK = [
+    (2, '.............................Y..................'),
+    (3, '......................Y.....YO..................'),
+    (4, '...............Y.....YoO...YoO..................'),
+    (5, '...............YO....YoO...YoO..................'),
+    (6, '...............YoO..YooOOOYooO..................'),
+    (7, '...............YoO..ooooOooooO..................'),
+    (8, '...............YooOYoooooooooO..................'),
+    (9, '...............YoooooooooooRrO..................'),
+    (10, '...............YooooYCcoooouoO..................'),
+    (11, '...............YRroooccooooooO..................'),
+    (12, '...............Yrrooooooo.......................'),
+    (13, '...............Yoooo............................'),
+    (15, '.........WG.........................WG..........'),
+    (16, '.........Gg.........................Gg..........'),
+    (19, '.....WG.........................................'),
+    (20, '.....Gg...................................WG....'),
+    (21, '..........................................Gg....'),
+    (23, '..................GGGGGGGGGGgd..................'),
+    (24, '...............GGGGGGGGGGGGGGGGgd...............'),
+    (25, '..WG..........GGGGGGGGGGGGGGGGGGgd..............'),
+    (26, '..Gg........GGGGGGGGGGGGGGGGGGGGGGgd.........WG.'),
+    (27, '..........WWGGGGGGGGGGGGGGGGGGGGGGGgd........Gg.'),
+    (28, '.......ddWGGGGGGGGGGGGddGGGGGGGGGGGGgd..........'),
+    (29, '.......ddddGGGGGGGGGddddGGGGGGGGGGGGGgd.........'),
+    (30, '.......WdddddGGGGGdddddGGGGGGGGGGGGGGGgd........'),
+    (31, '......WGGGddddGGGddddGGGGGGGGGGGGGGGGGGgd.......'),
+    (32, '.....W.GGWWKKdGGGdWWKKGGGGGGGGGGGGGGGGGgd.......'),
+    (33, '.....WGGGKKKKGGGGGKKKKGGGGGGGGGGGGGGGGGGgd......'),
+    (34, '....WGGGGGGGGGGGGGGGGGGGGGbggggggggggGGGGgd.....'),
+    (35, '....WGGGGGGGGGGGGGGGGGGgoebLLLLLLLLLggggGgd.....'),
+    (36, '....GGGGGGGGWKKKKKWGGgggggbMMMMMMMMggggggSSS....'),
+    (37, '...WGGGGGGGGKKKKKKKgggggggggggggggggggggSSSSs...'),
+    (38, '...WGGGGGGGKKKKKKKKKgggggggggggSSgggggggSKSKs...'),
+    (39, '...GGGGGGGGKKKKrKKKKgggYYgggggggSSSSSSSSsSSsd...'),
+    (40, '...GGGGGGGGGrrrrrrrgggYooogggggssgggggggssgsd...'),
+    (41, '...GGGGGGGGGGRRRrrGgggYooOggggggggggggggggggd...'),
+    (42, '.d.GGGGGGGGGGGGGGGGGGggOOgggggggggggggggggGgd.d.'),
+    (43, '.d.GGGGGGGGGGGGGGGGGGGGgggggggggggggggggGGGgd.d.'),
+    (44, '..gggggggggggggggggggggggggggggggggggggggggggg..'),
+    (45, '.dddddddddddddddddddddddddddddddddddddddddddddd.'),
+    (46, '.dddddddddddddddddddddddddddddddddddddddddddddd.'),
+]
+
+
+def slimeKing():
+    emit_boss('slimeKing', 'SLIME_KING_SPRITE', {'C': 'cyan', 'G': 'green', 'K': 'black', 'L': 'lightGray', 'M': 'gray', 'O': 'orange', 'R': 'red', 'S': 'sand', 'W': 'white', 'Y': 'yellow', 'b': 'darkBrown', 'c': 'blue', 'd': 'darkGreen', 'e': 'deepBrown', 'g': 'midGreen', 'o': 'gold', 'r': 'darkRed', 's': 'tan', 'u': 'rust', 'x': 'orangeBrown'}, SLIME_KING, SLIME_KING_ATTACK)
+
+
+TROLL = [
+    (1, '........................................gg......'),
+    (2, '......................................Gg........'),
+    (3, '.......................................g........'),
+    (4, '.........................MMMMMMMMMuu...xg.......'),
+    (5, '........................MMAGGGGGAuxxg.xBBBBb....'),
+    (6, '......................MMGGGGggggGGGSGxBBebbe....'),
+    (7, '.............b...b..bnMGGgggggggggddKxBBBbBb....'),
+    (8, '............bBb.bBbbBbnMdddggggddGGGAxxBBBBbe...'),
+    (9, '...........bBBBbBBBBBbnMMMMdddddGGgddBBBBbbee...'),
+    (10, '..........bBBBBBBBBBbbbnMMMMMMMMMdddGxBBBbe.....'),
+    (11, '.........bBBMMMBBBbbbbenMMMMMMMMAAAAGxBBBbe.....'),
+    (12, '.........MMMAAAMBbbbbeenAAMAAAAAAAAAxBBBBbe.....'),
+    (13, '........MMAAAAAAMbbbeeenAAAAAAAAAAAAxBBbbe......'),
+    (14, '.......MMMMMMMAAAAbbeeenAAAAAAAAAAAAxBBBbe......'),
+    (15, '.......MAnnnnnAAAAAMAeennAAAAAAAAAAAKxBBbe......'),
+    (16, '.......MAnYKnAAAAAMMAaennnAAAAAAAAaaxBbeeK......'),
+    (17, '......MMAAnnAAAAAAAMAAannnAAAAAAAaaaxBbeKn......'),
+    (18, '.....MMAAAAAAAAAAAAaAaannnnAAAAAaaaaxBbeKnn.....'),
+    (19, '....MMAAAAAAAAAAAAAAaaannnAAAAaaaaaxxBbeKnn.....'),
+    (20, '...MMAAAAnAAAAAAAAAAaannnnAAAaaaaaaxBbeKann.....'),
+    (21, '...MAAAAnnaAAAAAAAAAaannnAAAaaaaaaaxBbeKnnn.....'),
+    (22, '...nAAAnn..aAAAAAAAaannnAAaaaaaaaaaxBbeKnan.....'),
+    (23, '....nnn.SAnnnnnnAAAaannAAaaaaaaaaaxBbeKanan.....'),
+    (24, '.......MASAAAAASAAaaannAaaaaaaaaaaaaaannnnn.....'),
+    (25, '.......MAAAAAAAAAAaannnaaaaaaaaaaaaaaannan......'),
+    (26, '...g....naaaaaaaaannnnaaaaaaaaaaaaaaaannnn......'),
+    (27, '..gGg......nnnnnnnnnnaaaaaaaaaaaaaaaaannn....g..'),
+    (28, '...g.......MAAAAaannnaaaaaaaaaaaaannnnnnn...gGg.'),
+    (29, '..........MMAAAAAAn.MaaaaaaaaaaaaaKKaann.....g..'),
+    (30, '..........MAAAAAAAnneeeeeeeeSLeeeeeeeeeee.......'),
+    (31, '..........MAAAAAAAnnBBBBBBBBsBBBBBBBBbbe........'),
+    (32, '.........MMAAAAAAnnnBBBBBBBBBBBBBBBBBbee........'),
+    (33, '.........MAAAAAAAn.sbbbBBBBbBbBBBbbbbbe.........'),
+    (34, '.........MAAAAAAAn.eeeebBBbbeebBbbeeeben........'),
+    (35, '.........MAMAAAAnn.e.MAsbbbee.sbbeeaaeen........'),
+    (36, '.........MMMMMAAn...MMAAsbee...seeaaaaann.......'),
+    (37, '........MMAAAAnAn....MAAAeen....eaaaaaan........'),
+    (38, '........MAAAAAnnn...MMAAAAn......aaaaaann.......'),
+    (39, '........Maaaaann.....MAAAAn.......aaaaan........'),
+    (40, '........MAAAAnn.....MMAAAAn.......aaaaann.......'),
+    (41, '.........nnnnn.......MAAAAn.......aaaaan........'),
+    (42, '........S.SnS....MMMMMMMMMMMn.aaaaaaaaaan.......'),
+    (43, '.................MAAAAAAAAAAn.aaaaaaaaaan.......'),
+    (44, '................MMAAAAAAAAAAnnaaaaaaaaaan.......'),
+    (45, '................MAAAAAAAAAAAnnaaaaaaaaaan.......'),
+    (46, '................SnSnSnnnnnnnnnnLnLnnnnnnn.......'),
+]
+TROLL_ATTACK = [
+    (4, '.........................MMMMMMMMMuu............'),
+    (5, '........................MMAGGGGGAuxxx...........'),
+    (6, '......................MMGGGGggggGGGSMM..........'),
+    (7, '............b...b..b.MMGGgggggggggddAAM.........'),
+    (8, '...........bBb.bBbbBbnMMdddggggddGGGAGGdu.......'),
+    (9, '..........bBBBbBBBBBbnMMMMMdddddGGgddGguxx......'),
+    (10, '.........bBBBBBBBBBbbbnMMMMMMMMMMddnnnnnS.......'),
+    (11, '........bBBMMMBBBbbbbenMMMMMMMMMAAnaaaann.......'),
+    (12, '........MMMAAAMBbbbbeenAAAMAAAAAAnaaaaannn......'),
+    (13, '.......MMAAAAAAMbbbeeennAAAAAAAAnaaaaaannn......'),
+    (14, '......MMMMMMMAAAAbbeeenMnAAAAAAnaaaaaaannn......'),
+    (15, '......MnnnnnnnAAAAMAeenAMnAAAAnaaaaaaannnn......'),
+    (16, '......MAnnHKnAAAAMMAaenAAnnAAnaaaaaaannnan......'),
+    (17, '.....MMAAAnnAAAAAAMAAanAAnnAAnaaaaaaannaan......'),
+    (18, '....MMAAAAAAAAAAAAaAaanAAnnnnaaaaaaannnaan......'),
+    (19, '...MMAAAAAAAAAAAAAAaaanAAnnnaaaaaaannnaaan......'),
+    (20, '..MMAAAAnAAAAAAAAAAaannAnnnaaaaaaannnaaaan......'),
+    (21, '..MAAAAnnaAAAAAAAAAaannnnnaaaaaaannnaaaann......'),
+    (22, '..nAAAnnKKKKKKKKAAaannnnnaaaaaaannnaaaaan.......'),
+    (23, '...nnnKKSrrrrrrSKAaannnnaaaaaaannnaaaaaan.......'),
+    (24, '......KKrrRRRrrrKAaannnnaaaaannnnaaaaaann.......'),
+    (25, '......MKSrrrrrSKAaannnMMnaaannnnaaaaaaan........'),
+    (26, '......MAKKKKKKKAAaannAAAnnnnnnaaaaaaaaan........'),
+    (27, '.......naaaaaaaaannnnAAAnnnnnaaaaaaaaann........'),
+    (28, '.................nnnAAAnnnnaaaaaaaaaaan.........'),
+    (29, '................eennnnnnnaaaaaaaaaaaaan.........'),
+    (30, '...............eebBnnnnneeeeSLeeeeeeeeeee.......'),
+    (31, '..............eebBBxBnBBBBBBsBBBBBBBBbbe........'),
+    (32, '.............eebBBxsBBBBBBBBBBBBBBBBBbee........'),
+    (33, '............eebBBx.sbbbBBBBbBbBBBbbbbbe.........'),
+    (34, '..........ebebBBx..eeeebBBbbeebBbbeeeben........'),
+    (35, '.........ebbBBBx...e.MAsbbbee.sbbeeaaeen........'),
+    (36, '........ebbbBBx.....MMAAsbee...seeaaaaann.......'),
+    (37, '.......ebbBBBBx......MAAAeen....eaaaaaan........'),
+    (38, '.Ss..ebbbBBBBx......MMAAAAn......aaaaaann.......'),
+    (39, '.....bBBBBBBx........MAAAAn.......aaaaan........'),
+    (40, '....ebBBBBBx........MMAAAAn.......aaaaann.......'),
+    (41, '....bbbBBBx..........MAAAAn.......aaaaan........'),
+    (42, '.....BeeBBxx.....MMMMMMMMMMMn.aaaaaaaaaan.......'),
+    (43, '......BBxxxG.....MAAAAAAAAAAn.aaaaaaaaaan.......'),
+    (44, '.......x..gSs...MMAAAAAAAAAAnnaaaaaaaaaan.......'),
+    (45, '......g......Ss.MAAAAAAAAAAAnnaaaaaaaaaan.......'),
+    (46, '....ggG.........SnSnSnnnnnnnnnnLnLnnnnnnn.......'),
+]
+
+
+def troll():
+    emit_boss('troll', 'TROLL_SPRITE', {'A': 'slate', 'B': 'brown', 'G': 'green', 'H': 'hotRed', 'K': 'black', 'L': 'lightGray', 'M': 'gray', 'R': 'red', 'S': 'sand', 'Y': 'yellow', 'a': 'darkSlate', 'b': 'darkBrown', 'd': 'darkGreen', 'e': 'deepBrown', 'g': 'midGreen', 'n': 'night', 'r': 'darkRed', 's': 'tan', 'u': 'rust', 'x': 'orangeBrown'}, TROLL, TROLL_ATTACK)
+
+
 if __name__ == '__main__':
     for name in sys.argv[1:]:
         globals()[name]()

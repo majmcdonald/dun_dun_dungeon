@@ -21,6 +21,7 @@ import { CHAR_ADVANCE, drawText, textWidth } from '../ui/font';
 import { drawEquipmentIcons, drawEquipmentTooltip, hoveredSlot, ICON_STEP } from '../ui/partyCard';
 import { dotVfxId, VFX } from '../vfx/effects';
 import { loseRun, winNode } from '../run/flow';
+import { ENEMIES_BY_ID } from '../content/enemies';
 import { currentEncounter } from '../run/encounters';
 import { takeNextFight } from '../run/events';
 import { itemRef } from '../run/run';
@@ -64,6 +65,8 @@ interface SpriteSet {
   attack: HTMLCanvasElement;
   flash: HTMLCanvasElement;
   topRow: number;
+  width: number;
+  height: number;
 }
 
 interface Anim {
@@ -137,6 +140,8 @@ export class BattleScene implements Scene {
         attack: spriteCanvas(def, 'attack'),
         flash: spriteCanvas(def, 'idle', 'white'),
         topRow: firstOpaqueRow(def),
+        width: def.width,
+        height: def.height,
       });
     }
   }
@@ -149,7 +154,7 @@ export class BattleScene implements Scene {
     // Wounded/blessed effects from events apply to this fight only.
     const party = this.game.state.run ? takeNextFight(this.game.state) : undefined;
     const enemies = this.encounter ?? currentEncounter(this.game.state);
-    this.battle = new Battle(this.game.state.party, enemies, Math.random, { creatures: CREATURES, party });
+    this.battle = new Battle(this.game.state.party, enemies, Math.random, { creatures: CREATURES, party, bestiary: ENEMIES_BY_ID });
     this.anims.clear();
     this.floats = [];
     this.vfx = [];
@@ -336,11 +341,12 @@ export class BattleScene implements Scene {
     const lunge = Math.round(Math.sin(progress * Math.PI) * LUNGE_PX) * (c.side === 'party' ? 1 : -1);
     const img = anim.flash > 0 ? set.flash : attacking ? set.attack : set.idle;
 
+    const origin = this.spriteOrigin(c);
     ctx.globalAlpha = alpha;
-    ctx.drawImage(img, x + lunge, y);
+    ctx.drawImage(img, origin.x + lunge, origin.y);
     ctx.globalAlpha = 1;
     if (c.hp <= 0) return;
-    this.statusIcons(c).forEach((icon, i) => ctx.drawImage(icon, x - 9, y + 23 - i * 9));
+    this.statusIcons(c).forEach((icon, i) => ctx.drawImage(icon, origin.x - 9, y + 23 - i * 9));
     if (c.side === 'party' && !isSummon(c)) {
       this.drawMeter(ctx, c, x, y + 34);
       return;
@@ -414,8 +420,16 @@ export class BattleScene implements Scene {
   }
 
   private visualCenter(c: Combatant): { cx: number; cy: number } {
+    const set = this.spriteSet(c);
+    const { x, y } = this.spriteOrigin(c);
+    return { cx: x + set.width / 2, cy: y + Math.round((set.topRow + set.height - 1) / 2) };
+  }
+
+  // Where a sprite's top-left goes: bigger sprites (48x48 bosses) stand on the same feet line, centered on the cell.
+  private spriteOrigin(c: Combatant): { x: number; y: number } {
+    const set = this.spriteSet(c);
     const { x, y } = slotPosition(c);
-    return { cx: x + 16, cy: y + Math.round((this.spriteSet(c).topRow + 31) / 2) };
+    return { x: x - (set.width - 32) / 2, y: y - (set.height - 32) };
   }
 
   private drawVfx(ctx: CanvasRenderingContext2D, v: ActiveVfx): void {
@@ -426,8 +440,8 @@ export class BattleScene implements Scene {
 
   private drawNotice(ctx: CanvasRenderingContext2D, n: Notice): void {
     const target = this.battle.get(n.target);
-    const { x, y } = slotPosition(target);
-    const top = y + this.spriteSet(target).topRow - 20 - n.age * NOTICE_RISE_PER_SEC;
+    const { x } = slotPosition(target);
+    const top = this.spriteOrigin(target).y + this.spriteSet(target).topRow - 20 - n.age * NOTICE_RISE_PER_SEC;
     drawText(ctx, n.text, x + 16 - textWidth(n.text) / 2, top, PALETTE.hotRed);
   }
 
@@ -440,7 +454,8 @@ export class BattleScene implements Scene {
     if (segments.length === 0) return;
 
     const target = this.battle.get(f.target);
-    const { x, y } = slotPosition(target);
+    const { x } = slotPosition(target);
+    const y = this.spriteOrigin(target).y;
     const scale = f.pop > 0 ? 2 : 1;
     const full = segments.map((s) => s.text).join(' ');
     const baseline = y + this.spriteSet(target).topRow - 3 - f.age * FLOAT_RISE_PER_SEC;

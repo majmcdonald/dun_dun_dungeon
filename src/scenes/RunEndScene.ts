@@ -3,7 +3,7 @@ import { spriteCanvas } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
-import type { RunSummary } from '../run/run';
+import { LEVELS, type RunSummary } from '../run/run';
 import { drawBackground } from '../ui/background';
 import { drawText, textWidth } from '../ui/font';
 import { drawButton, drawPanel, inside, type Button, type Rect } from '../ui/widgets';
@@ -62,7 +62,7 @@ export class RunEndScene implements Scene {
 
     drawPanel(ctx, STATS, won ? PALETTE.gold : PALETTE.darkSlate);
     const rows: [string, string][] = [
-      ['LEVEL REACHED', `${level}/3`],
+      ['LEVEL REACHED', `${level}/${LEVELS}`],
       ['ROOMS CLEARED', `${stats.rooms}`],
       ['FIGHTS WON', `${stats.fights}`],
       ['EPIC MONSTERS', `${stats.epics}`],

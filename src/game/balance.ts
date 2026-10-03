@@ -95,6 +95,9 @@ export function effectCost(e: SkillEffect, cooldown: number, rarity: Rarity): nu
       return (Math.abs(1 - e.factor) * e.duration) / cooldown / b.speed;
     case 'summon':
       return e.share / cooldown / b.summon;
+    // Enemy-only; enemy abilities are never budgeted.
+    case 'spawn':
+      return 0;
     case 'transform':
     case 'taunt':
       return e.duration / cooldown / b.control;

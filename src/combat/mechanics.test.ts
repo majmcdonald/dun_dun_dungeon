@@ -317,3 +317,68 @@ describe('enemy grid', () => {
     ]);
   });
 });
+
+describe('boss mechanics', () => {
+  const minion = unit('minion', { hp: 50 }, [skill('poke', [hit(0)], { cooldown: 99 })]);
+  const call = (count: number, cap: number) =>
+    skill('call', [{ kind: 'spawn', enemy: 'minion', count, cap }], { cooldown: 1, target: { side: 'self' } });
+
+  it('spawn reinforcements into empty cells front to back, never above the cap', () => {
+    const boss = unit('boss', {}, [call(2, 3)]);
+    const battle = new Battle([member(unit('a', { attack: 0 }))], [null, null, null, null, boss], NO_JITTER, { bestiary: { minion } });
+    const events = runFor(battle, 1.05);
+    expect(events.filter((e) => e.type === 'summon')).toHaveLength(2);
+    runFor(battle, 2);
+    const minions = battle.alive('enemy').filter((c) => c.def.id === 'minion');
+    expect(minions.map((c) => c.position)).toEqual([0, 1, 2]);
+  });
+
+  it('fire a below-HP ability once when crossing the threshold', () => {
+    const rage = skill('rage', [{ kind: 'buff', stat: 'attack', amount: 5, duration: 99 }], {
+      cooldown: 1,
+      target: { side: 'self' },
+      trigger: { kind: 'belowHp', threshold: 0.5 },
+    });
+    const boss = unit('boss', { hp: 100, defense: 0 }, [rage]);
+    const battle = new Battle([member(unit('a', { attack: 30 }, [skill('hit', [hit()], { cooldown: 1 })]))], [boss], NO_JITTER);
+    const early = runFor(battle, 1.05);
+    expect(fired(early, 'rage')).toBe(0);
+    const later = runFor(battle, 1);
+    expect(fired(later, 'rage')).toBe(1);
+    expect(fired(runFor(battle, 0.9), 'rage')).toBe(0);
+  });
+
+  it('regenerate a share of max HP per second, paused by the blocking element', () => {
+    const troll = unit('troll', { hp: 100 }, [], { regeneration: { perSecond: 0.1, blockedBy: ['fire'], blockSeconds: 2 } });
+    const battle = new Battle([member(unit('a'))], [troll], NO_JITTER);
+    const t = battle.get('enemy-0');
+    t.hp = 50;
+    runFor(battle, 1);
+    expect(t.hp).toBeGreaterThanOrEqual(59);
+    expect(t.hp).toBeLessThanOrEqual(60);
+    const burn = skill('burn', [{ kind: 'damage', damageType: 'magic', stat: 'magic', scaling: 0, element: 'fire' }], { cooldown: 99 });
+    battle.get('party-0').slots.push({ def: burn, timer: 99 });
+    runFor(battle, 1.5);
+    expect(t.hp).toBeLessThanOrEqual(60);
+    runFor(battle, 2);
+    expect(t.hp).toBeGreaterThan(60);
+  });
+});
+
+describe('dying bosses', () => {
+  it('can spawn minions as they fall, and the fight goes on', () => {
+    const minion = unit('minion', { hp: 50 }, []);
+    const burst = skill('burst', [{ kind: 'spawn', enemy: 'minion', count: 3, cap: 9 }], {
+      cooldown: 1,
+      target: { side: 'self' },
+      trigger: { kind: 'onDefeat' },
+    });
+    const boss = unit('boss', { hp: 10, defense: 0 }, [burst]);
+    const battle = new Battle([member(unit('a', { attack: 50 }, [skill('hit', [hit()], { cooldown: 1 })]))], [boss], NO_JITTER, {
+      bestiary: { minion },
+    });
+    runFor(battle, 1.05);
+    expect(battle.alive('enemy').map((c) => c.def.id)).toEqual(['minion', 'minion', 'minion']);
+    expect(battle.result).toBeNull();
+  });
+});

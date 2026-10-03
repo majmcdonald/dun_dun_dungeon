@@ -1,7 +1,15 @@
 import type { CombatantDef, SkillDef, SkillEffect, Targeting } from '../combat/types';
 
 // Enemy abilities are not part of the player skill library and never appear in inventory or rewards.
-function enemySkill(id: string, name: string, cooldown: number, target: Targeting, effect: SkillEffect, spell = false): SkillDef {
+function enemySkill(
+  id: string,
+  name: string,
+  cooldown: number,
+  target: Targeting,
+  effect: SkillEffect | SkillEffect[],
+  spell = false,
+  extra: Partial<SkillDef> = {},
+): SkillDef {
   return {
     id,
     name,
@@ -10,7 +18,8 @@ function enemySkill(id: string, name: string, cooldown: number, target: Targetin
     access: { kind: 'shared' },
     cooldown,
     target,
-    effects: [effect],
+    effects: Array.isArray(effect) ? effect : [effect],
+    ...extra,
   };
 }
 
@@ -54,6 +63,55 @@ const wail = enemySkill(
 );
 const spiderBite = enemySkill('spiderBite', 'Bite', 1.3, front, physical(0.9));
 const web = enemySkill('web', 'Web', 5, { side: 'enemy', select: 'random', area: 'single' }, { kind: 'speed', factor: 0.7, duration: 3 });
+
+const slash = enemySkill('knightSlash', 'Slash', 1.8, front, physical(1));
+const shieldWall = enemySkill('shieldWall', 'Shield Wall', 8, { side: 'self' }, { kind: 'taunt', duration: 3 });
+const rend = enemySkill('rend', 'Rend', 1.6, front, { kind: 'damage', damageType: 'physical', stat: 'attack', scaling: 0.9, drain: 0.5 });
+const darkBolt = enemySkill(
+  'darkBolt',
+  'Dark Bolt',
+  2.5,
+  { side: 'enemy', select: 'highestHpPct', area: 'single' },
+  { kind: 'damage', damageType: 'magic', stat: 'magic', scaling: 1.1, element: 'shadow' },
+  true,
+);
+const bloodRite = enemySkill(
+  'bloodRite',
+  'Blood Rite',
+  8,
+  { side: 'ally', select: 'front', area: 'all' },
+  { kind: 'buff', stat: 'magic', amount: 4, duration: 6 },
+  true,
+);
+
+const allHeroes = { side: 'enemy', select: 'front', area: 'all' } as const;
+const smash = enemySkill('smash', 'Smash', 4, { side: 'enemy', select: 'front', area: 'column' }, physical(1.2));
+const stomp = enemySkill('stomp', 'Stomp', 10, allHeroes, { kind: 'delay', seconds: 1.5 });
+const venomSpray = enemySkill('venomSpray', 'Venom Spray', 7, allHeroes, {
+  kind: 'dot',
+  stat: 'attack',
+  scaling: 0.35,
+  duration: 4,
+  element: 'poison',
+});
+const webVolley = enemySkill('webVolley', 'Web Volley', 9, allHeroes, { kind: 'speed', factor: 0.75, duration: 3 });
+const fangs = enemySkill('fangs', 'Fangs', 1.5, front, physical(1));
+const soulDrain = enemySkill(
+  'soulDrain',
+  'Soul Drain',
+  3,
+  { side: 'enemy', select: 'highestHpPct', area: 'single' },
+  { kind: 'damage', damageType: 'magic', stat: 'magic', scaling: 1.2, element: 'shadow', drain: 0.5 },
+  true,
+);
+const boneShield = enemySkill(
+  'boneShield',
+  'Bone Shield',
+  8,
+  { side: 'ally', select: 'front', area: 'all' },
+  { kind: 'barrier', stat: 'resistance', scaling: 1, duration: 6 },
+  true,
+);
 
 export const SLIME: CombatantDef = {
   id: 'slime',
@@ -135,8 +193,140 @@ export const SPIDER: CombatantDef = {
   resist: { fire: -0.5, poison: 0.5 },
 };
 
+// Taunts with Shield Wall, so the party's single-target attacks must go through it.
+export const SKELETON_KNIGHT: CombatantDef = {
+  id: 'skeletonKnight',
+  name: 'Skeleton Knight',
+  stats: { hp: 80, attack: 14, magic: 0, defense: 18, resistance: 6 },
+  skills: [slash, shieldWall],
+  resist: { holy: -0.5, poison: 0.5 },
+};
+
+export const GHOUL: CombatantDef = {
+  id: 'ghoul',
+  name: 'Ghoul',
+  stats: { hp: 60, attack: 13, magic: 0, defense: 8, resistance: 6 },
+  skills: [rend],
+  resist: { holy: -0.5, fire: -0.5, shadow: 0.5, poison: 0.5 },
+};
+
+export const CULTIST: CombatantDef = {
+  id: 'cultist',
+  name: 'Cultist',
+  stats: { hp: 50, attack: 2, magic: 14, defense: 5, resistance: 12 },
+  skills: [darkBolt, bloodRite],
+  resist: { holy: -0.5, shadow: 0.5 },
+};
+
+// --- Act 1 Epic Monsters
+
+export const OGRE: CombatantDef = {
+  id: 'ogre',
+  name: 'Ogre',
+  stats: { hp: 260, attack: 20, magic: 0, defense: 14, resistance: 6 },
+  skills: [smash, stomp],
+  resist: { lightning: -0.5 },
+};
+
+export const SPIDER_QUEEN: CombatantDef = {
+  id: 'spiderQueen',
+  name: 'Spider Queen',
+  stats: { hp: 200, attack: 12, magic: 8, defense: 10, resistance: 10 },
+  skills: [fangs, venomSpray, webVolley],
+  resist: { fire: -0.5, poison: 0.5 },
+};
+
+export const BONE_MAGE: CombatantDef = {
+  id: 'boneMage',
+  name: 'Bone Mage',
+  stats: { hp: 170, attack: 4, magic: 18, defense: 8, resistance: 18 },
+  skills: [soulDrain, boneShield],
+  resist: { holy: -0.5, shadow: 0.5, poison: 0.5 },
+};
+
+// --- Act 1 bosses (one per run). Their 48x48 sprites are drawn separately.
+
+const self = { side: 'self' } as const;
+const scepterBash = enemySkill('scepterBash', 'Scepter Bash', 2, front, physical(1.1));
+const callTheHorde = enemySkill('callTheHorde', 'Call the Horde', 10, self, { kind: 'spawn', enemy: 'goblin', count: 2, cap: 6 });
+const warCry = enemySkill('warCry', 'War Cry', 12, { side: 'ally', select: 'front', area: 'all' }, { kind: 'speed', factor: 1.4, duration: 4 });
+const bodySlam = enemySkill('bodySlam', 'Body Slam', 3.5, { side: 'enemy', select: 'front', area: 'column' }, physical(1.2));
+const acidSpit = enemySkill('acidSpit', 'Acid Spit', 5, { side: 'enemy', select: 'random', area: 'single' }, {
+  kind: 'dot',
+  stat: 'attack',
+  scaling: 0.3,
+  duration: 4,
+  element: 'poison',
+});
+const split = (id: string, threshold: number) =>
+  enemySkill(id, 'Split', 1, self, { kind: 'spawn', enemy: 'slime', count: 2, cap: 8 }, false, {
+    trigger: { kind: 'belowHp', threshold },
+  });
+const burst = enemySkill('burst', 'Burst', 1, self, { kind: 'spawn', enemy: 'slime', count: 3, cap: 9 }, false, {
+  trigger: { kind: 'onDefeat' },
+});
+const club = enemySkill('trollClub', 'Club', 2.5, front, physical(1.2));
+const enrage = enemySkill(
+  'enrage',
+  'Enrage',
+  1,
+  self,
+  [
+    { kind: 'buff', stat: 'attack', amount: 6, duration: 999 },
+    { kind: 'speed', factor: 1.5, duration: 999 },
+  ],
+  false,
+  { trigger: { kind: 'belowHp', threshold: 0.5 } },
+);
+
+export const GOBLIN_KING: CombatantDef = {
+  id: 'goblinKing',
+  name: 'Goblin King',
+  stats: { hp: 420, attack: 18, magic: 0, defense: 14, resistance: 10 },
+  skills: [scepterBash, callTheHorde, warCry],
+  resist: { lightning: -0.5 },
+};
+
+export const SLIME_KING: CombatantDef = {
+  id: 'slimeKing',
+  name: 'Slime King',
+  stats: { hp: 600, attack: 16, magic: 0, defense: 8, resistance: 8 },
+  skills: [bodySlam, acidSpit, split('split66', 0.66), split('split33', 0.33), burst],
+  resist: { fire: -0.5, poison: 0.5 },
+};
+
+// Regenerates about 2% of max HP a second until fire or poison damage stops it for 4s.
+export const TROLL: CombatantDef = {
+  id: 'troll',
+  name: 'Troll',
+  stats: { hp: 700, attack: 22, magic: 0, defense: 16, resistance: 8 },
+  skills: [club, enrage],
+  resist: { fire: -0.5 },
+  regeneration: { perSecond: 0.02, blockedBy: ['fire', 'poison'], blockSeconds: 4 },
+};
+
 // Every enemy type, for pickers.
-export const ENEMIES: CombatantDef[] = [SLIME, BAT, ORC, ARCHER, SHAMAN, RAT, MUSHROOM, GOBLIN, GHOST, SPIDER];
+export const ENEMIES: CombatantDef[] = [
+  SLIME,
+  BAT,
+  ORC,
+  ARCHER,
+  SHAMAN,
+  RAT,
+  MUSHROOM,
+  GOBLIN,
+  GHOST,
+  SPIDER,
+  SKELETON_KNIGHT,
+  GHOUL,
+  CULTIST,
+  OGRE,
+  SPIDER_QUEEN,
+  BONE_MAGE,
+  GOBLIN_KING,
+  SLIME_KING,
+  TROLL,
+];
 export const ENEMIES_BY_ID: Record<string, CombatantDef> = Object.fromEntries(ENEMIES.map((e) => [e.id, e]));
 
 // Positions fill column by column: 0-2 front, 3-5 middle, 6-8 back.
