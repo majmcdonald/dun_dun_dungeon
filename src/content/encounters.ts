@@ -25,13 +25,13 @@ export const ACTS: ActEncounters[] = [
         { id: 'sporePatch', name: 'SPORE PATCH', enemies: ['mushroom', null, 'mushroom', 'bat', null, 'bat'] },
       ],
       [
-        { id: 'verminHorde', name: 'VERMIN HORDE', enemies: ['slime', 'slime', 'slime', 'rat', 'rat', 'rat', 'mushroom', null, 'mushroom'] },
+        { id: 'verminHorde', name: 'VERMIN HORDE', enemies: ['slime', 'slime', 'slime', 'rat', null, 'rat'] },
         { id: 'goblinGang', name: 'GOBLIN GANG', enemies: ['goblin', 'goblin', 'goblin', null, null, null, 'archer', null, 'archer'] },
         { id: 'hauntedWebs', name: 'HAUNTED WEBS', enemies: ['spider', null, 'spider', 'ghost', null, 'ghost'] },
         { id: 'goblinDen', name: 'GOBLIN DEN', enemies: ['goblin', null, 'goblin', null, 'spider', null, null, 'ghost'] },
       ],
       [
-        { id: 'goblinWarband', name: 'GOBLIN WARBAND', enemies: ['goblin', 'goblin', 'goblin', 'spider', 'shaman', 'spider', 'ghost', 'archer', 'ghost'] },
+        { id: 'goblinWarband', name: 'GOBLIN WARBAND', enemies: ['goblin', 'goblin', 'goblin', null, 'shaman', null, 'ghost', 'archer', 'ghost'] },
         { id: 'graveWatch', name: 'GRAVE WATCH', enemies: ['skeletonKnight', null, 'skeletonKnight', null, null, null, 'archer', 'archer', 'archer'] },
         { id: 'darkRitual', name: 'DARK RITUAL', enemies: ['ghoul', null, 'ghoul', null, 'skeletonKnight', null, 'cultist', null, 'cultist'] },
         { id: 'feedingPit', name: 'FEEDING PIT', enemies: ['ghoul', 'ghoul', 'ghoul', null, 'cultist'] },

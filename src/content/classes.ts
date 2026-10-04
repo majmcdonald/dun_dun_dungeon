@@ -41,8 +41,9 @@ export const CLASSES: ClassDef[] = [
   classDef('knight', 'Knight', 'tank', ['martial', 'heavy'], ['slash', 'ironGuard'], true),
   classDef('mage', 'Mage', 'caster', ['caster', 'arcane'], ['fireball', 'frostBolt'], true),
   classDef('cleric', 'Cleric', 'support', ['caster', 'holy'], ['heal', 'blessing'], true),
-  classDef('rogue', 'Rogue', 'striker', ['martial', 'shadow'], ['backstab', 'poisonedBlade'], true),
-  classDef('ranger', 'Ranger', 'striker', ['martial', 'ranged', 'nature'], ['aimedShot', 'volley'], true),
+  // Striker baseline with extra HP and DEF so tankless trios can survive Act 1 (balance pass 2).
+  classDef('rogue', 'Rogue', 'striker', ['martial', 'shadow'], ['backstab', 'poisonedBlade'], true, { hp: 115, defense: 12 }),
+  classDef('ranger', 'Ranger', 'striker', ['martial', 'ranged', 'nature'], ['aimedShot', 'volley'], true, { hp: 110, defense: 11 }),
   classDef('barbarian', 'Barbarian', 'bruiser', ['martial', 'heavy'], ['cleave', 'rage'], true, {}, { mechanic: 'rage' }),
   // Tank baseline with 6 ATK moved into MAG so Lay on Hands (a Magic Power heal) does something.
   classDef('paladin', 'Paladin', 'tank', ['martial', 'heavy', 'holy'], ['holyStrike', 'layOnHands'], false, { attack: 8, magic: 6 }),
