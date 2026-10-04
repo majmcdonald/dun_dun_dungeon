@@ -54,7 +54,8 @@ type BaseEffect =
   | { kind: 'barrier'; stat: 'defense' | 'resistance'; scaling: number; duration: number }
   | { kind: 'heal'; scaling: number }
   | { kind: 'regen'; scaling: number; duration: number }
-  | { kind: 'dot'; stat: 'attack' | 'magic'; scaling: number; duration: number; element?: Element }
+  // `perStack`: enemies only, each of the user's Venom stacks adds this share to the damage.
+  | { kind: 'dot'; stat: 'attack' | 'magic'; scaling: number; duration: number; element?: Element; perStack?: number }
   | { kind: 'buff'; stat: StatKey; amount: number; duration: number }
   | { kind: 'debuff'; stat: StatKey; amount: number; duration: number }
   | { kind: 'speed'; factor: number; duration: number }
@@ -71,7 +72,11 @@ type BaseEffect =
   | { kind: 'chaos'; options: SkillEffect[] }
   | { kind: 'shapeshift'; duration: number; bonus: number }
   | { kind: 'meter'; amount: number }
-  | { kind: 'consumeSummon' };
+  | { kind: 'consumeSummon' }
+  // Enemies only: Harpy flight, multiplying direct damage taken and dealt for a while.
+  | { kind: 'flight'; duration: number; damageTaken: number; damageDealt: number }
+  // Enemies only: +1 permanent Venom stack (kept in `meter`).
+  | { kind: 'venom' };
 
 // `self` applies the effect once to the caster instead of to each target (e.g. "hit them, lower my ATK");
 // `onSummons` applies it to each of the caster's summons (e.g. "hit them, empower my familiar").
@@ -248,6 +253,7 @@ export interface Combatant {
   // Seconds left before passive regeneration resumes, and healing built up below one whole point.
   regenBlocked: number;
   regenCarry: number;
+  flight: { remaining: number; damageTaken: number; damageDealt: number } | null;
 }
 
 export type BattleResult = 'victory' | 'defeat';
@@ -258,7 +264,7 @@ export type BattleEvent =
   | { type: 'heal'; source: string; target: string; amount: number; periodic?: boolean }
   | { type: 'barrier'; target: string; amount: number }
   | { type: 'buff'; target: string; stat: StatKey; amount: number }
-  | { type: 'status'; target: string; status: 'slow' | 'haste' | 'transform' | 'taunt' | 'shapeshift' | 'frenzy' | 'burst' | 'steal' | 'delay' | 'fury' }
+  | { type: 'status'; target: string; status: 'slow' | 'haste' | 'transform' | 'taunt' | 'shapeshift' | 'frenzy' | 'burst' | 'steal' | 'delay' | 'fury' | 'flight' | 'venom' }
   | { type: 'summon'; summoner: string; unit: string }
   | { type: 'gold'; amount: number }
   | { type: 'death'; target: string }

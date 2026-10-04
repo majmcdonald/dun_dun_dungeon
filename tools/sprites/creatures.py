@@ -1562,6 +1562,181 @@ def troll():
     emit_boss('troll', 'TROLL_SPRITE', {'A': 'slate', 'B': 'brown', 'G': 'green', 'H': 'hotRed', 'K': 'black', 'L': 'lightGray', 'M': 'gray', 'R': 'red', 'S': 'sand', 'Y': 'yellow', 'a': 'darkSlate', 'b': 'darkBrown', 'd': 'darkGreen', 'e': 'deepBrown', 'g': 'midGreen', 'n': 'night', 'r': 'darkRed', 's': 'tan', 'u': 'rust', 'x': 'orangeBrown'}, TROLL, TROLL_ATTACK)
 
 
+# ------------------------------------------------------------------ Act 2, Group 1
+def padded(rows):
+    return [(y, r.ljust(32, '.')) for y, r in rows]
+
+FROST_WOLF = [
+    (9,  '........W..W'),
+    (10, '.......WL.WLM'),
+    (11, '.......WLWLLM'),
+    (12, '......WLLLLLLM'),
+    (13, '.....WLLLLLLLM'),
+    (14, '..WWLLCKLLLLLLM.....C.....C'),
+    (15, '.KLLLLLLLLLLLLM....CBC...CBC'),
+    (16, '..MMMMMLLLLLLLLWWWWCBCWWWCBCWW'),
+    (17, '.....MMWWLLLLLLLLLLLLLLLLLLLLWW'),
+    (18, '......MWWWWLLLLLLLLLLLLLLLLLMWL'),
+    (19, '......MWWWWLLLLLLLLLLLLLLLLLMWL'),
+    (20, '......MWWWWLLLLLLLLLLLLLLLLM.WL'),
+    (21, '......WWWWLLLLLLLLLLLLLLLLLM.LM'),
+    (22, '.......WWMMLLLLLLLLLLLLLLLML.LM'),
+    (23, '.......MMMMMMLLLLLLLLLLMMMML.MM'),
+    (24, '........MM.MMMMMMMMMMMMMMLM'),
+    (25, '........LM...LM......LM..LM'),
+    (26, '........LM...LM......LM..LM'),
+    (27, '........LM...LM......LM..LM'),
+    (28, '.......CLM..CLM.....CLM.CLM'),
+    (29, '.......BBB..BBB.....BBB.BBB'),
+]
+FROST_WOLF_ATTACK = [
+    (9,  '.........W..W'),
+    (10, '........WL.WLM'),
+    (11, '........WLWLLM'),
+    (12, '.......WLLLLLLM'),
+    (13, '..WWWWLLLLLLLLM'),
+    (14, '.KLLLLLLCKLLLLM.....C.....C'),
+    (15, '..WrWrrLLLLLLLM....CBC...CBC'),
+    (16, '...rRRRRLLLLLLLWWWWCBCWWWCBCWW'),
+    (17, '..WrWrMMWWLLLLLLLLLLLLLLLLLLLWW'),
+    (18, '..MMMMMWWWWLLLLLLLLLLLLLLLLLMWL'),
+    (19, '......MWWWWLLLLLLLLLLLLLLLLLMWL'),
+    (20, '......MWWWWLLLLLLLLLLLLLLLLM.WL'),
+    (21, '......WWWWLLLLLLLLLLLLLLLLLM.LM'),
+    (22, '.......WWMMLLLLLLLLLLLLLLLML.LM'),
+    (23, '......LMMMMMLLLLLLLLLLLMMMML.MM'),
+    (24, '.....LM..MMMMMMMMMMMMMMM..LM'),
+    (25, '....LM.......LM.....LM....LM'),
+    (26, '...LM.......LM.......LM....LM'),
+    (27, '..LM.......LM.........LM....LM'),
+    (28, '.CLM......CLM.........CLM..CLM'),
+    (29, '.BBB......BBB.........BBB..BBB'),
+]
+
+
+def frostWolf():
+    emit(f'{OUT}/frostWolf.ts', 'FROST_WOLF_SPRITE', {'W': 'white', 'L': 'lightGray', 'M': 'gray', 'A': 'slate', 'N': 'darkSlate', 'C': 'cyan', 'B': 'blue', 'K': 'black', 'R': 'red', 'r': 'darkRed'}, frames(padded(FROST_WOLF), padded(FROST_WOLF_ATTACK)))
+
+HARPY = [
+    (2,  '..TT........................TT..'),
+    (3,  '..TTT......................TTT..'),
+    (4,  '..TTBb....................bBTT..'),
+    (5,  '.TTTBBb......uuuu........bBBTTT.'),
+    (6,  '.bTTTBBb...uuuuuuu......bBBTTTb.'),
+    (7,  '...bTTBb..uuuuuuuur.....bBTTb...'),
+    (8,  '..TTTBBBb.uuSSSuuurr...bBBBTTT..'),
+    (9,  '..bTTTBBb.SKSSKsuurr...bBBTTTb..'),
+    (10, '....bTTBb.SSSSSsuurr...bBTTb....'),
+    (11, '...TTTBBb..SRRSsuurr...bBBTTT...'),
+    (12, '...bTTTBBb..SSsuurrr..bBBTTTb...'),
+    (13, '.....bTTBBb..ssuurrr.bBBTTb.....'),
+    (14, '.....TTTBBBBBTTTTBBbBBBBTTT.....'),
+    (15, '.......bTBBBBTTTTTBbBBBTb.......'),
+    (16, '............BTTBTTBb............'),
+    (17, '............BBTTTBBb............'),
+    (18, '.............BTBBTb.............'),
+    (19, '.............bBBBBb.............'),
+    (20, '.............bBBBbb.............'),
+    (21, '.............ebBBbe.............'),
+    (22, '.............bBb.bB.............'),
+    (23, '..............Y..Y..............'),
+    (24, '..............Y..Y..............'),
+    (25, '..............Y..Y..............'),
+    (26, '..............Y..Y..............'),
+    (27, '..........YYYYY.YYYYY...........'),
+    (28, '.........W.W.W...W.W.W..........'),
+]
+HARPY_ATTACK = [
+    (4,  '..........................bBT...'),
+    (5,  '........................bBTTTT..'),
+    (6,  '......................bBBBBTTTT.'),
+    (7,  '.....................bBBBBBTTTT.'),
+    (8,  '....................bBBBbbbb....'),
+    (9,  '........uuuuu......bBBBBBTTTT...'),
+    (10, '.......uuuuuuur...bBBBBBBBTTTT..'),
+    (11, '......uuSSSuuurr..bBBBBbbbb.....'),
+    (12, '.....SKSSKsuurr..bBBBBBBTTTT....'),
+    (13, '.....SSSSSsuurr..bBBBBBBBTTTT...'),
+    (14, '......SRRSsuurr.bBBBBBbbbb......'),
+    (15, '.......SSsuurr..bBBBBBBTTTT.....'),
+    (16, '........ssuurr..bBBBBBBTTTT.....'),
+    (17, '........BTTTTTBBBBBBBBBbb.......'),
+    (18, '........BTTTTBBBBBBBbbTTT.......'),
+    (19, '.........BTTBBBBbbbbTTTT........'),
+    (20, '..........bBBBBBBbbbbb..........'),
+    (21, '...........bBbbbbbe.............'),
+    (22, '..........YG..YG................'),
+    (23, '.........YG..YG.................'),
+    (24, '........YG..YG..................'),
+    (25, '.......YG..YG...................'),
+    (26, '...YYYYYG..YYYYG................'),
+    (27, '..W.W.W...W.W.W.................'),
+]
+
+
+def harpy():
+    emit(f'{OUT}/harpy.ts', 'HARPY_SPRITE', {'u': 'rust', 'r': 'darkRed', 'S': 'skin', 's': 'skinShade', 'K': 'black', 'R': 'red', 'T': 'tan', 'B': 'brown', 'b': 'darkBrown', 'e': 'deepBrown', 'Y': 'yellow', 'G': 'gold', 'W': 'white'}, frames(padded(HARPY), padded(HARPY_ATTACK)))
+
+BANDIT = [
+    (4,  '............DDDD'),
+    (5,  '..........DDDDDDd'),
+    (6,  '.........DDDDDDDdd'),
+    (7,  '........DDDDDDDDddd'),
+    (8,  '........DDnnnnDDddd'),
+    (9,  '........DSKSSKsDddd'),
+    (10, '........DSSSSSsDdddd'),
+    (11, '........RRRRRRrrDddd'),
+    (12, '........RRRRRrrrdddd'),
+    (13, '.........rRRrrrDDdddd'),
+    (14, '.......DDBBBBBBBbDDddd'),
+    (15, '......DDBBBBBBBBbbDddd'),
+    (16, '......DDDBBBBBBBbbDdddd'),
+    (17, '..LLLGSSDBbBBBBbbbDdddd'),
+    (18, '.gMMMGssDBbBBBBbbbbDddd'),
+    (19, '.gm.....DeeeGeeeeebDddd'),
+    (20, '........DBBBBBBbbbbDdddd'),
+    (21, '........DBBBBbBBbbbDdddd'),
+    (22, '.........bBBBbBBbbDddddd'),
+    (23, '.........bBBb.bBbbDdddd'),
+    (24, '.........bBBb..bBbb'),
+    (25, '.........bBBb..bBbb'),
+    (26, '.........bBBb..bBbb'),
+    (27, '.........eeeb..eeeb'),
+    (28, '........eeeeb.eeeeb'),
+]
+BANDIT_ATTACK = [
+    (4,  '...........DDDD'),
+    (5,  '.........DDDDDDd'),
+    (6,  '........DDDDDDDdd'),
+    (7,  '.......DDDDDDDDddd'),
+    (8,  '.......DDnnnnDDddd'),
+    (9,  '.......DSKSSKsDddd'),
+    (10, '.......DSSSSSsDdddd'),
+    (11, '.......RRRRRRrrDddd'),
+    (12, '.......RRRRRrrrdddd'),
+    (13, '........rRRrrrDDdddd'),
+    (14, '..LLLGSSSDBBBBBBbDDddd'),
+    (15, '.gMMMGssDBBBBBBBBbbDddd'),
+    (16, '.gm.....DDBBBBBBBbbDdddd'),
+    (17, '.........DBbBBBBbbbDdddd'),
+    (18, '.........DBbBBBBbbbbDddd'),
+    (19, '.........DeeeGeeeeebDddd'),
+    (20, '.........DBBBBBBbbbbDdddd'),
+    (21, '.........DBBBBbBBbbbDdddd'),
+    (22, '.........bBBBbBBbbDddddd'),
+    (23, '........bBBb..bBbbDdddd'),
+    (24, '.......bBBb....bBbb'),
+    (25, '......bBBb......bBbb'),
+    (26, '......bBBb......bBbb'),
+    (27, '.....eeeb.......eeeb'),
+    (28, '....eeeeb.......eeeeb'),
+]
+
+
+def bandit():
+    emit(f'{OUT}/bandit.ts', 'BANDIT_SPRITE', {'D': 'darkGreen', 'd': 'deepTeal', 'S': 'skin', 's': 'skinShade', 'K': 'black', 'R': 'red', 'r': 'darkRed', 'B': 'brown', 'b': 'darkBrown', 'e': 'deepBrown', 'G': 'gold', 'L': 'lightGray', 'M': 'gray', 'g': 'green', 'm': 'midGreen', 'n': 'night'}, frames(padded(BANDIT), padded(BANDIT_ATTACK)))
+
+
 if __name__ == '__main__':
     for name in sys.argv[1:]:
         globals()[name]()

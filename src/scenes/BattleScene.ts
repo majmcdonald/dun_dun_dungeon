@@ -59,6 +59,8 @@ const STATUS_ICONS_MAX = 4;
 const STATUS_VFX = new Set(['slow', 'haste', 'transform', 'shapeshift']);
 const FAMILIAR_GHOST_ALPHA = 0.35;
 const FRENZY_BLINK = 0.15;
+const FLIGHT_LIFT = 5;
+const VENOM_PIPS_MAX = 8;
 
 interface SpriteSet {
   idle: HTMLCanvasElement;
@@ -342,8 +344,10 @@ export class BattleScene implements Scene {
     const img = anim.flash > 0 ? set.flash : attacking ? set.attack : set.idle;
 
     const origin = this.spriteOrigin(c);
+    // A flying Harpy hovers above its cell.
+    const lift = c.flight ? FLIGHT_LIFT + Math.round(Math.sin(this.battle.elapsed * 8)) : 0;
     ctx.globalAlpha = alpha;
-    ctx.drawImage(img, origin.x + lunge, origin.y);
+    ctx.drawImage(img, origin.x + lunge, origin.y - lift);
     ctx.globalAlpha = 1;
     if (c.hp <= 0) return;
     this.statusIcons(c).forEach((icon, i) => ctx.drawImage(icon, origin.x - 9, y + 23 - i * 9));
@@ -356,6 +360,8 @@ export class BattleScene implements Scene {
     if (isSummon(c)) return;
     const slot = c.slots[0];
     if (slot) drawBar(ctx, x, y + 38, 32, 2, slot.timer / slot.def.cooldown, PALETTE.gold);
+    // Bandit Venom stacks: one green pip each.
+    for (let i = 0; i < Math.min(c.meter, VENOM_PIPS_MAX); i++) drawBar(ctx, x + i * 4, y + 41, 3, 2, 1, PALETTE.green);
     // Boss fury: fills until it starts, then blinks red while it grows.
     const fury = c.def.fury;
     if (!fury) return;

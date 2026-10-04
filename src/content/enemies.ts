@@ -312,6 +312,54 @@ export const TROLL: CombatantDef = {
   regeneration: { perSecond: 0.02, blockedBy: ['fire', 'poison'], blockSeconds: 4 },
 };
 
+// --- Act 2, Group 1 (rooms 1–5). Base stats are pre-tuning; the Act 2 balance pass scales them.
+
+const frostBite = enemySkill('frostBite', 'Frost Bite', 1, front, [
+  physical(0.8),
+  { kind: 'damage', damageType: 'magic', stat: 'attack', scaling: 0.3, element: 'ice' },
+]);
+const howl = enemySkill('howl', 'Howl', 8, { side: 'ally', select: 'front', area: 'all' }, { kind: 'buff', stat: 'attack', amount: 4, duration: 4 });
+const frostbiteHide = enemySkill('frostbiteHide', 'Frostbite Hide', 3, { side: 'enemy', select: 'attackedMe', area: 'single' }, { kind: 'speed', factor: 0.7, duration: 3 }, false, {
+  trigger: { kind: 'whenHit' },
+});
+const dive = enemySkill('dive', 'Dive', 2, { side: 'enemy', select: 'back', area: 'single' }, physical(1.1));
+const screech = enemySkill('screech', 'Screech', 9, allHeroes, { kind: 'delay', seconds: 1 });
+const takeFlight = enemySkill('takeFlight', 'Take Flight', 8, self, { kind: 'flight', duration: 3, damageTaken: 0.3, damageDealt: 1.7 }, false, {
+  trigger: { kind: 'whenHit' },
+});
+const shiv = enemySkill('shiv', 'Shiv', 2.5, { side: 'enemy', select: 'lowestHp', area: 'single' }, [
+  physical(0.8),
+  { kind: 'dot', stat: 'attack', scaling: 0.25, duration: 5, element: 'poison', perStack: 0.5 },
+]);
+const envenom = enemySkill('envenom', 'Envenom', 5, self, { kind: 'venom' });
+const caltrops = enemySkill('caltrops', 'Caltrops', 6, front, { kind: 'speed', factor: 0.7, duration: 3 });
+
+// Slows whoever hits it.
+export const FROST_WOLF: CombatantDef = {
+  id: 'frostWolf',
+  name: 'Frost Wolf',
+  stats: { hp: 50, attack: 12, magic: 0, defense: 8, resistance: 8 },
+  skills: [frostBite, howl, frostbiteHide],
+  resist: { fire: -0.5, ice: 0.5 },
+};
+
+// Takes flight when hit: 70% less damage taken and 70% more dealt for 3s.
+export const HARPY: CombatantDef = {
+  id: 'harpy',
+  name: 'Harpy',
+  stats: { hp: 40, attack: 12, magic: 0, defense: 6, resistance: 6 },
+  skills: [dive, screech, takeFlight],
+  resist: { lightning: -0.5, poison: 0.5 },
+};
+
+// Gains a Venom stack every 5s; each stack adds 50% to Shiv's poison.
+export const BANDIT: CombatantDef = {
+  id: 'bandit',
+  name: 'Bandit',
+  stats: { hp: 45, attack: 11, magic: 0, defense: 8, resistance: 6 },
+  skills: [shiv, envenom, caltrops],
+};
+
 // Every enemy type, for pickers.
 export const ENEMIES: CombatantDef[] = [
   SLIME,
@@ -333,6 +381,9 @@ export const ENEMIES: CombatantDef[] = [
   GOBLIN_KING,
   SLIME_KING,
   TROLL,
+  FROST_WOLF,
+  HARPY,
+  BANDIT,
 ];
 export const ENEMIES_BY_ID: Record<string, CombatantDef> = Object.fromEntries(ENEMIES.map((e) => [e.id, e]));
 

@@ -433,6 +433,49 @@ describe('boss mechanics', () => {
   });
 });
 
+describe('act 2 enemy mechanics', () => {
+  it('slow whoever hits them, through an enemy when-hit trigger', () => {
+    const hide = skill('hide', [{ kind: 'speed', factor: 0.7, duration: 3 }], {
+      cooldown: 3,
+      target: { side: 'enemy', select: 'attackedMe', area: 'single' },
+      trigger: { kind: 'whenHit' },
+    });
+    const battle = new Battle([member(unit('a', {}, [skill('poke', [hit(1)])]))], [unit('wolf', { hp: 100000 }, [hide])], NO_JITTER);
+    runFor(battle, 1);
+    expect(battle.get('party-0').speed.map((s) => s.value)).toEqual([0.7]);
+  });
+
+  it('fly when hit: take less and deal more direct damage for a while', () => {
+    const fly = skill('fly', [{ kind: 'flight', duration: 3, damageTaken: 0.3, damageDealt: 1.7 }], {
+      cooldown: 8,
+      target: { side: 'self' },
+      trigger: { kind: 'whenHit' },
+    });
+    const harpy = unit('harpy', { hp: 100000, defense: 0 }, [fly]);
+    const battle = new Battle([member(unit('a', { attack: 100 }, [skill('poke', [hit(1)])]))], [harpy], NO_JITTER);
+    const h = battle.get('enemy-0');
+    const damage = (events: BattleEvent[]) => events.filter((e) => e.type === 'damage' && e.target === h.uid).map((e) => (e as { amount: number }).amount);
+    const first = damage(runFor(battle, 1));
+    expect(h.flight).not.toBeNull();
+    const second = damage(runFor(battle, 1));
+    expect(second[0]).toBeLessThan(first[0] * 0.35);
+    runFor(battle, 3);
+    expect(h.flight).toBeNull();
+  });
+
+  it('grow their poison with each Venom stack', () => {
+    const envenom = skill('envenom', [{ kind: 'venom' }], { cooldown: 5, target: { side: 'self' } });
+    const shiv = skill('shiv', [{ kind: 'dot', stat: 'attack', scaling: 1, duration: 5, element: 'poison', perStack: 0.5 }], { cooldown: 2.5 });
+    const battle = new Battle([member(unit('a', { hp: 100000 }))], [unit('b', { attack: 20, hp: 100000 }, [shiv, envenom])], NO_JITTER);
+    const hero = battle.get('party-0');
+    runFor(battle, 2.6);
+    expect(hero.dots[0].amount).toBe(20);
+    runFor(battle, 10);
+    expect(battle.get('enemy-0').meter).toBe(2);
+    expect(hero.dots[0].amount).toBe(40);
+  });
+});
+
 describe('dying bosses', () => {
   it('can spawn minions as they fall, and the fight goes on', () => {
     const minion = unit('minion', { hp: 50 }, []);

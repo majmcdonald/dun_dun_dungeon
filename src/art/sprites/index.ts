@@ -18,6 +18,9 @@ import { SPIDER_SPRITE } from './spider';
 import { SKELETON_KNIGHT_SPRITE } from './skeletonKnight';
 import { GHOUL_SPRITE } from './ghoul';
 import { CULTIST_SPRITE } from './cultist';
+import { FROST_WOLF_SPRITE } from './frostWolf';
+import { HARPY_SPRITE } from './harpy';
+import { BANDIT_SPRITE } from './bandit';
 import { OGRE_SPRITE } from './ogre';
 import { SPIDER_QUEEN_SPRITE } from './spiderQueen';
 import { BONE_MAGE_SPRITE } from './boneMage';
@@ -85,4 +88,7 @@ export const SPRITES: Record<string, SpriteDef> = {
   goblinKing: GOBLIN_KING_SPRITE,
   slimeKing: SLIME_KING_SPRITE,
   troll: TROLL_SPRITE,
+  frostWolf: FROST_WOLF_SPRITE,
+  harpy: HARPY_SPRITE,
+  bandit: BANDIT_SPRITE,
 };

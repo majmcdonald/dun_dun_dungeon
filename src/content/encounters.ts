@@ -48,6 +48,19 @@ export const ACTS: ActEncounters[] = [
       { id: 'troll', name: 'TROLL', enemies: [null, null, null, null, 'troll'] },
     ],
   },
-  { battles: [[], [], []], epics: [], bosses: [] },
+  {
+    battles: [
+      [
+        { id: 'graveyardShift', name: 'GRAVEYARD SHIFT', enemies: ['skeletonKnight', 'skeletonKnight', 'skeletonKnight', 'ghoul', null, 'ghoul', 'archer', null, 'archer'] },
+        { id: 'orcHunters', name: 'ORC HUNTERS', enemies: ['orc', null, 'orc', 'frostWolf', null, 'frostWolf'] },
+        { id: 'wolfPack', name: 'WOLF PACK', enemies: ['frostWolf', 'frostWolf', 'frostWolf', 'frostWolf', null, 'frostWolf', null, 'harpy', null] },
+        { id: 'highwaymen', name: 'HIGHWAYMEN', enemies: ['bandit', null, 'bandit', null, 'bandit', null, 'harpy', null, 'harpy'] },
+      ],
+      [],
+      [],
+    ],
+    epics: [],
+    bosses: [],
+  },
   { battles: [[], [], []], epics: [], bosses: [] },
 ];

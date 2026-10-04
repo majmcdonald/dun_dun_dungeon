@@ -121,6 +121,9 @@ export function effectCost(e: SkillEffect, cooldown: number, rarity: Rarity): nu
       return -(e.fraction * SELF_DAMAGE_CREDIT) / cooldown;
     case 'consumeSummon':
       return -CONSUME_SUMMON_CREDIT;
+    case 'flight':
+    case 'venom':
+      return 0;
     case 'chaos':
       return e.options.reduce((sum, o) => sum + effectCost(o, cooldown, rarity), 0) / e.options.length;
   }

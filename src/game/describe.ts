@@ -57,6 +57,10 @@ function describeBase(e: SkillEffect): string {
       return `CALL ${e.count} ${e.enemy.toUpperCase()} (MAX ${e.cap})`;
     case 'consumeSummon':
       return 'SACRIFICE A SUMMON';
+    case 'flight':
+      return `FLY ${e.duration}S: TAKE ${pct(1 - e.damageTaken)} LESS, DEAL ${pct(e.damageDealt - 1)} MORE`;
+    case 'venom':
+      return '+1 VENOM STACK';
     case 'chaos':
       return `RANDOM: ${e.options.map(describeBase).join(' / ')}`;
   }

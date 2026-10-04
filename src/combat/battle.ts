@@ -290,6 +290,10 @@ export class Battle {
       if (c.shapeshift.remaining <= TIMER_EPSILON) c.shapeshift = null;
     }
     if (c.burst > 0) c.burst = Math.max(0, c.burst - dt);
+    if (c.flight) {
+      c.flight.remaining -= dt;
+      if (c.flight.remaining <= TIMER_EPSILON) c.flight = null;
+    }
     if (c.channel > 0) {
       c.channel -= dt;
       if (c.channel <= TIMER_EPSILON) {
@@ -402,6 +406,8 @@ export class Battle {
           if (actor.def.mechanic === 'chi') power *= actor.burst > 0 ? MECHANIC.chiBurst : MECHANIC.chiFilling;
           if (effect.vsCasters) power *= target.castSpell ? 1 + effect.vsCasters.bonus : 1 - effect.vsCasters.penalty;
           if (target.transformed > 0) power *= MECHANIC.transformedDamageTaken;
+          if (actor.flight) power *= actor.flight.damageDealt;
+          if (target.flight) power *= target.flight.damageTaken;
           const mitigation = statOf(target, effect.damageType === 'physical' ? 'defense' : 'resistance');
           const amount = mitigate(power, mitigation, resistOf(target, effect.element));
           const total = this.applyDamage(actor, target, amount, events, { element: effect.element, direct: true });
@@ -427,7 +433,8 @@ export class Battle {
         return;
       }
       case 'dot': {
-        const amount = Math.round(statOf(actor, effect.stat) * effect.scaling * mult);
+        const stacks = effect.perStack ? 1 + effect.perStack * actor.meter : 1;
+        const amount = Math.round(statOf(actor, effect.stat) * effect.scaling * mult * stacks);
         const dot: Ticking = { source, owner: actor.uid, amount, element: effect.element, remaining: effect.duration, tick: 0 };
         target.dots = refresh(target.dots, dot);
         return;
@@ -494,6 +501,14 @@ export class Battle {
         return;
       case 'spawn':
         this.spawn(actor, effect.enemy, effect.count, effect.cap, events);
+        return;
+      case 'flight':
+        target.flight = { remaining: effect.duration, damageTaken: effect.damageTaken, damageDealt: effect.damageDealt };
+        events.push({ type: 'status', target: target.uid, status: 'flight' });
+        return;
+      case 'venom':
+        target.meter += 1;
+        events.push({ type: 'status', target: target.uid, status: 'venom' });
         return;
       case 'consumeSummon': {
         const victim = this.summonsOf(actor)[0];
@@ -865,6 +880,7 @@ function createCombatant(
     burst: 0,
     regenBlocked: 0,
     regenCarry: 0,
+    flight: null,
   };
 }
 
