@@ -60,7 +60,9 @@ if (preview === 'event') {
       won,
       level: won ? 3 : 2,
       where: won ? 'THE BOSS' : 'ROOM 7',
+      room: won ? 15 : 7,
       party: ['knight', 'barbarian', 'cleric'],
+      unlocked: won ? ['paladin', 'warlock'] : [],
       slayers: won ? [] : ['SLIME', 'ORC', 'BAT', 'ARCHER', 'SHAMAN'],
       stats: won
         ? { rooms: 48, fights: 31, epics: 6, bosses: 3, goldEarned: 1284, damageDone: 48210, damageTaken: 21377 }

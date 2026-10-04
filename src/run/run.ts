@@ -4,6 +4,7 @@ import { CLASSES_BY_ID, type ClassDef } from '../content/classes';
 import { ITEMS_BY_ID } from '../content/items';
 import { SKILLS_BY_ID } from '../content/skills';
 import { seededRng } from '../engine/random';
+import { checkUnlocks, loadProfile, saveProfile } from './profile';
 import { loadSlot, saveSlot } from '../engine/save';
 import { equippedSkills } from '../game/loadout';
 import { recruit, type GameState } from '../game/state';
@@ -171,12 +172,15 @@ export function recordWin(run: RunState, node: MapNode, reward: Reward): void {
 export interface RunSummary {
   won: boolean;
   level: number;
-  // Where the run ended, e.g. "ROOM 7" or "THE BOSS".
+  // Where the run ended, e.g. "ROOM 7" or "THE BOSS", and that room's number.
   where: string;
+  room: number;
   party: string[];
   stats: RunStats;
   // Enemy types in the fight that wiped the party; empty on a win.
   slayers: string[];
+  // Classes unlocked during the run.
+  unlocked?: string[];
 }
 
 // What the victory / Run Over screen shows; `slayers` are the enemy types of the fight that wiped the party.
@@ -187,6 +191,7 @@ export function runSummary(state: GameState, slayers: string[] = []): RunSummary
     won: run.result === 'won',
     level: run.level + 1,
     where: at?.type === 'boss' ? 'THE BOSS' : `ROOM ${at ? Math.min(at.floor + 1, FLOORS) : 1}`,
+    room: at ? Math.min(at.floor + 1, FLOORS) : 1,
     party: state.party.map((m) => m.def.id),
     stats: { ...run.stats },
     slayers,
@@ -330,13 +335,20 @@ export function fromSave(saved: SavedRun, state: GameState): void {
   };
 }
 
+// Also saves the slot's profile, unlocking anything the run's gold now earns.
 export function saveRun(state: GameState): boolean {
-  return !!state.run && saveSlot(state.run.slot, toSave(state));
+  if (!state.run) return false;
+  if (state.profile) {
+    checkUnlocks(state.profile, state.run.gold);
+    saveProfile(state.run.slot, state.profile);
+  }
+  return saveSlot(state.run.slot, toSave(state));
 }
 
 export function loadRun(slot: number, state: GameState): boolean {
   const saved = loadSlot<SavedRun>(slot);
   if (!saved) return false;
   fromSave(saved.data, state);
+  state.profile = loadProfile(slot);
   return true;
 }
