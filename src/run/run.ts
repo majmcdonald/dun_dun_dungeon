@@ -123,6 +123,25 @@ export function beginNode(run: RunState, node: MapNode): void {
   if (run.encounter?.node !== node.id) run.encounter = null;
 }
 
+// What a "?" room turns out to be, rolled when entered and seeded by the room so a reload gets the same.
+export const UNKNOWN_ODDS: [NodeType, number][] = [
+  ['event', 70],
+  ['battle', 15],
+  ['store', 10],
+  ['treasure', 5],
+];
+
+export function roomType(run: RunState, node: MapNode): NodeType {
+  if (node.type !== 'event' || run.event?.node === node.id) return node.type;
+  const rng = seededRng(run.seed * 457 + run.level * 71 + node.floor * 17 + node.column);
+  let roll = rng() * UNKNOWN_ODDS.reduce((sum, [, w]) => sum + w, 0);
+  for (const [type, weight] of UNKNOWN_ODDS) {
+    roll -= weight;
+    if (roll < 0) return type;
+  }
+  return 'event';
+}
+
 export function pendingNodeOf(run: RunState): MapNode | null {
   return run.pending ? (findNode(run.map, run.pending) ?? null) : null;
 }

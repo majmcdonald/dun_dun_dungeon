@@ -143,6 +143,7 @@ Phase 5 design:
 - Repair: gear broken on a KO this run is remembered; the store can restore one piece to the inventory for 50% of its price.
 - Store art: a 32×32 shopkeeper sprite beside the stock, with a counter graphic.
 - Store (approved): SKILLS row (4) and ITEMS row (2) as cards with price; click a card, then BUY in the detail panel. Services: SELL GEAR (unequipped only; half price, enchanted gear +20%), REPAIR (one broken piece per visit, half price), ENCHANT (any gear once: one random stat +5, or +20 HP; 50 G +25 per rarity step; labelled ENCHANTED). Shopkeeper in a red fez behind a counter. Every transaction saves; LEAVE clears the room, and the store can be revisited from the map until the next room is entered. Preview: ?preview=store.
+- "?" rooms (Event nodes) roll on entry, seeded per room: event 70%, monsters 15% (a normal Battle of the room's group), store 10%, treasure 5%. The map shows them as UNKNOWN.
 - Events: 15+ text events now (Phase 6 adds level-specific ones). Each has 2–3 choices; a choice may test one party stat (e.g. highest ATK, total DEF) with a success chance that rises with it, shown as a %, clamped to 10–95%.
 - Event outcomes: gain or lose gold; gain a skill or item; lose a random item; the next fight starts "wounded" (–25% HP) or "blessed" (bonus stats); start a fight (a win gives a bonus reward).
 - Event screen art: a parchment panel with a 64×64 pixel illustration per event, the story text, and 2–3 choice buttons showing the tested stat and %.

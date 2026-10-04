@@ -15,7 +15,7 @@ import { openEvent } from './events';
 import { openStore } from './store';
 import type { MapNode } from './map';
 import { rollReward } from './rewards';
-import { beginNode, clearNode, pendingNodeOf, recordWin, runSummary, saveRun, setRewardPicks } from './run';
+import { beginNode, clearNode, pendingNodeOf, recordWin, roomType, runSummary, saveRun, setRewardPicks } from './run';
 
 // Moves the run between screens: map → node → (fight) → reward → party → map. Every step is autosaved.
 // The run rules themselves live in run.ts.
@@ -24,7 +24,7 @@ export function enterNode(game: GameContext, node: MapNode): void {
   const run = game.state.run;
   if (!run) return;
   beginNode(run, node);
-  switch (node.type) {
+  switch (roomType(run, node)) {
     case 'battle':
     case 'epic':
     case 'boss':
@@ -46,13 +46,14 @@ export function pendingNode(game: GameContext): MapNode | null {
 }
 
 // A won fight or an opened treasure; `battleGold` is gold won by Gold skills during the fight.
-// Event fights pay out like an Epic Monster.
+// A "?" room pays as what it turned out to be; fights started by an event pay out like an Epic Monster.
 export function winNode(game: GameContext, battleGold = 0): void {
   const run = game.state.run;
   const node = pendingNode(game);
   if (!run || !node) return;
-  const payAs = node.type === 'event' ? 'epic' : node.type;
-  recordWin(run, node, rollReward(payAs, game.state.party, SKILL_LIBRARY, ITEM_LIBRARY, Math.random, battleGold));
+  const type = roomType(run, node);
+  const payAs = type === 'event' ? 'epic' : type;
+  recordWin(run, { ...node, type }, rollReward(payAs, game.state.party, SKILL_LIBRARY, ITEM_LIBRARY, Math.random, battleGold));
   saveRun(game.state);
   if (run.result === 'won') return endRun(game);
   game.scenes.switchTo(new RewardScene(game));

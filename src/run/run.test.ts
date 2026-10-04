@@ -15,10 +15,12 @@ import {
   nextNodes,
   pickHolder,
   recordWin,
+  roomType,
   runSummary,
   setRewardPicks,
   startRun,
   toSave,
+  UNKNOWN_ODDS,
   type LastReward,
 } from './run';
 
@@ -334,5 +336,35 @@ describe('run flow rules', () => {
     beginNode(run, next);
     run.result = 'lost';
     expect(runSummary(state, ['ORC'])).toMatchObject({ won: false, level: 1, where: 'ROOM 2', slayers: ['ORC'] });
+  });
+});
+
+describe('"?" rooms', () => {
+  const unknown = { id: '4-2', floor: 4, column: 2, type: 'event' as const, next: [] };
+
+  it('turn out an event, monsters, a store, or treasure at the set odds', () => {
+    const counts: Record<string, number> = {};
+    for (let seed = 1; seed <= 4000; seed++) {
+      const state = createState();
+      startRun(state, 0, [CLASSES_BY_ID.knight], seed);
+      const type = roomType(state.run!, unknown);
+      counts[type] = (counts[type] ?? 0) + 1;
+    }
+    for (const [type, weight] of UNKNOWN_ODDS) expect(counts[type] / 4000).toBeCloseTo(weight / 100, 1);
+  });
+
+  it('roll the same for a room every time, and leave other rooms alone', () => {
+    const state = createState();
+    startRun(state, 0, [CLASSES_BY_ID.knight], 3);
+    const run = state.run!;
+    expect(roomType(run, unknown)).toBe(roomType(run, unknown));
+    expect(roomType(run, { ...unknown, type: 'epic' })).toBe('epic');
+  });
+
+  it('stay an event once its event is open', () => {
+    const state = createState();
+    startRun(state, 0, [CLASSES_BY_ID.knight], 3);
+    state.run!.event = { node: unknown.id, id: 'any', result: null };
+    expect(roomType(state.run!, unknown)).toBe('event');
   });
 });
