@@ -356,6 +356,12 @@ export class BattleScene implements Scene {
     if (isSummon(c)) return;
     const slot = c.slots[0];
     if (slot) drawBar(ctx, x, y + 38, 32, 2, slot.timer / slot.def.cooldown, PALETTE.gold);
+    // Boss fury: fills until it starts, then blinks red while it grows.
+    const fury = c.def.fury;
+    if (!fury) return;
+    const furious = this.battle.elapsed >= fury.after;
+    const blink = Math.floor(this.battle.elapsed / FRENZY_BLINK) % 2 === 0;
+    drawBar(ctx, x, y + 41, 32, 2, Math.min(1, this.battle.elapsed / fury.after), furious ? (blink ? PALETTE.hotRed : PALETTE.white) : PALETTE.orange);
   }
 
   // Most important first; only the first few fit beside the sprite.

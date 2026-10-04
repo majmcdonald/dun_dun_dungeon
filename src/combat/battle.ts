@@ -178,6 +178,7 @@ export class Battle {
     }
     for (const c of this.alive()) this.tickStatuses(c, dt, events);
     this.tickPeriodic(dt, events);
+    this.tickFury(dt, events);
 
     for (const actor of [...this.combatants]) {
       if (actor.hp <= 0 || this.result || actor.channel > 0 || actor.transformed > 0) continue;
@@ -631,6 +632,22 @@ export class Battle {
 
   // Returns the total damage landed (barrier absorption included) so drain and thorns can scale from it.
   // Passive regeneration heals in whole points as they build up, unless a blocking element hit it recently.
+  // Stacks reapply the 'fury' buff with a larger amount, so it never expires and only grows.
+  private tickFury(dt: number, events: BattleEvent[]): void {
+    for (const c of this.alive()) {
+      const fury = c.def.fury;
+      if (!fury) continue;
+      const before = Math.floor((this.elapsed - dt - fury.after) / fury.step);
+      const stacks = Math.floor((this.elapsed - fury.after) / fury.step);
+      if (stacks < 0 || stacks === before) continue;
+      if (stacks === 0) events.push({ type: 'status', target: c.uid, status: 'fury' });
+      const share = fury.rate * (stacks + 1);
+      for (const stat of ['attack', 'magic'] as const) {
+        if (c.def.stats[stat] > 0) this.setBuff(c, 'fury', stat, Math.round(c.def.stats[stat] * share), Infinity, events);
+      }
+    }
+  }
+
   private tickRegeneration(c: Combatant, dt: number, events: BattleEvent[]): void {
     const regen = c.def.regeneration;
     c.regenBlocked = Math.max(0, c.regenBlocked - dt);

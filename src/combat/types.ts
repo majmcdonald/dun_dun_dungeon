@@ -142,6 +142,8 @@ export interface CombatantDef {
   familiar?: string;
   // Passive regeneration: this share of max HP each second, paused for `blockSeconds` after damage of these elements.
   regeneration?: { perSecond: number; blockedBy: Element[]; blockSeconds: number };
+  // Boss soft timer: from `after` seconds in, every `step` seconds ATK and MAG grow by `rate` of their base.
+  fury?: { after: number; step: number; rate: number };
 }
 
 export type EquipSlot = 'armor' | 'helmet' | 'boots' | 'weapon' | 'jewelry';
@@ -256,7 +258,7 @@ export type BattleEvent =
   | { type: 'heal'; source: string; target: string; amount: number; periodic?: boolean }
   | { type: 'barrier'; target: string; amount: number }
   | { type: 'buff'; target: string; stat: StatKey; amount: number }
-  | { type: 'status'; target: string; status: 'slow' | 'haste' | 'transform' | 'taunt' | 'shapeshift' | 'frenzy' | 'burst' | 'steal' | 'delay' }
+  | { type: 'status'; target: string; status: 'slow' | 'haste' | 'transform' | 'taunt' | 'shapeshift' | 'frenzy' | 'burst' | 'steal' | 'delay' | 'fury' }
   | { type: 'summon'; summoner: string; unit: string }
   | { type: 'gold'; amount: number }
   | { type: 'death'; target: string }

@@ -246,6 +246,10 @@ export const BONE_MAGE: CombatantDef = {
 
 // --- Act 1 bosses (one per run). Their 48x48 sprites are drawn separately.
 
+// Bosses hit lightly at first, then grow fiercer from 25s: +30% ATK/MAG every 3s. Fast parties win before
+// the wall; slow ones (heal-and-outlast) can't, so no class is required.
+const BOSS_FURY = { after: 25, step: 3, rate: 0.3 };
+
 const self = { side: 'self' } as const;
 const scepterBash = enemySkill('scepterBash', 'Scepter Bash', 2, front, physical(1.1));
 const callTheHorde = enemySkill('callTheHorde', 'Call the Horde', 10, self, { kind: 'spawn', enemy: 'goblin', count: 2, cap: 6 });
@@ -282,16 +286,18 @@ const enrage = enemySkill(
 export const GOBLIN_KING: CombatantDef = {
   id: 'goblinKing',
   name: 'Goblin King',
-  stats: { hp: 1470, attack: 30, magic: 0, defense: 14, resistance: 10 },
+  stats: { hp: 1911, attack: 14, magic: 0, defense: 14, resistance: 10 },
   skills: [scepterBash, callTheHorde, warCry],
+  fury: BOSS_FURY,
   resist: { lightning: -0.5 },
 };
 
 export const SLIME_KING: CombatantDef = {
   id: 'slimeKing',
   name: 'Slime King',
-  stats: { hp: 1920, attack: 26, magic: 0, defense: 8, resistance: 8 },
+  stats: { hp: 2880, attack: 13, magic: 0, defense: 8, resistance: 8 },
   skills: [bodySlam, acidSpit, split('split66', 0.66), split('split33', 0.33), burst],
+  fury: BOSS_FURY,
   resist: { fire: -0.5, poison: 0.5 },
 };
 
@@ -299,8 +305,9 @@ export const SLIME_KING: CombatantDef = {
 export const TROLL: CombatantDef = {
   id: 'troll',
   name: 'Troll',
-  stats: { hp: 2800, attack: 42, magic: 0, defense: 16, resistance: 8 },
+  stats: { hp: 3780, attack: 19, magic: 0, defense: 16, resistance: 8 },
   skills: [club, enrage],
+  fury: BOSS_FURY,
   resist: { fire: -0.5 },
   regeneration: { perSecond: 0.02, blockedBy: ['fire', 'poison'], blockSeconds: 4 },
 };

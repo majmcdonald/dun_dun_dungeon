@@ -417,6 +417,20 @@ describe('boss mechanics', () => {
     runFor(battle, 2);
     expect(t.hp).toBeGreaterThan(60);
   });
+
+  it('grow fiercer after the fury timer, one stack per step', () => {
+    const boss = unit('boss', { hp: 100000, attack: 20, magic: 0 }, [], { fury: { after: 10, step: 2, rate: 0.5 } });
+    const battle = new Battle([member(unit('a', { hp: 100000 }))], [boss], NO_JITTER);
+    const b = battle.get('enemy-0');
+    const attack = () => b.buffs.filter((x) => x.source === 'fury' && x.stat === 'attack').reduce((n, x) => n + x.amount, 0);
+    runFor(battle, 9.9);
+    expect(attack()).toBe(0);
+    expect(runFor(battle, 0.2).some((e) => e.type === 'status' && e.status === 'fury')).toBe(true);
+    expect(attack()).toBe(10);
+    runFor(battle, 4);
+    expect(attack()).toBe(30);
+    expect(b.buffs.filter((x) => x.source === 'fury' && x.stat === 'magic')).toHaveLength(0);
+  });
 });
 
 describe('dying bosses', () => {
