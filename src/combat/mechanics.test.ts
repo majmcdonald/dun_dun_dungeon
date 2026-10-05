@@ -524,6 +524,55 @@ describe('act 2 group 2 mechanics', () => {
   });
 });
 
+describe('act 2 group 3 mechanics', () => {
+  const sting = skill('sting', [{ kind: 'dot', stat: 'attack', scaling: 1, duration: 10, element: 'poison' }], { cooldown: 1 });
+
+  it('stack the same poison from different casters', () => {
+    const battle = new Battle([member(unit('a', { hp: 100000 }))], [unit('w1', { attack: 10, hp: 100000 }, [sting]), unit('w2', { attack: 10, hp: 100000 }, [sting])], NO_JITTER);
+    runFor(battle, 1.05);
+    expect(battle.get('party-0').dots).toHaveLength(2);
+  });
+
+  it('bite: every poison on the target ticks once more, and keeps running', () => {
+    const bite = skill('bite', [{ kind: 'tickPoison' }], { cooldown: 3 });
+    const periodicTicks = (skills: SkillDef[]) => {
+      const battle = new Battle([member(unit('a', { hp: 100000, defense: 0 }))], [unit('w', { attack: 10, hp: 100000 }, skills)], NO_JITTER);
+      const events = runFor(battle, 3.05);
+      return { ticks: damageTo(events, 'party-0').filter((e) => e.periodic).length, dots: battle.get('party-0').dots.length };
+    };
+    const without = periodicTicks([sting, skill('wait', [hit(0)], { cooldown: 3 })]);
+    const withBite = periodicTicks([sting, bite]);
+    expect(withBite.ticks).toBe(without.ticks + 1);
+    expect(withBite.dots).toBe(1);
+  });
+});
+
+describe('act 2 epic monster mechanics', () => {
+  it('target caster-class heroes, or the front hero when none are left', () => {
+    const bite = skill('bite', [hit(1)], { target: { side: 'enemy', select: 'casterClass', area: 'single' } });
+    const party = [member(unit('tank', { hp: 100000 })), member(unit('mage', { hp: 100000 }, [], { tags: ['caster'] }))];
+    const battle = new Battle(party, [unit('chimera', { attack: 10, hp: 100000 }, [bite])], NO_JITTER);
+    const events = runFor(battle, 3.05);
+    expect(damageTo(events, 'party-1').length).toBe(3);
+    expect(damageTo(events, 'party-0').length).toBe(0);
+    const noCasters = new Battle([member(unit('tank', { hp: 100000 }))], [unit('chimera', { attack: 10, hp: 100000 }, [bite])], NO_JITTER);
+    expect(damageTo(runFor(noCasters, 1.05), 'party-0').length).toBe(1);
+  });
+
+  it('harden with every hit: ice armor stacks DEF', () => {
+    const armor = skill('armor', [{ kind: 'buff', stat: 'defense', amount: 3, duration: 8, stack: true }], {
+      cooldown: 1,
+      target: { side: 'self' },
+      trigger: { kind: 'whenHit' },
+    });
+    const giant = unit('giant', { hp: 100000, defense: 10 }, [armor]);
+    // Slot 1 runs x1.25, so a 1.25s poke lands once a second, matching the armor's 1s cooldown.
+    const battle = new Battle([member(unit('a', {}, [skill('poke', [hit(1)], { cooldown: 1.25 })]))], [giant], NO_JITTER);
+    runFor(battle, 3.05);
+    expect(statOf(battle.get('enemy-0'), 'defense')).toBe(19);
+  });
+});
+
 describe('dying bosses', () => {
   it('can spawn minions as they fall, and the fight goes on', () => {
     const minion = unit('minion', { hp: 50 }, []);

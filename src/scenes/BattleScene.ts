@@ -326,8 +326,13 @@ export class BattleScene implements Scene {
     const anim = this.anim(c.uid);
     anim.critter = c.transformed > 0 && anim.morph <= 0;
     const id = anim.critter ? 'critter' : c.def.id;
-    const set = this.sprites.get(id);
-    if (!set) throw new Error(`No sprite for ${c.def.id}`);
+    let set = this.sprites.get(id);
+    if (!set) {
+      // Art not drawn yet: a placeholder box, so the fight still runs.
+      const box = spriteCanvas(undefined, 'idle');
+      set = { idle: box, attack: box, flash: box, topRow: 6, width: box.width, height: box.height };
+      this.sprites.set(id, set);
+    }
     return set;
   }
 

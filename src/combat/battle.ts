@@ -352,6 +352,10 @@ export class Battle {
         return frontMost(pool.filter((c) => c.castSpell));
       case 'castDefensive':
         return frontMost(pool.filter((c) => c.castDefensive));
+      case 'casterClass': {
+        const casters = pool.filter((c) => c.def.tags?.includes('caster'));
+        return casters.length > 0 ? casters[Math.floor(this.rng() * casters.length)] : null;
+      }
     }
   }
 
@@ -507,6 +511,13 @@ export class Battle {
         target.flight = { remaining: effect.duration, damageTaken: effect.damageTaken, damageDealt: effect.damageDealt };
         events.push({ type: 'status', target: target.uid, status: 'flight' });
         return;
+      case 'tickPoison':
+        for (const d of target.dots.filter((dot) => dot.element === 'poison')) {
+          if (target.hp <= 0 || this.result) return;
+          const amount = Math.max(1, Math.round(d.amount * (1 - resistOf(target, d.element))));
+          this.applyDamage(this.get(d.owner), target, amount, events, { element: d.element, direct: false, periodic: true });
+        }
+        return;
       case 'venom':
         target.meter += 1;
         events.push({ type: 'status', target: target.uid, status: 'venom' });
@@ -654,8 +665,6 @@ export class Battle {
     }
   }
 
-  // Returns the total damage landed (barrier absorption included) so drain and thorns can scale from it.
-  // Passive regeneration heals in whole points as they build up, unless a blocking element hit it recently.
   // Stacks reapply the 'fury' buff with a larger amount, so it never expires and only grows.
   private tickFury(dt: number, events: BattleEvent[]): void {
     for (const c of this.alive()) {
@@ -672,6 +681,7 @@ export class Battle {
     }
   }
 
+  // Passive regeneration heals in whole points as they build up, unless a blocking element hit it recently.
   private tickRegeneration(c: Combatant, dt: number, events: BattleEvent[]): void {
     const regen = c.def.regeneration;
     c.regenBlocked = Math.max(0, c.regenBlocked - dt);
@@ -684,6 +694,7 @@ export class Battle {
     events.push({ type: 'heal', source: c.uid, target: c.uid, amount, periodic: true });
   }
 
+  // Returns the total damage landed (barrier absorption included) so drain and thorns can scale from it.
   private applyDamage(
     source: Combatant,
     target: Combatant,
@@ -787,8 +798,9 @@ export class Battle {
 }
 
 // Reapplying resets the duration but keeps tick progress, so an effect refreshed every second still ticks.
+// The same skill from the same caster refreshes its effect; different casters stack.
 function refresh(list: Ticking[], next: Ticking): Ticking[] {
-  const existing = list.find((t) => t.source === next.source);
+  const existing = list.find((t) => t.source === next.source && t.owner === next.owner);
   return [...list.filter((t) => t !== existing), { ...next, tick: existing?.tick ?? 0 }];
 }
 

@@ -29,7 +29,9 @@ export type Selector =
   | 'attackedMe'
   | 'mostDamage'
   | 'castSpell'
-  | 'castDefensive';
+  | 'castDefensive'
+  // A random hero of the Caster tag (Mage, Cleric, ...).
+  | 'casterClass';
 
 export type Area = 'single' | 'row' | 'column' | 'all';
 
@@ -76,6 +78,8 @@ type BaseEffect =
   | { kind: 'consumeSummon' }
   // Enemies only: Harpy flight, multiplying direct damage taken and dealt for a while.
   | { kind: 'flight'; duration: number; damageTaken: number; damageDealt: number }
+  // Enemies only: every poison on the target ticks once right away (it keeps running).
+  | { kind: 'tickPoison' }
   // Enemies only: +1 permanent Venom stack (kept in `meter`).
   | { kind: 'venom' };
 

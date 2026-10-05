@@ -24,6 +24,15 @@ import { BANDIT_SPRITE } from './bandit';
 import { STONE_GOLEM_SPRITE } from './stoneGolem';
 import { GNOLL_SPRITE } from './gnoll';
 import { WISP_SPRITE } from './wisp';
+import { MINOTAUR_SPRITE } from './minotaur';
+import { MEDUSA_SPRITE } from './medusa';
+import { WYVERN_SPRITE } from './wyvern';
+import { FROST_GIANT_SPRITE } from './frostGiant';
+import { CHIMERA_SPRITE } from './chimera';
+import { HYDRA_SPRITE } from './hydra';
+import { BANDIT_KING_SPRITE } from './banditKing';
+import { ICE_QUEEN_SPRITE } from './iceQueen';
+import { ELDER_WYRM_SPRITE } from './elderWyrm';
 import { OGRE_SPRITE } from './ogre';
 import { SPIDER_QUEEN_SPRITE } from './spiderQueen';
 import { BONE_MAGE_SPRITE } from './boneMage';
@@ -97,4 +106,13 @@ export const SPRITES: Record<string, SpriteDef> = {
   stoneGolem: STONE_GOLEM_SPRITE,
   gnoll: GNOLL_SPRITE,
   wisp: WISP_SPRITE,
+  minotaur: MINOTAUR_SPRITE,
+  medusa: MEDUSA_SPRITE,
+  wyvern: WYVERN_SPRITE,
+  frostGiant: FROST_GIANT_SPRITE,
+  chimera: CHIMERA_SPRITE,
+  hydra: HYDRA_SPRITE,
+  banditKing: BANDIT_KING_SPRITE,
+  iceQueen: ICE_QUEEN_SPRITE,
+  elderWyrm: ELDER_WYRM_SPRITE,
 };

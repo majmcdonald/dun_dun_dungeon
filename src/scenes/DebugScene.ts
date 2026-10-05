@@ -1,5 +1,5 @@
 import { PALETTE } from '../art/palette';
-import { spriteCanvas } from '../art/sprite';
+import { drawFitted, spriteCanvas } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
 import type { CombatantDef, PartyMember } from '../combat/types';
 import { CLASSES, CLASSES_BY_ID } from '../content/classes';
@@ -224,7 +224,7 @@ export class DebugScene implements Scene {
     pointer: { x: number; y: number } | null,
   ): void {
     drawPanel(ctx, row, border);
-    ctx.drawImage(this.sprite(member.def.id), row.x + 4, row.y + (row.h - 32) / 2);
+    drawFitted(ctx, this.sprite(member.def.id), row.x + 4, row.y + (row.h - 32) / 2);
     drawText(ctx, `${index + 1} ${member.def.name.toUpperCase()}`, row.x + 40, row.y + 5, PALETTE.white);
     const names = equippedSkills(member).map((s) => s.name.toUpperCase());
     drawText(ctx, clip(names.slice(0, 2).join(', '), 21), row.x + 40, row.y + 16, PALETTE.lightGray);
@@ -242,7 +242,7 @@ export class DebugScene implements Scene {
       const r = cellRect(p);
       drawPanel(ctx, r, !blocked && inside(pointer, r) ? PALETTE.lightGray : PALETTE.night);
       const def = encounter[p];
-      if (def) ctx.drawImage(this.sprite(def.id), r.x + (CELL - 32) / 2, r.y + (CELL - 32) / 2);
+      if (def) drawFitted(ctx, this.sprite(def.id), r.x + (CELL - 32) / 2, r.y + (CELL - 32) / 2);
     }
     drawButton(ctx, CLEAR, !blocked && inside(pointer, CLEAR));
   }
@@ -266,7 +266,7 @@ export class DebugScene implements Scene {
     pointer: { x: number; y: number },
   ): void {
     drawPanel(ctx, r, inside(pointer, r) ? PALETTE.lightGray : PALETTE.darkSlate);
-    if (spriteId) ctx.drawImage(this.sprite(spriteId), r.x + (r.w - 32) / 2, r.y + 2);
+    if (spriteId) drawFitted(ctx, this.sprite(spriteId), r.x + (r.w - 32) / 2, r.y + 2);
     drawText(ctx, name, r.x + (r.w - textWidth(name)) / 2, r.y + (detail ? 36 : 46), color);
     detail?.forEach((line, i) => drawText(ctx, line, r.x + (r.w - textWidth(line)) / 2, r.y + 46 + i * 9, PALETTE.slate));
   }

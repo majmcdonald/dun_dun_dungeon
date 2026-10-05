@@ -62,10 +62,23 @@ export const ACTS: ActEncounters[] = [
         { id: 'quarry', name: 'QUARRY', enemies: ['stoneGolem', null, 'stoneGolem', null, null, null, 'wisp', null, 'wisp'] },
         { id: 'hauntedBog', name: 'HAUNTED BOG', enemies: [null, 'stoneGolem', null, 'gnoll', null, 'gnoll', 'wisp', null, 'wisp'] },
       ],
-      [],
+      [
+        { id: 'gnollWarband', name: 'GNOLL WARBAND', enemies: ['bandit', null, 'bandit', 'gnoll', 'gnoll', 'gnoll', 'wisp', null, 'wisp'] },
+        { id: 'labyrinth', name: 'LABYRINTH', enemies: ['minotaur', null, 'minotaur', null, null, null, 'harpy', null, 'harpy'] },
+        { id: 'gorgonsGarden', name: "GORGON'S GARDEN", enemies: [null, 'minotaur', null, null, 'medusa', null, 'wyvern', null, 'wyvern'] },
+        { id: 'wyvernRoost', name: 'WYVERN ROOST', enemies: ['wyvern', null, 'wyvern', null, 'wyvern', null, null, 'medusa', null] },
+      ],
     ],
-    epics: [],
-    bosses: [],
+    epics: [
+      { id: 'frostGiant', name: 'FROST GIANT', enemies: ['frostWolf', null, 'frostWolf', null, 'frostGiant'] },
+      { id: 'chimera', name: 'CHIMERA', enemies: [null, null, null, null, 'chimera', null, 'harpy', null, 'harpy'] },
+      { id: 'hydra', name: 'HYDRA', enemies: [null, null, null, null, 'hydra', null, null, 'medusa', null] },
+    ],
+    bosses: [
+      { id: 'banditKing', name: 'BANDIT KING', enemies: ['bandit', null, 'bandit', null, 'banditKing'] },
+      { id: 'iceQueen', name: 'ICE QUEEN', enemies: [null, null, null, null, 'iceQueen'] },
+      { id: 'elderWyrm', name: 'ELDER WYRM', enemies: [null, null, null, null, 'elderWyrm'] },
+    ],
   },
   { battles: [[], [], []], epics: [], bosses: [] },
 ];

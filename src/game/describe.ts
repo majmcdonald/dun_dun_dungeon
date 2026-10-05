@@ -61,6 +61,8 @@ function describeBase(e: SkillEffect): string {
       return `FLY ${e.duration}S: TAKE ${pct(1 - e.damageTaken)} LESS, DEAL ${pct(e.damageDealt - 1)} MORE`;
     case 'venom':
       return '+1 VENOM STACK';
+    case 'tickPoison':
+      return 'ALL POISON ON THE TARGET TICKS NOW';
     case 'chaos':
       return `RANDOM: ${e.options.map(describeBase).join(' / ')}`;
   }
@@ -140,6 +142,7 @@ const SELECTOR: Record<Selector, string> = {
   mostDamage: 'TOP DAMAGE DEALER',
   castSpell: 'SPELLCASTER',
   castDefensive: 'DEFENSIVE CASTER',
+  casterClass: 'CASTER-CLASS',
 };
 
 export function describeTarget(t: Targeting): string {

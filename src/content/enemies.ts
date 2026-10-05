@@ -428,6 +428,214 @@ export const WISP: CombatantDef = {
   resist: { ice: -0.5, fire: 0.5 },
 };
 
+// --- Act 2, Group 3 (rooms 11–15). Base stats are pre-tuning; the Act 2 balance pass scales them.
+
+const gore = enemySkill('gore', 'Gore', 2.5, { side: 'enemy', select: 'highestHp', area: 'single' }, physical(1.3));
+const trample = enemySkill('trample', 'Trample', 7, { side: 'enemy', select: 'front', area: 'column' }, physical(1));
+const rampage = enemySkill(
+  'rampage',
+  'Rampage',
+  1,
+  self,
+  [
+    { kind: 'buff', stat: 'attack', amount: 6, duration: 999 },
+    { kind: 'speed', factor: 1.4, duration: 999 },
+  ],
+  false,
+  { trigger: { kind: 'belowHp', threshold: 0.5 } },
+);
+const petrifyingGaze = enemySkill('petrifyingGaze', 'Petrifying Gaze', 8, { side: 'enemy', select: 'random', area: 'single' }, { kind: 'delay', seconds: 3 }, true);
+const serpentHair = enemySkill('serpentHair', 'Serpent Hair', 3, { side: 'enemy', select: 'random', area: 'single' }, {
+  kind: 'dot',
+  stat: 'magic',
+  scaling: 0.4,
+  duration: 5,
+  element: 'poison',
+}, true);
+const stoneGlare = enemySkill('stoneGlare', 'Stone Glare', 4, { side: 'enemy', select: 'attackedMe', area: 'single' }, { kind: 'speed', factor: 0.5, duration: 2 }, true, {
+  trigger: { kind: 'whenHit' },
+});
+const tailSting = enemySkill('tailSting', 'Tail Sting', 4, front, [physical(0.8), { kind: 'dot', stat: 'attack', scaling: 0.5, duration: 6, element: 'poison' }]);
+const wyvernBite = enemySkill('wyvernBite', 'Bite', 3, front, [physical(0.9), { kind: 'tickPoison' }]);
+
+// A wall of HP; enrages below half.
+export const MINOTAUR: CombatantDef = {
+  id: 'minotaur',
+  name: 'Minotaur',
+  stats: { hp: 360, attack: 18, magic: 0, defense: 14, resistance: 8 },
+  skills: [gore, trample, rampage],
+  resist: { ice: -0.5 },
+};
+
+export const MEDUSA: CombatantDef = {
+  id: 'medusa',
+  name: 'Medusa',
+  stats: { hp: 70, attack: 6, magic: 15, defense: 8, resistance: 14 },
+  skills: [petrifyingGaze, serpentHair, stoneGlare],
+  resist: { holy: -0.5, poison: 0.5 },
+};
+
+// Bite makes every poison on its target tick at once; takes flight when hit, like the Harpy.
+export const WYVERN: CombatantDef = {
+  id: 'wyvern',
+  name: 'Wyvern',
+  stats: { hp: 90, attack: 15, magic: 0, defense: 10, resistance: 8 },
+  skills: [tailSting, wyvernBite, takeFlight],
+  resist: { lightning: -0.5, poison: 0.5 },
+};
+
+// --- Act 2 Epic Monsters. Base stats are pre-tuning; the Act 2 balance pass scales them.
+
+const glacialSmash = enemySkill('glacialSmash', 'Glacial Smash', 4, { side: 'enemy', select: 'front', area: 'column' }, {
+  kind: 'damage',
+  damageType: 'physical',
+  stat: 'attack',
+  scaling: 1.3,
+  element: 'ice',
+});
+const blizzard = enemySkill('blizzard', 'Blizzard', 10, allHeroes, [
+  { kind: 'damage', damageType: 'magic', stat: 'attack', scaling: 0.6, element: 'ice' },
+  { kind: 'speed', factor: 0.7, duration: 3 },
+], true);
+const iceArmor = enemySkill('iceArmor', 'Ice Armor', 1, self, { kind: 'buff', stat: 'defense', amount: 3, duration: 8, stack: true }, false, {
+  trigger: { kind: 'whenHit' },
+});
+const atCaster = { side: 'enemy', select: 'casterClass', area: 'single' } as const;
+const lionBite = enemySkill('lionBite', 'Lion Bite', 1.5, atCaster, physical(1));
+const goatCharge = enemySkill('goatCharge', 'Goat Charge', 5, atCaster, physical(1.6));
+const serpentTail = enemySkill('serpentTail', 'Serpent Tail', 4, atCaster, { kind: 'dot', stat: 'attack', scaling: 0.4, duration: 6, element: 'poison' });
+const fireBreath = enemySkill('fireBreath', 'Fire Breath', 8, { side: 'enemy', select: 'casterClass', area: 'row' }, {
+  kind: 'damage',
+  damageType: 'magic',
+  stat: 'magic',
+  scaling: 1.2,
+  element: 'fire',
+}, true);
+const snappingHeads = enemySkill('snappingHeads', 'Snapping Heads', 2, front, { kind: 'damage', damageType: 'physical', stat: 'attack', scaling: 0.5, hits: 3 });
+const growHead = (id: string, threshold: number) =>
+  enemySkill(
+    id,
+    'Grow Head',
+    1,
+    self,
+    [
+      { kind: 'buff', stat: 'attack', amount: 4, duration: 999, stack: true },
+      { kind: 'speed', factor: 1.2, duration: 999, stack: true },
+    ],
+    false,
+    { trigger: { kind: 'belowHp', threshold } },
+  );
+
+// Hardens when hit: each hit stacks +DEF for 8s.
+export const FROST_GIANT: CombatantDef = {
+  id: 'frostGiant',
+  name: 'Frost Giant',
+  stats: { hp: 300, attack: 20, magic: 0, defense: 14, resistance: 8 },
+  skills: [glacialSmash, blizzard, iceArmor],
+  resist: { fire: -0.5, ice: 0.5 },
+};
+
+// Every head goes for the party's casters.
+export const CHIMERA: CombatantDef = {
+  id: 'chimera',
+  name: 'Chimera',
+  stats: { hp: 260, attack: 18, magic: 12, defense: 10, resistance: 10 },
+  skills: [lionBite, goatCharge, serpentTail, fireBreath],
+};
+
+// Regrows unless burned; grows a head (stacking +ATK and haste) at 75%, 50%, and 25% HP.
+export const HYDRA: CombatantDef = {
+  id: 'hydra',
+  name: 'Hydra',
+  stats: { hp: 280, attack: 16, magic: 0, defense: 10, resistance: 8 },
+  skills: [snappingHeads, growHead('growHead75', 0.75), growHead('growHead50', 0.5), growHead('growHead25', 0.25)],
+  resist: { fire: -0.5 },
+  regeneration: { perSecond: 0.02, blockedBy: ['fire'], blockSeconds: 4 },
+};
+
+// --- Act 2 bosses (one per run; 48x48 sprites drawn separately). Base stats are pre-tuning.
+
+const twinDaggers = enemySkill('twinDaggers', 'Twin Daggers', 1.5, { side: 'enemy', select: 'lowestHp', area: 'single' }, [
+  { kind: 'damage', damageType: 'physical', stat: 'attack', scaling: 0.6, hits: 2 },
+  { kind: 'dot', stat: 'attack', scaling: 0.25, duration: 5, element: 'poison', perStack: 0.5 },
+]);
+const smokeBomb = enemySkill('smokeBomb', 'Smoke Bomb', 12, allHeroes, { kind: 'delay', seconds: 1.5 });
+const smokeScreen = enemySkill('smokeScreen', 'Smoke Screen', 12, { side: 'ally', select: 'front', area: 'all' }, {
+  kind: 'barrier',
+  stat: 'defense',
+  scaling: 1.5,
+  duration: 4,
+});
+const callThugs = enemySkill('callThugs', 'Call Thugs', 15, self, { kind: 'spawn', enemy: 'bandit', count: 2, cap: 4 });
+const frostLance = enemySkill('frostLance', 'Frost Lance', 2, { side: 'enemy', select: 'highestHp', area: 'single' }, {
+  kind: 'damage',
+  damageType: 'magic',
+  stat: 'magic',
+  scaling: 1.1,
+  element: 'ice',
+}, true);
+const glacialTomb = enemySkill('glacialTomb', 'Glacial Tomb', 10, { side: 'enemy', select: 'random', area: 'single' }, { kind: 'delay', seconds: 4 }, true);
+const mirrorShards = enemySkill('mirrorShards', 'Mirror Shards', 3, { side: 'enemy', select: 'attackedMe', area: 'single' }, {
+  kind: 'damage',
+  damageType: 'magic',
+  stat: 'magic',
+  scaling: 0.8,
+  element: 'ice',
+}, true, { trigger: { kind: 'whenHit' } });
+const wintersGrip = enemySkill('wintersGrip', "Winter's Grip", 1, allHeroes, { kind: 'speed', factor: 0.6, duration: 999 }, true, {
+  trigger: { kind: 'belowHp', threshold: 0.5 },
+});
+const wintersCall = enemySkill('wintersCall', "Winter's Call", 1, self, { kind: 'spawn', enemy: 'frostWolf', count: 2, cap: 2 }, false, {
+  trigger: { kind: 'belowHp', threshold: 0.5 },
+});
+const wyrmClaw = enemySkill('wyrmClaw', 'Claw', 2, front, physical(1.1));
+const inferno = enemySkill('inferno', 'Inferno', 9, allHeroes, {
+  kind: 'damage',
+  damageType: 'magic',
+  stat: 'magic',
+  scaling: 1.3,
+  element: 'fire',
+}, true);
+const moltenScales = enemySkill(
+  'moltenScales',
+  'Molten Scales',
+  1,
+  self,
+  [
+    { kind: 'buff', stat: 'defense', amount: 10, duration: 999 },
+    { kind: 'buff', stat: 'resistance', amount: 10, duration: 999 },
+  ],
+  false,
+  { trigger: { kind: 'belowHp', threshold: 0.5 } },
+);
+
+export const BANDIT_KING: CombatantDef = {
+  id: 'banditKing',
+  name: 'Bandit King',
+  stats: { hp: 500, attack: 18, magic: 0, defense: 12, resistance: 10 },
+  skills: [twinDaggers, smokeBomb, smokeScreen, callThugs, envenom],
+  fury: BOSS_FURY,
+};
+
+// Below half HP: the whole party slows to 60% for good, and two Frost Wolves join.
+export const ICE_QUEEN: CombatantDef = {
+  id: 'iceQueen',
+  name: 'Ice Queen',
+  stats: { hp: 600, attack: 4, magic: 20, defense: 10, resistance: 18 },
+  skills: [frostLance, glacialTomb, mirrorShards, wintersGrip, wintersCall],
+  resist: { fire: -0.5, ice: 0.5 },
+  fury: BOSS_FURY,
+};
+
+export const ELDER_WYRM: CombatantDef = {
+  id: 'elderWyrm',
+  name: 'Elder Wyrm',
+  stats: { hp: 750, attack: 20, magic: 18, defense: 14, resistance: 12 },
+  skills: [wyrmClaw, inferno, takeFlight, moltenScales],
+  resist: { ice: -0.5, fire: 0.5 },
+  fury: BOSS_FURY,
+};
+
 // Every enemy type, for pickers.
 export const ENEMIES: CombatantDef[] = [
   SLIME,
@@ -455,6 +663,15 @@ export const ENEMIES: CombatantDef[] = [
   STONE_GOLEM,
   GNOLL,
   WISP,
+  MINOTAUR,
+  MEDUSA,
+  WYVERN,
+  FROST_GIANT,
+  CHIMERA,
+  HYDRA,
+  BANDIT_KING,
+  ICE_QUEEN,
+  ELDER_WYRM,
 ];
 export const ENEMIES_BY_ID: Record<string, CombatantDef> = Object.fromEntries(ENEMIES.map((e) => [e.id, e]));
 
