@@ -476,6 +476,54 @@ describe('act 2 enemy mechanics', () => {
   });
 });
 
+describe('act 2 group 2 mechanics', () => {
+  it('shatter on defeat, hitting every hero', () => {
+    const shatter = skill('shatter', [hit(2)], { cooldown: 1, target: { side: 'enemy', select: 'front', area: 'all' }, trigger: { kind: 'onDefeat' } });
+    const golem = unit('golem', { hp: 1, attack: 50 }, [shatter]);
+    const other = unit('other', { hp: 100000 }, []);
+    const party = [member(unit('a', { hp: 1000, defense: 0, attack: 100 }, [skill('poke', [hit(1)])])), member(unit('b', { hp: 1000, defense: 0 }))];
+    const battle = new Battle(party, [golem, other], NO_JITTER);
+    const events = runFor(battle, 1.5);
+    expect(fired(events, 'shatter')).toBe(1);
+    expect(damageTo(events, 'party-0').length).toBeGreaterThan(0);
+    expect(damageTo(events, 'party-1').length).toBeGreaterThan(0);
+  });
+
+  it('stack bloodlust haste and attack for each fallen ally, each on its own timer', () => {
+    const lust = skill(
+      'lust',
+      [
+        { kind: 'buff', stat: 'attack', amount: 4, duration: 10, stack: true },
+        { kind: 'speed', factor: 1.3, duration: 10, stack: true },
+      ],
+      { cooldown: 0, target: { side: 'self' }, trigger: { kind: 'allyFalls' } },
+    );
+    const gnoll = unit('gnoll', { hp: 100000 }, [lust]);
+    const fodder = () => unit('fodder', { hp: 1 }, []);
+    const hero = unit('a', { attack: 100, hp: 100000 }, [skill('poke', [hit(1)], { target: { side: 'enemy', select: 'lowestHp', area: 'single' } })]);
+    const battle = new Battle([member(hero)], [gnoll, fodder(), fodder()], NO_JITTER);
+    const g = battle.get('enemy-0');
+    runFor(battle, 2.5);
+    expect(speedOf(g)).toBeCloseTo(1.69, 2);
+    expect(statOf(g, 'attack')).toBe(g.def.stats.attack + 8);
+    runFor(battle, 10);
+    expect(speedOf(g)).toBe(1);
+  });
+
+  it('ward and heal a wisp when it is hit', () => {
+    const ward = skill('ward', [{ kind: 'barrier', stat: 'resistance', scaling: 1, duration: 3 }, { kind: 'heal', scaling: 1 }], {
+      cooldown: 4,
+      target: { side: 'self' },
+      trigger: { kind: 'whenHit' },
+    });
+    const wisp = unit('wisp', { hp: 1000, magic: 50, resistance: 20 }, [ward]);
+    const battle = new Battle([member(unit('a', { attack: 30 }, [skill('poke', [hit(1)])]))], [wisp], NO_JITTER);
+    const events = runFor(battle, 1);
+    expect(fired(events, 'ward')).toBe(1);
+    expect(events.some((e) => e.type === 'heal' && e.target === 'enemy-0')).toBe(true);
+  });
+});
+
 describe('dying bosses', () => {
   it('can spawn minions as they fall, and the fight goes on', () => {
     const minion = unit('minion', { hp: 50 }, []);

@@ -1737,6 +1737,179 @@ def bandit():
     emit(f'{OUT}/bandit.ts', 'BANDIT_SPRITE', {'D': 'darkGreen', 'd': 'deepTeal', 'S': 'skin', 's': 'skinShade', 'K': 'black', 'R': 'red', 'r': 'darkRed', 'B': 'brown', 'b': 'darkBrown', 'e': 'deepBrown', 'G': 'gold', 'L': 'lightGray', 'M': 'gray', 'g': 'green', 'm': 'midGreen', 'n': 'night'}, frames(padded(BANDIT), padded(BANDIT_ATTACK)))
 
 
+# ------------------------------------------------------------------ Act 2, Group 2
+GOLEM = [
+    (3,  '...........MMMMM................'),
+    (4,  '..........MLLLLMA...............'),
+    (5,  '.........MLLLLLMAA..............'),
+    (6,  '.........LYYLYYMAA..............'),
+    (7,  '.........MLLLLLMAA..............'),
+    (8,  '.......MMMMMMMMMAAAA............'),
+    (9,  '.....MMLLLLLLLLMMMAAAA..........'),
+    (10, '....MLLLLLLLLLOLMMMAAAAA........'),
+    (11, '...MLLLLMLLLLOLLLMMAAAAAA.......'),
+    (12, '...MLLLMMLLLOOLLLMMAAAAAA.......'),
+    (13, '...MLLMMMLLLOLLLLMMAAAAAAA......'),
+    (14, '..MLLLMA.MLOLLLLMMAAA.AAAA......'),
+    (15, '..MLLMAA.MMLLLLMMMAAA.AAAA......'),
+    (16, '..MLLMAA.MMMLLMMMAAAA.AAAA......'),
+    (17, '.MLLLLMA.MgMMMMMAAAAA.AAAAA.....'),
+    (18, 'MLLLLLMAA.MMMMMAAAAA..AAAAA.....'),
+    (19, 'MLLLLMMAA.gMMMAAAAgA..AAAAA.....'),
+    (20, 'MMLLMMMAA..MMMAAAAA...AAAA......'),
+    (21, '.MMMMMAA...MMAAAAAA...NAAN......'),
+    (22, '..NNNNN....MMAAAAAA.............'),
+    (23, '..........MLLMA.MMAA............'),
+    (24, '..........MLLMA.MMAA............'),
+    (25, '..........MLLMA.MMAA............'),
+    (26, '.........MLLLMA.MMAAA...........'),
+    (27, '.........MMMMAA.MMAAA...........'),
+    (28, '.........NNNNNN.NNNNN...........'),
+]
+GOLEM_ATTACK = [
+    (4,  '.........MMMMM..................'),
+    (5,  '........MLLLLMA.................'),
+    (6,  '.......MLLLLLMAA................'),
+    (7,  '.......LYYLYYMAA................'),
+    (8,  '.......MLLLLLMAA................'),
+    (9,  '..MMMMMMMMMMMMMAAAA.............'),
+    (10, '.MLLLLLLLLLLLLMMMAAAA...........'),
+    (11, 'MLLLLLLLLLLLLOLLMMAAAAA.........'),
+    (12, 'MLLLLLLMLLLLOLLLMMAAAAAA........'),
+    (13, 'MMLLLLMMLLLOOLLLMMAAAAAA........'),
+    (14, '.MMMMMMMMLLOLLLLLMMAAAAAA.......'),
+    (15, '..NNNN..MLOLLLLMMAAA.AAAA.......'),
+    (16, '........MMLLLLMMMAAA.AAAA.......'),
+    (17, '........MMMLLMMMAAAA.AAAA.......'),
+    (18, '........MgMMMMMAAAAA.AAAAA......'),
+    (19, '.........MMMMMAAAAA..AAAAA......'),
+    (20, '.........gMMMAAAAgA..AAAAA......'),
+    (21, '..........MMMAAAAA...AAAA.......'),
+    (22, '..........MMAAAAAA...NAAN.......'),
+    (23, '.........MLLMA..MMAA............'),
+    (24, '........MLLMA....MMAA...........'),
+    (25, '.......MLLMA......MMAA..........'),
+    (26, '......MLLLMA......MMAAA.........'),
+    (27, '......MMMMAA......MMAAA.........'),
+    (28, '......NNNNNN......NNNNN.........'),
+]
+
+
+def stoneGolem():
+    emit(f'{OUT}/stoneGolem.ts', 'STONE_GOLEM_SPRITE', {'K': 'black', 'L': 'lightGray', 'M': 'gray', 'A': 'slate', 'N': 'darkSlate', 'Y': 'yellow', 'O': 'orange', 'g': 'midGreen'}, frames(padded(GOLEM), padded(GOLEM_ATTACK)))
+
+
+GNOLL = [
+    (3,  '...........b..b.................'),
+    (4,  '..........bTbbTb................'),
+    (5,  '.........bTTbTTTb...............'),
+    (6,  '........TTTTTTTTbe..............'),
+    (7,  '.....TTTTTKTTTTTbee.............'),
+    (8,  '...TTTTTTTTTTTTTbeee............'),
+    (9,  '..nTTTTTTTTTTTTbbeee............'),
+    (10, '...WsWsWTTTTTTbbeeee............'),
+    (11, '....ssssTTTTTbbbeeeee...........'),
+    (12, '..LL.....TTBTTTbbeeeee..........'),
+    (13, '.LMML...TTTTTTBTTbeeee..........'),
+    (14, '.LMMu..TTBTTTTTTTTbee...........'),
+    (15, '..L.u.TTTTTTBTTTTTbbe...........'),
+    (16, '....uTTTb.TTTTBTTTbbb...........'),
+    (17, '....uTTb..TTTTTTTTbbb...........'),
+    (18, '....sTb...eeeOeeeeebb...........'),
+    (19, '....u.....TTBTTTTBTb............'),
+    (20, '....u.....bTTTTTTTb.............'),
+    (21, '..........bTTb.bTTb.............'),
+    (22, '..........bTTb..bTTb............'),
+    (23, '.........bTTb....bTTb...........'),
+    (24, '.........bTb......bTb...........'),
+    (25, '.........bTb......bTb...........'),
+    (26, '........bTb......bTb............'),
+    (27, '.......eeeb.....eeeb............'),
+    (28, '......eeeeb....eeeeb............'),
+]
+GNOLL_ATTACK = [
+    (4,  '..........b..b..................'),
+    (5,  '.........bTbbTb.................'),
+    (6,  '........bTTbTTTb................'),
+    (7,  '.......TTTTTTTTbe...............'),
+    (8,  '....TTTTTKTTTTTbee..............'),
+    (9,  '..TTTTTTTTTTTTTbeee.............'),
+    (10, '.nTTTTTTTTTTTTbbeee.............'),
+    (11, '..WRWRW.TTTTTbbeeee.............'),
+    (12, '...RRR..TTTTTbbbeeeee...........'),
+    (13, '..WRWRWTTBTTTTbbeeeee...........'),
+    (14, '.......TTTTTTBTTbeeee...........'),
+    (15, 'LL...TTTBTTTTTTTTbee............'),
+    (16, 'LMuuuTTTTTTBTTTTTbbe............'),
+    (17, 'LMLs.uuTb.TTTTBTTTbbb...........'),
+    (18, '.L.......TTTTTTTTbbb............'),
+    (19, '.........eeeOeeeeebb............'),
+    (20, '.........TTBTTTTBTb.............'),
+    (21, '.........bTTTTTTTb..............'),
+    (22, '........bTTb..bTTb..............'),
+    (23, '.......bTTb....bTTb.............'),
+    (24, '......bTb.......bTTb............'),
+    (25, '.....bTb.........bTb............'),
+    (26, '....bTb..........bTb............'),
+    (27, '...eeeb.........eeeb............'),
+    (28, '..eeeeb........eeeeb............'),
+]
+
+
+def gnoll():
+    emit(f'{OUT}/gnoll.ts', 'GNOLL_SPRITE', {'n': 'night', 'T': 'tan', 'B': 'brown', 'b': 'darkBrown', 'e': 'deepBrown', 'K': 'black', 'W': 'white', 'R': 'red', 's': 'skinShade',  'L': 'lightGray', 'M': 'gray', 'u': 'rust', 'O': 'gold'}, frames(padded(GNOLL), padded(GNOLL_ATTACK)))
+
+
+WISP = [
+    (4,  '..............R.................'),
+    (5,  '.............RO.................'),
+    (6,  '.............ROR................'),
+    (7,  '............ROOR..R.............'),
+    (8,  '............ROGOR.RO............'),
+    (9,  '...........ROGGOORO.............'),
+    (10, '...........ROGYGOOR.............'),
+    (11, '..........ROGYYYGOR.............'),
+    (12, '..........ROGYWYYGOR............'),
+    (13, '..........RGnWWWnGOR............'),
+    (14, '..........RGnWWWnGOR............'),
+    (15, '..........ROGYWYYGOR............'),
+    (16, '...........ROGYYGOR.............'),
+    (17, '...........ROOGGOOR.............'),
+    (18, '............ROOOOR..............'),
+    (19, '.............ROOR...............'),
+    (20, '.............ROR................'),
+    (21, '..............RO................'),
+    (22, '...............R................'),
+    (23, '..............R.................'),
+]
+WISP_ATTACK = [
+    (4,  '...............R................'),
+    (5,  '..............RO................'),
+    (6,  '..............ROR...............'),
+    (7,  '.............ROOR..R............'),
+    (8,  '.............ROGOR.RO...........'),
+    (9,  '............ROGGOORO............'),
+    (10, '............ROGYGOOR............'),
+    (11, '...........ROGYYYGOR............'),
+    (12, '....RROO..ROGYWYYGOR............'),
+    (13, '.RROOGYYGRGnWWWnGOR.............'),
+    (14, 'ROGYWWWYYGYnWWYnOR..............'),
+    (15, '.RROOGYYGRGYWYYGOR..............'),
+    (16, '....RROO..ROGYYGOR..............'),
+    (17, '...........ROOGGOOR.............'),
+    (18, '............ROOOOR..............'),
+    (19, '.............ROOR...............'),
+    (20, '..............ROR...............'),
+    (21, '...............RO...............'),
+    (22, '................R...............'),
+    (23, '...............R................'),
+]
+
+
+def wisp():
+    emit(f'{OUT}/wisp.ts', 'WISP_SPRITE', {'K': 'black', 'R': 'red', 'O': 'orange', 'G': 'gold', 'Y': 'yellow', 'W': 'white', 'n': 'night'}, frames(padded(WISP), padded(WISP_ATTACK)))
+
+
 if __name__ == '__main__':
     for name in sys.argv[1:]:
         globals()[name]()

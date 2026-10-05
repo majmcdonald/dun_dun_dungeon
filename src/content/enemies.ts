@@ -360,6 +360,74 @@ export const BANDIT: CombatantDef = {
   skills: [shiv, envenom, caltrops],
 };
 
+// --- Act 2, Group 2 (rooms 6–10). Base stats are pre-tuning; the Act 2 balance pass scales them.
+
+const slam = enemySkill('slam', 'Slam', 4, { side: 'enemy', select: 'front', area: 'column' }, physical(1.1));
+const stoneSkin = enemySkill('stoneSkin', 'Stone Skin', 10, self, [
+  { kind: 'taunt', duration: 3 },
+  { kind: 'barrier', stat: 'defense', scaling: 2, duration: 5 },
+]);
+const shatter = enemySkill('shatter', 'Shatter', 1, allHeroes, physical(2.5), false, { trigger: { kind: 'onDefeat' } });
+const gnollRend = enemySkill('gnollRend', 'Rend', 1.8, front, [physical(0.8), { kind: 'dot', stat: 'attack', scaling: 0.3, duration: 4 }]);
+const bloodlust = enemySkill(
+  'bloodlust',
+  'Bloodlust',
+  0,
+  self,
+  [
+    { kind: 'buff', stat: 'attack', amount: 4, duration: 10, stack: true },
+    { kind: 'speed', factor: 1.3, duration: 10, stack: true },
+  ],
+  false,
+  { trigger: { kind: 'allyFalls' } },
+);
+const flicker = enemySkill('flicker', 'Flicker', 2, { side: 'enemy', select: 'random', area: 'single' }, {
+  kind: 'damage',
+  damageType: 'magic',
+  stat: 'magic',
+  scaling: 0.8,
+  element: 'fire',
+}, true);
+const lure = enemySkill('lure', 'Lure', 7, { side: 'enemy', select: 'highestHp', area: 'single' }, { kind: 'delay', seconds: 1.5 }, true);
+const emberWard = enemySkill('emberWard', 'Ember Ward', 4, self, [
+  { kind: 'barrier', stat: 'resistance', scaling: 1, duration: 3 },
+  { kind: 'heal', scaling: 0.6 },
+], true, { trigger: { kind: 'whenHit' } });
+const flameWall = enemySkill('flameWall', 'Flame Wall', 10, allHeroes, {
+  kind: 'damage',
+  damageType: 'magic',
+  stat: 'magic',
+  scaling: 1.5,
+  element: 'fire',
+}, true);
+
+// Shatters on defeat, hitting every hero hard.
+export const STONE_GOLEM: CombatantDef = {
+  id: 'stoneGolem',
+  name: 'Stone Golem',
+  stats: { hp: 120, attack: 14, magic: 0, defense: 22, resistance: 6 },
+  skills: [slam, stoneSkin, shatter],
+  resist: { lightning: -0.5, poison: 0.5 },
+};
+
+// Each enemy that falls stacks +ATK and haste for 10s.
+export const GNOLL: CombatantDef = {
+  id: 'gnoll',
+  name: 'Gnoll',
+  stats: { hp: 60, attack: 13, magic: 0, defense: 8, resistance: 5 },
+  skills: [gnollRend, bloodlust],
+  resist: { fire: -0.5 },
+};
+
+// Wards and heals itself when hit; Flame Wall scorches the whole party every 10s.
+export const WISP: CombatantDef = {
+  id: 'wisp',
+  name: 'Wisp',
+  stats: { hp: 30, attack: 0, magic: 14, defense: 4, resistance: 14 },
+  skills: [flicker, lure, emberWard, flameWall],
+  resist: { ice: -0.5, fire: 0.5 },
+};
+
 // Every enemy type, for pickers.
 export const ENEMIES: CombatantDef[] = [
   SLIME,
@@ -384,6 +452,9 @@ export const ENEMIES: CombatantDef[] = [
   FROST_WOLF,
   HARPY,
   BANDIT,
+  STONE_GOLEM,
+  GNOLL,
+  WISP,
 ];
 export const ENEMIES_BY_ID: Record<string, CombatantDef> = Object.fromEntries(ENEMIES.map((e) => [e.id, e]));
 

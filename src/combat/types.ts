@@ -56,9 +56,10 @@ type BaseEffect =
   | { kind: 'regen'; scaling: number; duration: number }
   // `perStack`: enemies only, each of the user's Venom stacks adds this share to the damage.
   | { kind: 'dot'; stat: 'attack' | 'magic'; scaling: number; duration: number; element?: Element; perStack?: number }
-  | { kind: 'buff'; stat: StatKey; amount: number; duration: number }
+  // `stack`: each use adds its own copy with its own timer instead of refreshing the last one.
+  | { kind: 'buff'; stat: StatKey; amount: number; duration: number; stack?: boolean }
   | { kind: 'debuff'; stat: StatKey; amount: number; duration: number }
-  | { kind: 'speed'; factor: number; duration: number }
+  | { kind: 'speed'; factor: number; duration: number; stack?: boolean }
   | { kind: 'summon'; creature: string; share: number }
   // Enemies only: calls `count` more of an enemy type into empty grid cells, never above `cap` alive at once.
   | { kind: 'spawn'; enemy: string; count: number; cap: number }

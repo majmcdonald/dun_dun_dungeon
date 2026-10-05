@@ -56,7 +56,12 @@ export const ACTS: ActEncounters[] = [
         { id: 'wolfPack', name: 'WOLF PACK', enemies: ['frostWolf', 'frostWolf', 'frostWolf', 'frostWolf', null, 'frostWolf', null, 'harpy', null] },
         { id: 'highwaymen', name: 'HIGHWAYMEN', enemies: ['bandit', null, 'bandit', null, 'bandit', null, 'harpy', null, 'harpy'] },
       ],
-      [],
+      [
+        { id: 'banditCamp', name: 'BANDIT CAMP', enemies: ['bandit', 'bandit', 'bandit', 'orc', null, 'orc', 'archer', null, 'archer'] },
+        { id: 'gnollRaiders', name: 'GNOLL RAIDERS', enemies: ['gnoll', 'gnoll', 'gnoll', 'frostWolf', null, 'frostWolf'] },
+        { id: 'quarry', name: 'QUARRY', enemies: ['stoneGolem', null, 'stoneGolem', null, null, null, 'wisp', null, 'wisp'] },
+        { id: 'hauntedBog', name: 'HAUNTED BOG', enemies: [null, 'stoneGolem', null, 'gnoll', null, 'gnoll', 'wisp', null, 'wisp'] },
+      ],
       [],
     ],
     epics: [],

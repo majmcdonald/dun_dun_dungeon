@@ -21,6 +21,9 @@ import { CULTIST_SPRITE } from './cultist';
 import { FROST_WOLF_SPRITE } from './frostWolf';
 import { HARPY_SPRITE } from './harpy';
 import { BANDIT_SPRITE } from './bandit';
+import { STONE_GOLEM_SPRITE } from './stoneGolem';
+import { GNOLL_SPRITE } from './gnoll';
+import { WISP_SPRITE } from './wisp';
 import { OGRE_SPRITE } from './ogre';
 import { SPIDER_QUEEN_SPRITE } from './spiderQueen';
 import { BONE_MAGE_SPRITE } from './boneMage';
@@ -91,4 +94,7 @@ export const SPRITES: Record<string, SpriteDef> = {
   frostWolf: FROST_WOLF_SPRITE,
   harpy: HARPY_SPRITE,
   bandit: BANDIT_SPRITE,
+  stoneGolem: STONE_GOLEM_SPRITE,
+  gnoll: GNOLL_SPRITE,
+  wisp: WISP_SPRITE,
 };

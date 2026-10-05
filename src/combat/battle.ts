@@ -442,7 +442,8 @@ export class Battle {
       case 'buff':
       case 'debuff': {
         const sign = effect.kind === 'buff' ? 1 : -1;
-        this.setBuff(target, source, effect.stat, sign * Math.round(effect.amount * mult), effect.duration, events);
+        const from = effect.kind === 'buff' && effect.stack ? this.stackSource(source) : source;
+        this.setBuff(target, from, effect.stat, sign * Math.round(effect.amount * mult), effect.duration, events);
         return;
       }
       case 'siphon': {
@@ -452,7 +453,7 @@ export class Battle {
         return;
       }
       case 'speed':
-        target.speed = refreshTimed(target.speed, { source, value: effect.factor, remaining: effect.duration });
+        target.speed = refreshTimed(target.speed, { source: effect.stack ? this.stackSource(source) : source, value: effect.factor, remaining: effect.duration });
         events.push({ type: 'status', target: target.uid, status: effect.factor < 1 ? 'slow' : 'haste' });
         return;
       case 'transform':
@@ -518,6 +519,14 @@ export class Battle {
         return;
       }
     }
+  }
+
+  private stacks = 0;
+
+  // A unique source per use, so stacking effects never replace each other.
+  private stackSource(source: string): string {
+    this.stacks += 1;
+    return `${source}#${this.stacks}`;
   }
 
   private setBuff(target: Combatant, source: string, stat: StatKey, amount: number, duration: number, events: BattleEvent[]): void {
