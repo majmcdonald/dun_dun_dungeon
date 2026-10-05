@@ -511,6 +511,11 @@ export class Battle {
         target.flight = { remaining: effect.duration, damageTaken: effect.damageTaken, damageDealt: effect.damageDealt };
         events.push({ type: 'status', target: target.uid, status: 'flight' });
         return;
+      case 'cleanse':
+        if (target.dots.length === 0) return;
+        target.dots = [];
+        events.push({ type: 'status', target: target.uid, status: 'cleanse' });
+        return;
       case 'tickPoison':
         for (const d of target.dots.filter((dot) => dot.element === 'poison')) {
           if (target.hp <= 0 || this.result) return;

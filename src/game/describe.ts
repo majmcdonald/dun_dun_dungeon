@@ -61,6 +61,8 @@ function describeBase(e: SkillEffect): string {
       return `FLY ${e.duration}S: TAKE ${pct(1 - e.damageTaken)} LESS, DEAL ${pct(e.damageDealt - 1)} MORE`;
     case 'venom':
       return '+1 VENOM STACK';
+    case 'cleanse':
+      return 'CLEANSE (REMOVE POISON AND BLEED)';
     case 'tickPoison':
       return 'ALL POISON ON THE TARGET TICKS NOW';
     case 'chaos':

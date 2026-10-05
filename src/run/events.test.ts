@@ -40,9 +40,9 @@ describe('event checks', () => {
   it('read the best member or the whole party, gear included', () => {
     const state = atEvent();
     state.party[1] = { ...state.party[1], equipment: { weapon: ITEMS_BY_ID.oakStaff } };
-    const mage = 18 + (ITEMS_BY_ID.oakStaff.stats.magic ?? 0);
+    const mage = CLASSES_BY_ID.mage.stats.magic + (ITEMS_BY_ID.oakStaff.stats.magic ?? 0);
     expect(partyStat(state, { stat: 'magic', mode: 'highest', difficulty: 1 })).toBe(mage);
-    expect(partyStat(state, { stat: 'magic', mode: 'total', difficulty: 1 })).toBe(0 + mage + 14);
+    expect(partyStat(state, { stat: 'magic', mode: 'total', difficulty: 1 })).toBe(0 + mage + CLASSES_BY_ID.cleric.stats.magic);
   });
 
   it('can be plain luck instead of a stat', () => {
@@ -54,8 +54,9 @@ describe('event checks', () => {
 
   it('give 50% at the difficulty, scaling with the stat, clamped to 10–95%', () => {
     const state = atEvent();
-    expect(checkChance(state, { stat: 'magic', mode: 'highest', difficulty: 18 })).toBe(0.5);
-    expect(checkChance(state, { stat: 'magic', mode: 'highest', difficulty: 36 })).toBe(0.25);
+    const best = CLASSES_BY_ID.mage.stats.magic;
+    expect(checkChance(state, { stat: 'magic', mode: 'highest', difficulty: best })).toBe(0.5);
+    expect(checkChance(state, { stat: 'magic', mode: 'highest', difficulty: best * 2 })).toBe(0.25);
     expect(checkChance(state, { stat: 'magic', mode: 'highest', difficulty: 1 })).toBe(0.95);
     expect(checkChance(state, { stat: 'magic', mode: 'highest', difficulty: 1000 })).toBe(0.1);
   });

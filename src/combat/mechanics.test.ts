@@ -573,6 +573,20 @@ describe('act 2 epic monster mechanics', () => {
   });
 });
 
+describe('cleanse', () => {
+  it('removes every damage-over-time effect from its targets', () => {
+    const sting = skill('sting', [{ kind: 'dot', stat: 'attack', scaling: 1, duration: 20, element: 'poison' }], { cooldown: 1 });
+    const purge = skill('purge', [{ kind: 'cleanse' }], { cooldown: 2, target: { side: 'ally', select: 'front', area: 'all' } });
+    const party = [member(unit('a', { hp: 100000 }, [purge])), member(unit('b', { hp: 100000 }))];
+    const battle = new Battle(party, [unit('w', { attack: 10, hp: 100000 }, [sting])], NO_JITTER);
+    runFor(battle, 1.1);
+    expect(battle.get('party-0').dots).toHaveLength(1);
+    const events = runFor(battle, 0.6);
+    expect(events.some((e) => e.type === 'status' && e.status === 'cleanse')).toBe(true);
+    expect(battle.get('party-0').dots).toHaveLength(0);
+  });
+});
+
 describe('dying bosses', () => {
   it('can spawn minions as they fall, and the fight goes on', () => {
     const minion = unit('minion', { hp: 50 }, []);

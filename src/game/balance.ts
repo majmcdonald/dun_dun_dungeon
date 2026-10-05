@@ -23,6 +23,8 @@ export const GLORY_START = 0.8;
 const STEAL_BUFF_POINTS = 10;
 const SELF_DAMAGE_CREDIT = 10;
 const CONSUME_SUMMON_CREDIT = 0.3;
+// A cleanse is worth this many seconds of the skill's budget, per target.
+const CLEANSE_SECONDS = 0.6;
 
 // Harder-to-fire skills get more power per second of cooldown.
 // Triggers fire at most once per cooldown, and only when their event happens: the rarer the event, the more
@@ -121,6 +123,8 @@ export function effectCost(e: SkillEffect, cooldown: number, rarity: Rarity): nu
       return -(e.fraction * SELF_DAMAGE_CREDIT) / cooldown;
     case 'consumeSummon':
       return -CONSUME_SUMMON_CREDIT;
+    case 'cleanse':
+      return CLEANSE_SECONDS / cooldown;
     case 'flight':
     case 'venom':
     case 'tickPoison':

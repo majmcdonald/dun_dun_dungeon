@@ -170,6 +170,7 @@ export function siphon(stat: StatKey, share: number, duration: number): Fx {
 }
 
 export const steal = (): Fx => () => ({ kind: 'steal' });
+export const cleanse = (): Fx => () => ({ kind: 'cleanse' });
 export const selfDamage = (fraction: number): Fx => () => ({ kind: 'selfDamage', fraction, self: true });
 export const consumeSummon = (): Fx => () => ({ kind: 'consumeSummon', self: true });
 

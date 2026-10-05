@@ -12,8 +12,8 @@ import { findNode, FLOORS, generateMap, reachable, type MapNode, type NodeType, 
 import type { EventVisit } from './events';
 import type { Reward } from './rewards';
 
-// Temporarily 1: runs end after Act 1 until Acts 2 and 3 have their encounters (Phase 6). The full game is 3.
-export const LEVELS = 1;
+// Temporarily 2: runs end after Act 2 until Act 3 has its encounters (Phase 6). The full game is 3.
+export const LEVELS = 2;
 
 export interface RunState {
   slot: number;

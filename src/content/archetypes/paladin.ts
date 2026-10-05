@@ -1,5 +1,5 @@
 import type { SkillDef } from '../../combat/types';
-import { ally, barrier, buff, cls, delay, dmg, foe, heal, SELF, skill, type SkillSpec } from '../build';
+import { ally, barrier, buff, cleanse, cls, delay, dmg, foe, heal, SELF, skill, type SkillSpec } from '../build';
 
 type Spec = Omit<SkillSpec, 'access' | 'category'> & { category?: SkillSpec['category'] };
 const p = (spec: Spec): SkillDef => skill({ category: 'skill', ...spec, access: cls('paladin') });
@@ -12,10 +12,10 @@ const GLORY = 0.05;
 const devotion: SkillDef[] = [
   p({ id: 'devotionAura', name: 'Devotion Aura', theme: 'devotion', rarity: 'common', cooldown: 8, target: ally('front', 'all'), fx: [buff('defense', 1, 6)], vfx: 'blessing' }),
   p({ id: 'guardianBlessing', name: 'Guardian Blessing', theme: 'devotion', rarity: 'common', category: 'spell', cooldown: 5, target: ally('lowestHpPct'), fx: [barrier(1, 4)] }),
-  p({ id: 'holyLight', name: 'Holy Light', theme: 'devotion', rarity: 'common', category: 'spell', cooldown: 4, target: ally('lowestHpPct'), fx: [heal(1)], vfx: 'heal' }),
+  p({ id: 'holyLight', name: 'Holy Light', theme: 'devotion', rarity: 'common', category: 'spell', cooldown: 4, target: ally('lowestHpPct'), fx: [heal(0.85), cleanse()], vfx: 'heal' }),
   p({ id: 'sacredVow', name: 'Sacred Vow', theme: 'devotion', rarity: 'rare', cooldown: 9, target: ally('front', 'all'), fx: [buff('attack', 0.5, 6), buff('defense', 0.5, 6)], vfx: 'blessing' }),
   p({ id: 'shieldOfFaith', name: 'Shield of Faith', theme: 'devotion', rarity: 'rare', category: 'spell', cooldown: 5, target: ally('lowestHpPct'), fx: [barrier(1, 4, 'resistance')], synergy: { with: 'guardianBlessing', bonus: 0.3 } }),
-  p({ id: 'beaconOfHope', name: 'Beacon of Hope', theme: 'devotion', rarity: 'epic', category: 'spell', cooldown: 9, target: ally('front', 'all'), fx: [barrier(0.5, 4), heal(0.5)], vfx: 'heal' }),
+  p({ id: 'beaconOfHope', name: 'Beacon of Hope', theme: 'devotion', rarity: 'epic', category: 'spell', cooldown: 9, target: ally('front', 'all'), fx: [barrier(0.4, 4), heal(0.4), cleanse()], vfx: 'heal' }),
   p({ id: 'divineProtection', name: 'Divine Protection', theme: 'devotion', rarity: 'legendary', category: 'spell', cooldown: 10, target: ally('front', 'all'), fx: [barrier(0.6, 5), buff('defense', 0.4, 5)], prerequisite: 'layOnHands', vfx: 'blessing' }),
 ];
 

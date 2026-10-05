@@ -17,7 +17,7 @@ import { wrap } from '../ui/describeLines';
 
 describe('skill library', () => {
   it('has about 100 skills with unique ids', () => {
-    expect(SKILL_LIBRARY.length).toBe(456);
+    expect(SKILL_LIBRARY.length).toBe(457);
     expect(new Set(SKILL_LIBRARY.map((s) => s.id)).size).toBe(SKILL_LIBRARY.length);
   });
 

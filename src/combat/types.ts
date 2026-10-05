@@ -78,6 +78,8 @@ type BaseEffect =
   | { kind: 'consumeSummon' }
   // Enemies only: Harpy flight, multiplying direct damage taken and dealt for a while.
   | { kind: 'flight'; duration: number; damageTaken: number; damageDealt: number }
+  // Removes every damage-over-time effect (poison, bleed, burn) from the target.
+  | { kind: 'cleanse' }
   // Enemies only: every poison on the target ticks once right away (it keeps running).
   | { kind: 'tickPoison' }
   // Enemies only: +1 permanent Venom stack (kept in `meter`).
@@ -269,7 +271,7 @@ export type BattleEvent =
   | { type: 'heal'; source: string; target: string; amount: number; periodic?: boolean }
   | { type: 'barrier'; target: string; amount: number }
   | { type: 'buff'; target: string; stat: StatKey; amount: number }
-  | { type: 'status'; target: string; status: 'slow' | 'haste' | 'transform' | 'taunt' | 'shapeshift' | 'frenzy' | 'burst' | 'steal' | 'delay' | 'fury' | 'flight' | 'venom' }
+  | { type: 'status'; target: string; status: 'slow' | 'haste' | 'transform' | 'taunt' | 'shapeshift' | 'frenzy' | 'burst' | 'steal' | 'delay' | 'fury' | 'flight' | 'venom' | 'cleanse' }
   | { type: 'summon'; summoner: string; unit: string }
   | { type: 'gold'; amount: number }
   | { type: 'death'; target: string }

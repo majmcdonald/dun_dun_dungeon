@@ -1,5 +1,5 @@
 import type { SkillDef } from '../../combat/types';
-import { ally, barrier, buff, cls, debuff, delay, dmg, dot, foe, haste, heal, regen, skill, slow, type SkillSpec } from '../build';
+import { ally, barrier, buff, cleanse, cls, debuff, delay, dmg, dot, foe, haste, heal, regen, skill, slow, type SkillSpec } from '../build';
 
 type Spec = Omit<SkillSpec, 'access' | 'category'> & { category?: SkillSpec['category'] };
 const c = (spec: Spec): SkillDef => skill({ category: 'spell', ...spec, access: cls('cleric') });
@@ -40,8 +40,8 @@ const life: SkillDef[] = [
 ];
 
 const general: SkillDef[] = [
-  c({ id: 'renew', name: 'Renew', theme: 'cleric', rarity: 'common', cooldown: 5, target: ally('lowestHpPct'), fx: [regen(1, 4)], vfx: 'heal' }),
-  c({ id: 'purify', name: 'Purify', theme: 'cleric', rarity: 'common', cooldown: 5, target: ally('lowestHpPct'), fx: [heal(0.6), buff('resistance', 0.4, 5)], vfx: 'heal' }),
+  c({ id: 'renew', name: 'Renew', theme: 'cleric', rarity: 'common', cooldown: 5, target: ally('front', 'all'), fx: [regen(1, 4)], vfx: 'heal' }),
+  c({ id: 'purify', name: 'Purify', theme: 'cleric', rarity: 'common', cooldown: 5, target: ally('lowestHpPct'), fx: [heal(0.5), buff('resistance', 0.38, 5), cleanse()], vfx: 'heal' }),
   c({ id: 'rebuke', name: 'Rebuke', theme: 'cleric', rarity: 'common', cooldown: 3, target: foe('attackedMe'), fx: [dmg(1, holy)] }),
   c({ id: 'halo', name: 'Halo', theme: 'cleric', rarity: 'rare', cooldown: 6, target: ally('lowestHpPct'), fx: [barrier(0.5, 4, 'resistance'), regen(0.5, 4)] }),
   c({ id: 'benediction', name: 'Benediction', theme: 'cleric', rarity: 'epic', cooldown: 8, target: ally('front', 'all'), fx: [heal(0.5), buff('defense', 0.5, 5)], vfx: 'heal' }),
