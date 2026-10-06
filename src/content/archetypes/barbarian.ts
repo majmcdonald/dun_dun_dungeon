@@ -1,5 +1,5 @@
 import type { SkillDef } from '../../combat/types';
-import { ally, barrier, buff, cls, debuff, delay, dmg, foe, haste, meter, SELF, selfDamage, skill, type SkillSpec } from '../build';
+import { ally, barrier, buff, cls, debuff, delay, dmg, foe, haste, meter, self, SELF, selfDamage, skill, type SkillSpec } from '../build';
 
 type Spec = Omit<SkillSpec, 'access' | 'category'> & { category?: SkillSpec['category'] };
 const b = (spec: Spec): SkillDef => skill({ category: 'skill', ...spec, access: cls('barbarian') });
@@ -41,10 +41,10 @@ const storm: SkillDef[] = [
 ];
 
 const general: SkillDef[] = [
-  b({ id: 'warCry', name: 'War Cry', theme: 'barbarian', rarity: 'common', cooldown: 8, target: ally('front', 'all'), fx: [buff('attack', 1, 6)], vfx: 'blessing' }),
+  b({ id: 'warCry', name: 'War Cry', theme: 'barbarian', rarity: 'common', cooldown: 8, target: ally('front', 'all'), fx: [buff('attack', 0.8, 6), self(meter(0.2))], vfx: 'blessing' }),
   b({ id: 'headbutt', name: 'Headbutt', theme: 'barbarian', rarity: 'common', cooldown: 3, target: foe('front'), fx: [dmg(0.7), delay(0.3)] }),
   b({ id: 'skullCrack', name: 'Skull Crack', theme: 'barbarian', rarity: 'common', cooldown: 3, target: foe('highestHp'), fx: [dmg(1)] }),
-  b({ id: 'thickHide', name: 'Thick Hide', theme: 'barbarian', rarity: 'rare', cooldown: 6, target: SELF, fx: [barrier(1, 4)] }),
+  b({ id: 'thickHide', name: 'Thick Hide', theme: 'barbarian', rarity: 'rare', cooldown: 6, target: SELF, fx: [barrier(0.7, 4), meter(0.3)] }),
   b({ id: 'intimidate', name: 'Intimidate', theme: 'barbarian', rarity: 'rare', cooldown: 6, target: foe('front', 'column'), fx: [debuff('attack', 1, 5)] }),
 ];
 

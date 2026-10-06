@@ -301,15 +301,29 @@ export function toSave(state: GameState): SavedRun {
 }
 
 // A run reloaded mid-node restarts that node from the map.
+// Skills and items removed from the game since the save was made are dropped wherever their ids appear.
+const knownSkill = (id: string | null) => id === null || !!SKILLS_BY_ID[id];
+const knownItem = (id: string | null) => id === null || !!ITEMS_BY_ID[id];
+
 export function fromSave(saved: SavedRun, state: GameState): void {
+  const reward = saved.run.lastReward;
+  const store = saved.run.store;
   state.run = {
     ...saved.run,
     path: saved.run.path ?? [],
     pending: null,
-    lastReward: saved.run.lastReward ?? null,
+    lastReward: reward
+      ? {
+          ...reward,
+          skills: reward.skills.filter(knownSkill),
+          items: reward.items.filter(knownItem),
+          skill: knownSkill(reward.skill) ? reward.skill : null,
+          item: knownItem(reward.item) ? reward.item : null,
+        }
+      : null,
     stats: { ...NO_STATS, ...saved.run.stats },
     broken: saved.run.broken ?? [],
-    store: saved.run.store ?? null,
+    store: store ? { ...store, skills: store.skills.filter(knownSkill), items: store.items.filter(knownItem) } : null,
     event: saved.run.event ?? null,
     seenEvents: saved.run.seenEvents ?? [],
     nextFight: saved.run.nextFight ?? null,

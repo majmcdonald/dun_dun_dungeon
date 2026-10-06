@@ -11,7 +11,29 @@ import { PALADIN_ARCHETYPES } from './archetypes/paladin';
 import { RANGER_ARCHETYPES } from './archetypes/ranger';
 import { ROGUE_ARCHETYPES } from './archetypes/rogue';
 import { WARLOCK_ARCHETYPES } from './archetypes/warlock';
-import { ally, barrier, buff, cleanse, cls, debuff, dmg, dot, foe, haste, heal, regen, SELF, SHARED, skill, tag } from './build';
+import {
+  ally,
+  barrier,
+  buff,
+  cleanse,
+  cls,
+  debuff,
+  delay,
+  dmg,
+  dot,
+  foe,
+  haste,
+  heal,
+  meter,
+  regen,
+  SELF,
+  self,
+  SHARED,
+  skill,
+  slow,
+  tag,
+  taunt,
+} from './build';
 import { CLASS_TRIGGERS, SHARED_TRIGGERS, TAG_TRIGGERS } from './triggers';
 
 const magic = (element?: 'fire' | 'ice' | 'lightning' | 'holy' | 'shadow' | 'poison') =>
@@ -28,9 +50,8 @@ const shared: SkillDef[] = [
   skill({ id: 'frostTouch', name: 'Frost Touch', category: 'spell', rarity: 'common', access: SHARED, cooldown: 3, target: foe('front'), fx: [dmg(0.7, magic('ice')), debuff('attack', 0.3, 4)] }),
   skill({ id: 'ember', name: 'Ember', category: 'spell', rarity: 'common', access: SHARED, cooldown: 3, target: foe('lowestHp'), fx: [dot(1, 3, { stat: 'magic', element: 'fire' })] }),
   skill({ id: 'antidote', name: 'Antidote', category: 'skill', rarity: 'common', access: SHARED, cooldown: 6, target: ally('lowestHpPct'), fx: [heal(0.9), cleanse()], vfx: 'heal' }),
-  skill({ id: 'mendWounds', name: 'Mend Wounds', category: 'spell', rarity: 'common', access: SHARED, cooldown: 4, target: ally('lowestHpPct'), fx: [heal(1)] }),
+  skill({ id: 'mendWounds', name: 'Mend Wounds', category: 'spell', rarity: 'common', access: SHARED, cooldown: 4, target: ally('lowestHpPct'), fx: [regen(1, 4)] }),
   skill({ id: 'heavyBlow', name: 'Heavy Blow', category: 'skill', rarity: 'rare', access: SHARED, cooldown: 4, target: foe('front'), fx: [dmg(1)], synergy: { with: 'focus', bonus: 0.25 } }),
-  skill({ id: 'retaliate', name: 'Retaliate', category: 'skill', rarity: 'rare', access: SHARED, cooldown: 3, target: foe('attackedMe'), fx: [dmg(1)], synergy: { with: 'guard', bonus: 0.3 } }),
   skill({ id: 'secondWind', name: 'Second Wind', category: 'skill', rarity: 'rare', access: SHARED, cooldown: 8, target: SELF, fx: [buff('defense', 0.5, 5), buff('resistance', 0.5, 5)] }),
   skill({ id: 'rally', name: 'Rally', category: 'skill', rarity: 'rare', access: SHARED, cooldown: 8, target: ally('front', 'all'), fx: [buff('attack', 1, 6)] }),
   skill({ id: 'weaken', name: 'Weaken', category: 'spell', rarity: 'rare', access: SHARED, cooldown: 5, target: foe('highestHp'), fx: [debuff('attack', 1, 5)] }),
@@ -41,17 +62,17 @@ const tagged: SkillDef[] = [
   // martial
   skill({ id: 'crushingBlow', name: 'Crushing Blow', category: 'skill', rarity: 'common', access: tag('martial'), cooldown: 3, target: foe('front'), fx: [dmg(0.8), debuff('defense', 0.2, 4)] }),
   skill({ id: 'sweep', name: 'Sweep', category: 'skill', rarity: 'rare', access: tag('martial'), cooldown: 4, target: foe('front', 'column'), fx: [dmg(1)], synergy: { with: 'crushingBlow', bonus: 0.3 } }),
-  skill({ id: 'battleCry', name: 'Battle Cry', category: 'skill', rarity: 'epic', access: tag('martial'), cooldown: 8, target: ally('front', 'all'), fx: [buff('attack', 1, 6)], vfx: 'blessing' }),
+  skill({ id: 'battleCry', name: 'Battle Cry', category: 'skill', rarity: 'epic', access: tag('martial'), cooldown: 8, target: ally('front', 'all'), fx: [buff('attack', 0.6, 6), haste(0.4, 6)], vfx: 'blessing' }),
   // caster
   skill({ id: 'magicMissile', name: 'Magic Missile', category: 'spell', rarity: 'common', access: tag('caster'), cooldown: 2, target: foe('random'), fx: [dmg(1, { ...magic(), hits: 3 })] }),
-  skill({ id: 'arcaneShield', name: 'Arcane Shield', category: 'spell', rarity: 'rare', access: tag('caster'), cooldown: 6, target: SELF, fx: [barrier(1, 4, 'resistance')] }),
+  skill({ id: 'arcaneShield', name: 'Arcane Shield', category: 'spell', rarity: 'rare', access: tag('caster'), cooldown: 6, target: SELF, fx: [barrier(0.7, 4, 'resistance'), haste(0.3, 4)] }),
   skill({ id: 'manaSurge', name: 'Mana Surge', category: 'spell', rarity: 'epic', access: tag('caster'), cooldown: 8, target: SELF, fx: [buff('magic', 1, 6)] }),
   // heavy
-  skill({ id: 'brace', name: 'Brace', category: 'skill', rarity: 'common', access: tag('heavy'), cooldown: 5, target: SELF, fx: [barrier(1, 4)] }),
+  skill({ id: 'brace', name: 'Brace', category: 'skill', rarity: 'common', access: tag('heavy'), cooldown: 5, target: SELF, fx: [barrier(0.7, 4), buff('defense', 0.3, 4)] }),
   skill({ id: 'shieldWall', name: 'Shield Wall', category: 'skill', rarity: 'rare', access: tag('heavy'), cooldown: 8, target: ally('front', 'all'), fx: [barrier(1, 4)], synergy: { with: 'brace', bonus: 0.3 } }),
-  skill({ id: 'unbreakable', name: 'Unbreakable', category: 'skill', rarity: 'epic', access: tag('heavy'), cooldown: 10, target: SELF, fx: [buff('defense', 0.6, 6), buff('resistance', 0.4, 6)] }),
+  skill({ id: 'unbreakable', name: 'Unbreakable', category: 'skill', rarity: 'epic', access: tag('heavy'), cooldown: 10, target: SELF, fx: [buff('defense', 0.45, 6), buff('resistance', 0.3, 6), taunt(0.25)] }),
   // ranged
-  skill({ id: 'quickShot', name: 'Quick Shot', category: 'skill', rarity: 'common', access: tag('ranged'), cooldown: 1.5, target: foe('random'), fx: [dmg(1)] }),
+  skill({ id: 'quickShot', name: 'Quick Shot', category: 'skill', rarity: 'common', access: tag('ranged'), cooldown: 1.5, target: foe('random'), fx: [dmg(0.75), self(haste(0.25, 2))] }),
   skill({ id: 'pinningShot', name: 'Pinning Shot', category: 'skill', rarity: 'rare', access: tag('ranged'), cooldown: 4, target: foe('back'), fx: [dmg(0.7), debuff('attack', 0.3, 4)] }),
   skill({ id: 'rainOfArrows', name: 'Rain of Arrows', category: 'skill', rarity: 'epic', access: tag('ranged'), cooldown: 6, target: foe('front', 'all'), fx: [dmg(1, { hits: 2 })], synergy: { with: 'pinningShot', bonus: 0.3 } }),
   // holy
@@ -74,15 +95,15 @@ const tagged: SkillDef[] = [
 
 const knight: SkillDef[] = [
   skill({ id: 'slash', name: 'Slash', category: 'skill', rarity: 'common', access: cls('knight'), cooldown: 2, target: foe('front'), fx: [dmg(1)], synergy: { with: 'shieldBash', bonus: 0.25 } }),
-  skill({ id: 'ironGuard', name: 'Iron Guard', category: 'skill', rarity: 'common', access: cls('knight'), cooldown: 6, target: SELF, fx: [barrier(1, 4)] }),
-  skill({ id: 'shieldBash', name: 'Shield Bash', category: 'skill', rarity: 'rare', access: cls('knight'), cooldown: 4, target: foe('attackedMe'), fx: [dmg(1)], synergy: { with: 'ironGuard', bonus: 0.3 } }),
+  skill({ id: 'ironGuard', name: 'Iron Guard', category: 'skill', rarity: 'common', access: cls('knight'), cooldown: 6, target: SELF, fx: [barrier(0.7, 4), taunt(0.3)] }),
+  skill({ id: 'shieldBash', name: 'Shield Bash', category: 'skill', rarity: 'rare', access: cls('knight'), cooldown: 4, target: foe('attackedMe'), fx: [dmg(0.7), delay(0.3)], synergy: { with: 'ironGuard', bonus: 0.3 } }),
   skill({ id: 'holdTheLine', name: 'Hold the Line', category: 'skill', rarity: 'epic', access: cls('knight'), cooldown: 8, target: ally('front', 'all'), fx: [buff('defense', 1, 6)], vfx: 'blessing' }),
   skill({ id: 'lastStand', name: 'Last Stand', category: 'skill', rarity: 'legendary', access: cls('knight'), cooldown: 10, target: SELF, fx: [barrier(0.6, 5), buff('defense', 0.4, 5)], prerequisite: 'ironGuard', vfx: 'blessing' }),
 ];
 
 const mage: SkillDef[] = [
   skill({ id: 'fireball', name: 'Fireball', category: 'spell', rarity: 'common', access: cls('mage'), cooldown: 5, target: foe('lowestHp', 'row'), fx: [dmg(1, magic('fire'))], vfx: 'fireball' }),
-  skill({ id: 'frostBolt', name: 'Frost Bolt', category: 'spell', rarity: 'common', access: cls('mage'), cooldown: 2.5, target: foe('front'), fx: [dmg(0.8, magic('ice')), debuff('attack', 0.2, 3)], synergy: { with: 'blizzard', bonus: 0.3 } }),
+  skill({ id: 'frostBolt', name: 'Frost Bolt', category: 'spell', rarity: 'common', access: cls('mage'), cooldown: 2.5, target: foe('front'), fx: [dmg(0.8, magic('ice')), slow(0.2, 3)], synergy: { with: 'blizzard', bonus: 0.3 } }),
   skill({ id: 'chainLightning', name: 'Chain Lightning', category: 'spell', rarity: 'rare', access: cls('mage'), cooldown: 4, target: foe('random', 'column'), fx: [dmg(1, magic('lightning'))], synergy: { with: 'spark', bonus: 0.25 } }),
   skill({ id: 'blizzard', name: 'Blizzard', category: 'spell', rarity: 'epic', access: cls('mage'), cooldown: 7, target: foe('front', 'all'), fx: [dmg(0.7, magic('ice')), debuff('attack', 0.3, 4)] }),
   skill({ id: 'meteor', name: 'Meteor', category: 'spell', rarity: 'legendary', access: cls('mage'), cooldown: 9, target: foe('highestHp', 'all'), fx: [dmg(0.8, magic('fire')), dot(0.2, 3, { stat: 'magic', element: 'fire' })], prerequisite: 'fireball', vfx: 'fireball' }),
@@ -146,7 +167,7 @@ const druid: SkillDef[] = [
 
 const monk: SkillDef[] = [
   skill({ id: 'flurry', name: 'Flurry', category: 'skill', rarity: 'common', access: cls('monk'), cooldown: 2.5, target: foe('front'), fx: [dmg(1, { hits: 3 })] }),
-  skill({ id: 'innerPeace', name: 'Inner Peace', category: 'skill', rarity: 'common', access: cls('monk'), cooldown: 8, target: SELF, fx: [buff('defense', 0.5, 6), buff('resistance', 0.5, 6)] }),
+  skill({ id: 'innerPeace', name: 'Inner Peace', category: 'skill', rarity: 'common', access: cls('monk'), cooldown: 8, target: SELF, fx: [buff('defense', 0.35, 6), buff('resistance', 0.35, 6), meter(0.3)] }),
   skill({ id: 'palmStrike', name: 'Palm Strike', category: 'skill', rarity: 'rare', access: cls('monk'), cooldown: 3, target: foe('attackedMe'), fx: [dmg(0.7, { element: 'holy' }), debuff('attack', 0.3, 4)], synergy: { with: 'flurry', bonus: 0.25 } }),
   skill({ id: 'hundredFists', name: 'Hundred Fists', category: 'skill', rarity: 'epic', access: cls('monk'), cooldown: 5, target: foe('front'), fx: [dmg(1, { hits: 6 })], synergy: { with: 'innerPeace', bonus: 0.3 } }),
   skill({ id: 'ascension', name: 'Ascension', category: 'skill', rarity: 'legendary', access: cls('monk'), cooldown: 6, target: foe('lowestHpPct'), fx: [dmg(1, { element: 'holy', hits: 4, drain: 0.4 })], prerequisite: 'flurry' }),

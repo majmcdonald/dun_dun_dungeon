@@ -140,7 +140,7 @@ export const ARCHER: CombatantDef = {
 export const ORC: CombatantDef = {
   id: 'orc',
   name: 'Orc',
-  stats: { hp: 332, attack: 16, magic: 0, defense: 10, resistance: 4 },
+  stats: { hp: 332, attack: 15, magic: 0, defense: 10, resistance: 4 },
   skills: [orcCleave, charge],
 };
 
@@ -462,7 +462,7 @@ const wyvernBite = enemySkill('wyvernBite', 'Bite', 3, front, [physical(0.9), { 
 export const MINOTAUR: CombatantDef = {
   id: 'minotaur',
   name: 'Minotaur',
-  stats: { hp: 1561, attack: 16, magic: 0, defense: 14, resistance: 8 },
+  stats: { hp: 1561, attack: 15, magic: 0, defense: 14, resistance: 8 },
   skills: [gore, trample, rampage],
   resist: { ice: -0.5 },
 };
@@ -530,7 +530,7 @@ const growHead = (id: string, threshold: number) =>
 export const FROST_GIANT: CombatantDef = {
   id: 'frostGiant',
   name: 'Frost Giant',
-  stats: { hp: 1741, attack: 48, magic: 0, defense: 14, resistance: 8 },
+  stats: { hp: 1741, attack: 46, magic: 0, defense: 14, resistance: 8 },
   skills: [glacialSmash, blizzard, iceArmor],
   resist: { fire: -0.5, ice: 0.5 },
 };
@@ -539,7 +539,7 @@ export const FROST_GIANT: CombatantDef = {
 export const CHIMERA: CombatantDef = {
   id: 'chimera',
   name: 'Chimera',
-  stats: { hp: 1758, attack: 20, magic: 14, defense: 10, resistance: 10 },
+  stats: { hp: 1758, attack: 19, magic: 13, defense: 10, resistance: 10 },
   skills: [lionBite, goatCharge, serpentTail, fireBreath],
 };
 
@@ -547,7 +547,7 @@ export const CHIMERA: CombatantDef = {
 export const HYDRA: CombatantDef = {
   id: 'hydra',
   name: 'Hydra',
-  stats: { hp: 1674, attack: 30, magic: 0, defense: 10, resistance: 8 },
+  stats: { hp: 1674, attack: 29, magic: 0, defense: 10, resistance: 8 },
   skills: [snappingHeads, growHead('growHead75', 0.75), growHead('growHead50', 0.5), growHead('growHead25', 0.25)],
   resist: { fire: -0.5 },
   regeneration: { perSecond: 0.02, blockedBy: ['fire'], blockSeconds: 4 },
@@ -621,7 +621,7 @@ export const BANDIT_KING: CombatantDef = {
 export const ICE_QUEEN: CombatantDef = {
   id: 'iceQueen',
   name: 'Ice Queen',
-  stats: { hp: 2475, attack: 3, magic: 16, defense: 10, resistance: 18 },
+  stats: { hp: 2475, attack: 3, magic: 15, defense: 10, resistance: 18 },
   skills: [frostLance, glacialTomb, mirrorShards, wintersGrip, wintersCall],
   resist: { fire: -0.5, ice: 0.5 },
   fury: BOSS_FURY,
@@ -630,7 +630,7 @@ export const ICE_QUEEN: CombatantDef = {
 export const ELDER_WYRM: CombatantDef = {
   id: 'elderWyrm',
   name: 'Elder Wyrm',
-  stats: { hp: 2939, attack: 16, magic: 14, defense: 14, resistance: 12 },
+  stats: { hp: 2939, attack: 15, magic: 13, defense: 14, resistance: 12 },
   skills: [wyrmClaw, inferno, takeFlight, moltenScales],
   resist: { ice: -0.5, fire: 0.5 },
   fury: BOSS_FURY,

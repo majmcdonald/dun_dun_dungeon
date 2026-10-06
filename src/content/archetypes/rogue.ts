@@ -1,5 +1,24 @@
 import type { SkillDef } from '../../combat/types';
-import { barrier, buff, cls, debuff, delay, dmg, dot, foe, gold, self, SELF, selfDamage, siphon, skill, steal, taunt, type SkillSpec } from '../build';
+import {
+  barrier,
+  buff,
+  cls,
+  debuff,
+  delay,
+  dmg,
+  dot,
+  foe,
+  gold,
+  haste,
+  SELF,
+  self,
+  selfDamage,
+  siphon,
+  skill,
+  steal,
+  taunt,
+  type SkillSpec,
+} from '../build';
 
 type Spec = Omit<SkillSpec, 'access' | 'category'> & { category?: SkillSpec['category'] };
 const r = (spec: Spec): SkillDef => skill({ category: 'skill', ...spec, access: cls('rogue') });
@@ -23,7 +42,7 @@ const assassin: SkillDef[] = [
   r({ id: 'ambush', name: 'Ambush', theme: 'assassin', rarity: 'common', cooldown: 4, target: foe('castSpell'), fx: [dmg(1, shadow)] }),
   r({ id: 'markForDeath', name: 'Mark for Death', theme: 'assassin', rarity: 'common', cooldown: 6, target: foe('highestHp'), fx: [debuff('defense', 1, 5)] }),
   r({ id: 'silentKill', name: 'Silent Kill', theme: 'assassin', rarity: 'rare', cooldown: 6, target: foe('lowestHp'), fx: [dmg(1, shadow)], synergy: { with: 'markForDeath', bonus: 0.3 } }),
-  r({ id: 'shadowCloak', name: 'Shadow Cloak', theme: 'assassin', rarity: 'rare', cooldown: 6, target: SELF, fx: [barrier(1, 4)] }),
+  r({ id: 'shadowCloak', name: 'Shadow Cloak', theme: 'assassin', rarity: 'rare', cooldown: 6, target: SELF, fx: [barrier(0.7, 4), haste(0.3, 4)] }),
   r({ id: 'coupDeGrace', name: 'Coup de Grace', theme: 'assassin', rarity: 'epic', cooldown: 8, target: foe('lowestHpPct'), fx: [dmg(1, shadow)] }),
   r({ id: 'nightfall', name: 'Nightfall', theme: 'assassin', rarity: 'epic', cooldown: 9, target: foe('front', 'all'), fx: [dot(1, 5, { element: 'shadow' })] }),
 ];

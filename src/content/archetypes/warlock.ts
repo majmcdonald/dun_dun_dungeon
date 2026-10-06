@@ -61,7 +61,7 @@ const general: SkillDef[] = [
   w({ id: 'hellfire', name: 'Hellfire', theme: 'warlock', rarity: 'common', cooldown: 4, target: foe('front', 'row'), fx: [dmg(1, fire)] }),
   w({ id: 'hexBolt', name: 'Hex Bolt', theme: 'warlock', rarity: 'common', cooldown: 2.5, target: foe('random'), fx: [dmg(1, shadow())] }),
   w({ id: 'felFlame', name: 'Fel Flame', theme: 'warlock', rarity: 'common', cooldown: 3, target: foe('lowestHp'), fx: [dmg(1, fire)] }),
-  w({ id: 'demonSkin', name: 'Demon Skin', theme: 'warlock', rarity: 'rare', cooldown: 6, target: SELF, fx: [barrier(1, 4, 'resistance')] }),
+  w({ id: 'demonSkin', name: 'Demon Skin', theme: 'warlock', rarity: 'rare', cooldown: 6, target: SELF, fx: [barrier(0.7, 4, 'resistance'), toSummons(buff('attack', 0.3, 4))] }),
   w({ id: 'leechLife', name: 'Leech Life', theme: 'warlock', rarity: 'rare', cooldown: 3, target: foe('front'), fx: [dmg(1, shadow({ drain: 0.4 }))] }),
   w({ id: 'chaosBolt', name: 'Chaos Bolt', theme: 'warlock', rarity: 'epic', cooldown: 5, target: foe('highestHp'), fx: [chaos(dmg(1, fire), dmg(1, shadow()))] }),
 ];

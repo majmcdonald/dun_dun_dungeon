@@ -11,7 +11,7 @@ const magic = (element?: 'fire' | 'ice' | 'lightning' | 'holy' | 'shadow' | 'poi
 const chaosSpells: SkillDef[] = [
   m({ id: 'wildMagic', name: 'Wild Magic', theme: 'chaos', rarity: 'common', cooldown: 2.5, target: foe('random'), fx: [chaos(dmg(1, magic('fire')), dmg(1, magic('ice')), dmg(1, magic('lightning')))] }),
   m({ id: 'prismaticBolt', name: 'Prismatic Bolt', theme: 'chaos', rarity: 'common', cooldown: 3, target: foe('front'), fx: [chaos(dmg(1, magic('fire')), dmg(1, magic('shadow')), slow(1, 3))] }),
-  m({ id: 'unstableRift', name: 'Unstable Rift', theme: 'chaos', rarity: 'common', cooldown: 3, target: foe('random'), fx: [dmg(1, magic('lightning', { hits: 2 }))] }),
+  m({ id: 'unstableRift', name: 'Unstable Rift', theme: 'chaos', rarity: 'common', cooldown: 3, target: foe('random', 'row'), fx: [dmg(1, magic('lightning', { hits: 2 }))] }),
   m({ id: 'chaosOrb', name: 'Chaos Orb', theme: 'chaos', rarity: 'rare', cooldown: 5, target: foe('random', 'row'), fx: [chaos(dmg(1, magic('fire')), slow(1, 3), debuff('resistance', 1, 4))] }),
   m({ id: 'wildSurge', name: 'Wild Surge', theme: 'chaos', rarity: 'rare', cooldown: 7, target: SELF, fx: [chaos(buff('magic', 1, 5), haste(1, 5), barrier(1, 5, 'resistance'))] }),
   m({ id: 'entropy', name: 'Entropy', theme: 'chaos', rarity: 'epic', cooldown: 8, target: foe('front', 'all'), fx: [chaos(dmg(1, magic('shadow')), dot(1, 4, { stat: 'magic', element: 'fire' }), slow(1, 4))] }),
@@ -42,7 +42,7 @@ const transformation: SkillDef[] = [
 
 const general: SkillDef[] = [
   m({ id: 'blinkBolt', name: 'Blink Bolt', theme: 'mage', rarity: 'common', cooldown: 2.5, target: foe('back'), fx: [dmg(1, magic())] }),
-  m({ id: 'manaShield', name: 'Mana Shield', theme: 'mage', rarity: 'common', cooldown: 5, target: SELF, fx: [barrier(1, 4, 'resistance')] }),
+  m({ id: 'manaShield', name: 'Mana Shield', theme: 'mage', rarity: 'common', cooldown: 5, target: SELF, fx: [barrier(0.7, 4, 'resistance'), buff('magic', 0.3, 4)] }),
   m({ id: 'quicken', name: 'Quicken', theme: 'mage', rarity: 'rare', cooldown: 8, target: SELF, fx: [haste(1, 5)] }),
   m({ id: 'counterspell', name: 'Counterspell', theme: 'mage', rarity: 'rare', cooldown: 5, target: foe('castSpell'), fx: [delay(0.6), dmg(0.4, magic())] }),
 ];

@@ -21,7 +21,7 @@ const light: SkillDef[] = [
 // Order: control enemies and direct friends.
 const order: SkillDef[] = [
   c({ id: 'silence', name: 'Silence', theme: 'order', rarity: 'common', cooldown: 5, target: foe('castSpell'), fx: [delay(1)] }),
-  c({ id: 'command', name: 'Command', theme: 'order', rarity: 'common', cooldown: 5, target: foe('highestHp'), fx: [debuff('attack', 1, 5)] }),
+  c({ id: 'command', name: 'Command', theme: 'order', rarity: 'common', cooldown: 5, target: foe('highestHp'), fx: [debuff('attack', 0.6, 5), delay(0.25)] }),
   c({ id: 'compel', name: 'Compel', theme: 'order', rarity: 'common', cooldown: 7, target: ally('mostDamage'), fx: [haste(1, 4)] }),
   c({ id: 'hold', name: 'Hold', theme: 'order', rarity: 'rare', cooldown: 6, target: foe('front'), fx: [delay(1)], synergy: { with: 'silence', bonus: 0.3 } }),
   c({ id: 'decree', name: 'Decree', theme: 'order', rarity: 'rare', cooldown: 9, target: foe('front', 'all'), fx: [slow(1, 4)] }),

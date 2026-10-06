@@ -42,10 +42,10 @@ const fauna: SkillDef[] = [
 ];
 
 const general: SkillDef[] = [
-  d({ id: 'moonfire', name: 'Moonfire', theme: 'druid', rarity: 'common', cooldown: 2.5, target: foe('random'), fx: [dmg(1, { type: 'magic' })] }),
+  d({ id: 'moonfire', name: 'Moonfire', theme: 'druid', rarity: 'common', cooldown: 2.5, target: foe('random'), fx: [dmg(0.7, { type: 'magic' }), dot(0.3, 3, { stat: 'magic', element: 'fire' })] }),
   d({ id: 'thornVolley', name: 'Thorn Volley', theme: 'druid', rarity: 'rare', cooldown: 3, target: foe('random'), fx: [dmg(1, { ...poison, hits: 3 })] }),
   d({ id: 'hurricane', name: 'Hurricane', theme: 'druid', rarity: 'rare', cooldown: 5, target: foe('front', 'column'), fx: [dmg(0.6, { type: 'magic', element: 'lightning' }), slow(0.4, 3)] }),
-  d({ id: 'starfall', name: 'Starfall', theme: 'druid', rarity: 'epic', cooldown: 8, target: foe('front', 'all'), fx: [dmg(1, { type: 'magic' })] }),
+  d({ id: 'starfall', name: 'Starfall', theme: 'druid', rarity: 'epic', cooldown: 8, target: foe('front', 'all'), fx: [dmg(0.75, { type: 'magic' }), debuff('resistance', 0.25, 5)] }),
 ];
 
 export const DRUID_ARCHETYPES: SkillDef[] = [...shapeshiftSkills, ...summonSkills, ...fauna, ...general];

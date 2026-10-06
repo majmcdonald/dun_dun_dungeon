@@ -45,7 +45,7 @@ const soul: SkillDef[] = [
 const general: SkillDef[] = [
   m({ id: 'sweepingKick', name: 'Sweeping Kick', theme: 'monk', rarity: 'common', cooldown: 4, target: foe('front', 'column'), fx: [dmg(1)] }),
   m({ id: 'stoneFist', name: 'Stone Fist', theme: 'monk', rarity: 'common', cooldown: 3, target: foe('highestHp'), fx: [dmg(1)] }),
-  m({ id: 'deflect', name: 'Deflect', theme: 'monk', rarity: 'rare', cooldown: 6, target: SELF, fx: [barrier(1, 4)] }),
+  m({ id: 'deflect', name: 'Deflect', theme: 'monk', rarity: 'rare', cooldown: 6, target: SELF, fx: [barrier(0.7, 4), meter(0.3)] }),
   m({ id: 'flyingKnee', name: 'Flying Knee', theme: 'monk', rarity: 'rare', cooldown: 3, target: foe('back'), fx: [dmg(1)] }),
 ];
 
