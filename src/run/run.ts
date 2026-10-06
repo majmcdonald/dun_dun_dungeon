@@ -4,6 +4,7 @@ import { CLASSES_BY_ID, type ClassDef } from '../content/classes';
 import { ITEMS_BY_ID } from '../content/items';
 import { SKILLS_BY_ID } from '../content/skills';
 import { seededRng } from '../engine/random';
+import { logEvent, loadout, type LogEntry } from './log';
 import { checkUnlocks, loadProfile, saveProfile } from './profile';
 import { loadSlot, saveSlot } from '../engine/save';
 import { equippedSkills } from '../game/loadout';
@@ -16,6 +17,8 @@ import type { Reward } from './rewards';
 export const LEVELS = 3;
 
 export interface RunState {
+  // What has happened this run (see log.ts).
+  log: LogEntry[];
   slot: number;
   seed: number;
   // 0-based; the player sees level + 1.
@@ -83,7 +86,8 @@ export interface LastReward {
 export function startRun(state: GameState, slot: number, classes: ClassDef[], seed: number): void {
   state.party = classes.map(recruit);
   state.inventory = { skills: [], items: [] };
-  state.run = { slot, seed, level: 0, map: levelMap(seed, 0), position: null, path: [], pending: null, gold: 0, result: null, lastReward: null, stats: { ...NO_STATS }, broken: [], store: null, event: null, seenEvents: [], nextFight: null, encounter: null, usedEncounters: [] };
+  state.run = { log: [], slot, seed, level: 0, map: levelMap(seed, 0), position: null, path: [], pending: null, gold: 0, result: null, lastReward: null, stats: { ...NO_STATS }, broken: [], store: null, event: null, seenEvents: [], nextFight: null, encounter: null, usedEncounters: [] };
+  logEvent(state.run, 'start', { seed, slot, party: loadout(state.party) });
 }
 
 function levelMap(seed: number, level: number): RunMap {
@@ -310,6 +314,7 @@ export function fromSave(saved: SavedRun, state: GameState): void {
   const store = saved.run.store;
   state.run = {
     ...saved.run,
+    log: saved.run.log ?? [],
     path: saved.run.path ?? [],
     pending: null,
     lastReward: reward

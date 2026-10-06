@@ -634,6 +634,21 @@ describe('party focus target', () => {
   });
 });
 
+describe('polymorph', () => {
+  it('breaks on the first damage the critter takes', () => {
+    const poly = skill('poly', [{ kind: 'transform', duration: 30 }], { cooldown: 0.5, target: { side: 'enemy', select: 'front', area: 'single' } });
+    const hit2 = skill('poke', [hit(1)], { cooldown: 4 });
+    const battle = new Battle([member(unit('mage', {}, [poly])), member(unit('fighter', { attack: 10 }, [hit2]))], [unit('boss', { hp: 100000 })], NO_JITTER);
+    runFor(battle, 0.45);
+    const boss = battle.get('enemy-0');
+    expect(boss.transformed).toBeGreaterThan(0);
+    // Only cast once: the mage's slot then sits idle.
+    battle.get('party-0').slots[0].timer = -1000;
+    runFor(battle, 3.5);
+    expect(boss.transformed).toBe(0);
+  });
+});
+
 describe('dying bosses', () => {
   it('can spawn minions as they fall, and the fight goes on', () => {
     const minion = unit('minion', { hp: 50 }, []);

@@ -14,6 +14,7 @@ import { pickEncounter } from './encounters';
 import { openEvent } from './events';
 import { openStore } from './store';
 import type { MapNode } from './map';
+import { keepFinishedLog, loadout, logEvent } from './log';
 import { noteRoom, noteRunEnd, saveProfile } from './profile';
 import { rollReward } from './rewards';
 import { beginNode, clearNode, pendingNodeOf, recordWin, roomType, runSummary, saveRun, setRewardPicks } from './run';
@@ -25,6 +26,7 @@ export function enterNode(game: GameContext, node: MapNode): void {
   const run = game.state.run;
   if (!run) return;
   beginNode(run, node);
+  logEvent(run, 'room', { type: roomType(run, node), mapType: node.type, gold: run.gold });
   switch (roomType(run, node)) {
     case 'battle':
     case 'epic':
@@ -55,7 +57,11 @@ export function winNode(game: GameContext, battleGold = 0): void {
   const type = roomType(run, node);
   const payAs = type === 'event' ? 'epic' : type;
   if (game.state.profile) noteRoom(game.state.profile, type, run.level);
-  recordWin(run, { ...node, type }, rollReward(payAs, game.state.party, SKILL_LIBRARY, ITEM_LIBRARY, Math.random, battleGold));
+  const level = run.level;
+  const reward = rollReward(payAs, game.state.party, SKILL_LIBRARY, ITEM_LIBRARY, Math.random, battleGold);
+  logEvent(run, 'reward', { type, gold: reward.gold, skills: reward.skills.map((s) => s.id), items: reward.items.map((i) => i.id) });
+  recordWin(run, { ...node, type }, reward);
+  if (run.level !== level) logEvent(run, 'act', { party: loadout(game.state.party), gold: run.gold });
   saveRun(game.state);
   if (run.result === 'won') return endRun(game);
   game.scenes.switchTo(new RewardScene(game));
@@ -76,6 +82,7 @@ export function completeNode(game: GameContext): void {
 // Takes the chosen picks; anything new is shown on the party screen, otherwise straight back to the map.
 export function choosePicks(game: GameContext, skill: string | null, item: string | null): void {
   setRewardPicks(game.state, skill, item);
+  if (game.state.run) logEvent(game.state.run, 'picks', { skill, item });
   saveRun(game.state);
   game.scenes.switchTo(skill || item ? new PartyScene(game) : new MapScene(game));
 }
@@ -100,6 +107,8 @@ function endRun(game: GameContext, slayers: string[] = []): void {
   const run = game.state.run;
   if (!run) return;
   const summary = runSummary(game.state, slayers);
+  logEvent(run, 'end', { won: summary.won, where: summary.where, slayers, stats: summary.stats, party: loadout(game.state.party), gold: run.gold });
+  keepFinishedLog(game.state, summary.won);
   const profile = game.state.profile;
   if (profile) {
     noteRunEnd(profile, summary.won, summary.party, run.level, summary.room);

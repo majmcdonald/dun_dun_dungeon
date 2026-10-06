@@ -6,6 +6,7 @@ import { seededRng, type Rng } from '../engine/random';
 import { equipItemBlock, skillAccessBlock } from '../game/loadout';
 import type { GameState } from '../game/state';
 import { STAT_LABEL } from '../ui/partyCard';
+import { logEvent } from './log';
 import type { MapNode } from './map';
 import { NORMAL_WEIGHTS, pickWeighted, RICH_WEIGHTS } from './rewards';
 
@@ -135,6 +136,7 @@ export function chooseOption(state: GameState, event: EventDef, index: number, r
     else lines.push(...apply(state, outcome, rng));
   }
   visit.result = { choice: index, success, text: result.text, lines, fight };
+  logEvent(state.run!, 'event', { id: event.id, choice: choice.label, chance: Math.round(choiceChance(state, choice) * 100) / 100, success, lines, fight });
   return visit.result;
 }
 

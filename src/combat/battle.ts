@@ -759,6 +759,8 @@ export class Battle {
     const dealt = selfInflicted ? Math.min(amount, target.hp - 1) : Math.min(amount, target.hp);
     if (dealt <= 0) return;
     target.hp -= dealt;
+    // Polymorph breaks on the first damage (the breaking hit still gets the transformed bonus).
+    if (!selfInflicted && target.transformed > 0) target.transformed = 0;
     if (target.hp > 0) {
       for (const slot of target.slots) {
         const trigger = slot.def.trigger;

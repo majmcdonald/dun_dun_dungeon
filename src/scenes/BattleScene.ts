@@ -24,6 +24,7 @@ import { loseRun, winNode } from '../run/flow';
 import { ENEMIES_BY_ID } from '../content/enemies';
 import { currentEncounter } from '../run/encounters';
 import { takeNextFight } from '../run/events';
+import { loadout, logEvent } from '../run/log';
 import { itemRef } from '../run/run';
 import { PreBattleScene } from './PreBattleScene';
 import { inside } from '../ui/widgets';
@@ -116,6 +117,7 @@ interface Notice {
 type FloatAmounts = Partial<Pick<FloatText, 'damage' | 'absorbed' | 'barrier' | 'heal'>>;
 
 export class BattleScene implements Scene {
+  private focusClicks = 0;
   private battle!: Battle;
   private anims = new Map<string, Anim>();
   private floats: FloatText[] = [];
@@ -190,7 +192,10 @@ export class BattleScene implements Scene {
         const o = this.spriteOrigin(c);
         return inside(click, { x: o.x, y: o.y, w: set.width, h: set.height });
       });
-      if (enemy) this.battle.setFocus(enemy.uid);
+      if (enemy) {
+        this.battle.setFocus(enemy.uid);
+        this.focusClicks += 1;
+      }
     }
 
     for (const f of this.floats) {
@@ -271,11 +276,32 @@ export class BattleScene implements Scene {
         if (item && state.run) state.run.broken.push(itemRef(item));
         break;
       }
+      case 'end':
+        this.logFight(event.result);
+        break;
       case 'buff':
       case 'death':
-      case 'end':
         break;
     }
+  }
+
+  // Records the fight in the run log: what it was, how long, what it cost, and the party that fought it.
+  private logFight(result: 'victory' | 'defeat'): void {
+    const run = this.game.state.run;
+    if (!run) return;
+    const heroes = this.battle.combatants.filter((c) => c.side === 'party' && !isSummon(c));
+    const maxHp = heroes.reduce((s, c) => s + c.maxHp, 0);
+    const hpLeft = heroes.reduce((s, c) => s + Math.max(0, c.hp), 0);
+    logEvent(run, 'fight', {
+      encounter: run.encounter?.id ?? null,
+      enemies: this.battle.combatants.filter((c) => c.side === 'enemy').map((c) => c.def.id),
+      result,
+      seconds: Math.round(this.battle.elapsed * 10) / 10,
+      hpLost: maxHp === 0 ? 0 : Math.round((1 - hpLeft / maxHp) * 100) / 100,
+      kos: heroes.filter((c) => c.hp <= 0).map((c) => c.def.id),
+      focusClicks: this.focusClicks,
+      party: loadout(this.game.state.party),
+    });
   }
 
   // Created on first use, since summons join mid-battle.

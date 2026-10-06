@@ -38,7 +38,7 @@ function describeBase(e: SkillEffect): string {
     case 'speed':
       return e.factor < 1 ? `SLOW ${pct(1 - e.factor)} FOR ${e.duration}S` : `HASTE +${pct(e.factor - 1)} FOR ${e.duration}S`;
     case 'transform':
-      return `TRANSFORM INTO A CRITTER FOR ${e.duration}S`;
+      return `TRANSFORM INTO A CRITTER FOR ${e.duration}S (DAMAGE BREAKS IT)`;
     case 'taunt':
       return `TAUNT FOR ${e.duration}S`;
     case 'delay':
