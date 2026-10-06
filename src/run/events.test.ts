@@ -136,6 +136,31 @@ describe('events', () => {
   });
 });
 
+describe('act events', () => {
+  it('only appear in their own act, alongside the shared events', () => {
+    const state = atEvent();
+    const act2Only: EventDef = { ...SHRINE, id: 'act2Only', act: 1 };
+    for (let floor = 1; floor < 10; floor++) {
+      const n = { ...node, id: `${floor}-0`, floor, column: 0 };
+      beginNode(state.run!, n);
+      expect(openEvent(state, n, [SHRINE, act2Only]).id).toBe('shrine');
+    }
+    state.run!.level = 1;
+    state.run!.seenEvents = ['shrine'];
+    const n = { ...node, id: '9-1', floor: 9, column: 1 };
+    beginNode(state.run!, n);
+    expect(openEvent(state, n, [SHRINE, act2Only]).id).toBe('act2Only');
+  });
+
+  it('curse the next fight, cancelling out a blessing', () => {
+    const state = atEvent();
+    const curse: EventDef = { ...SHRINE, choices: [{ label: 'X', success: { text: '', outcomes: [{ kind: 'cursed', penalty: { attack: 6, magic: 6 } }] } }] };
+    openEvent(state, node, [curse]);
+    expect(chooseOption(state, curse, 0)!.lines).toEqual(['CURSED: -6 ATK, -6 MAG NEXT FIGHT']);
+    expect(state.run!.nextFight).toEqual({ bonus: { attack: -6, magic: -6 } });
+  });
+});
+
 describe('wounded and blessed fights', () => {
   it('apply once to the next fight', () => {
     const state = atEvent();
