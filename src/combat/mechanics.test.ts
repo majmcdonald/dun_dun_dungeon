@@ -587,6 +587,31 @@ describe('cleanse', () => {
   });
 });
 
+describe('act 3 group 2 mechanics', () => {
+  it('reassemble once at a share of max HP, then die for good', () => {
+    const golem = unit('golem', { hp: 100, defense: 0 }, [], { reassemble: 0.4 });
+    const battle = new Battle([member(unit('a', { attack: 1000 }, [skill('smash', [hit(1)])]))], [golem, unit('other', { hp: 100000 })], NO_JITTER);
+    const g = battle.get('enemy-0');
+    const first = runFor(battle, 0.85);
+    expect(first.some((e) => e.type === 'status' && e.status === 'reassemble')).toBe(true);
+    expect(g.hp).toBe(40);
+    const second = runFor(battle, 0.85);
+    expect(second.some((e) => e.type === 'death' && e.target === g.uid)).toBe(true);
+  });
+
+  it('stack keening -DEF on every hero for each fallen enemy', () => {
+    const keen = skill('keen', [{ kind: 'debuff', stat: 'defense', amount: 3, duration: 999, stack: true }], {
+      cooldown: 0,
+      target: { side: 'enemy', select: 'front', area: 'all' },
+      trigger: { kind: 'allyFalls' },
+    });
+    const hero = unit('a', { attack: 100, hp: 100000, defense: 20 }, [skill('poke', [hit(1)], { target: { side: 'enemy', select: 'lowestHp', area: 'single' } })]);
+    const battle = new Battle([member(hero)], [unit('banshee', { hp: 100000 }, [keen]), unit('f', { hp: 1 }), unit('f', { hp: 1 })], NO_JITTER);
+    runFor(battle, 2.5);
+    expect(statOf(battle.get('party-0'), 'defense')).toBe(14);
+  });
+});
+
 describe('dying bosses', () => {
   it('can spawn minions as they fall, and the fight goes on', () => {
     const minion = unit('minion', { hp: 50 }, []);

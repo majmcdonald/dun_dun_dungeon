@@ -33,6 +33,9 @@ import { HYDRA_SPRITE } from './hydra';
 import { BANDIT_KING_SPRITE } from './banditKing';
 import { ICE_QUEEN_SPRITE } from './iceQueen';
 import { ELDER_WYRM_SPRITE } from './elderWyrm';
+import { VAMPIRE_SPRITE } from './vampire';
+import { DEATH_KNIGHT_SPRITE } from './deathKnight';
+import { SHADE_SPRITE } from './shade';
 import { OGRE_SPRITE } from './ogre';
 import { SPIDER_QUEEN_SPRITE } from './spiderQueen';
 import { BONE_MAGE_SPRITE } from './boneMage';
@@ -56,6 +59,18 @@ import { ROGUE_SPRITE } from './rogue';
 import { SHAMAN_SPRITE } from './shaman';
 import { SLIME_SPRITE } from './slime';
 import { WARLOCK_SPRITE } from './warlock';
+import { ABOMINATION_SPRITE } from './abomination';
+import { NIGHTMARE_SPRITE } from './nightmare';
+import { DARK_PRIEST_SPRITE } from './darkPriest';
+import { BONE_GOLEM_SPRITE } from './boneGolem';
+import { BANSHEE_SPRITE } from './banshee';
+import { GARGOYLE_SPRITE } from './gargoyle';
+import { LICH_SPRITE } from './lich';
+import { BONE_DRAGON_SPRITE } from './boneDragon';
+import { PLAGUE_LORD_SPRITE } from './plagueLord';
+import { BLOOD_COUNTESS_SPRITE } from './bloodCountess';
+import { REAPER_SPRITE } from './reaper';
+import { DEMON_LORD_SPRITE } from './demonLord';
 
 export const SPRITES: Record<string, SpriteDef> = {
   knight: KNIGHT_SPRITE,
@@ -115,4 +130,19 @@ export const SPRITES: Record<string, SpriteDef> = {
   banditKing: BANDIT_KING_SPRITE,
   iceQueen: ICE_QUEEN_SPRITE,
   elderWyrm: ELDER_WYRM_SPRITE,
+  vampire: VAMPIRE_SPRITE,
+  deathKnight: DEATH_KNIGHT_SPRITE,
+  shade: SHADE_SPRITE,
+  abomination: ABOMINATION_SPRITE,
+  nightmare: NIGHTMARE_SPRITE,
+  darkPriest: DARK_PRIEST_SPRITE,
+  boneGolem: BONE_GOLEM_SPRITE,
+  banshee: BANSHEE_SPRITE,
+  gargoyle: GARGOYLE_SPRITE,
+  lich: LICH_SPRITE,
+  boneDragon: BONE_DRAGON_SPRITE,
+  plagueLord: PLAGUE_LORD_SPRITE,
+  bloodCountess: BLOOD_COUNTESS_SPRITE,
+  reaper: REAPER_SPRITE,
+  demonLord: DEMON_LORD_SPRITE,
 };

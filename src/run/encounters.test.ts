@@ -62,10 +62,9 @@ describe('encounters', () => {
 
   it('fall back to the old fight where an act has no content yet', () => {
     const state = started();
-    state.run!.level = 2;
     const node = room(15, 3, 'boss');
     beginNode(state.run!, node);
-    expect(pickEncounter(state, node)).toBeNull();
+    expect(pickEncounter(state, node, [{ battles: [[], [], []], epics: [], bosses: [] }])).toBeNull();
     expect(currentEncounter(state)).toEqual(MAP_ENCOUNTER);
   });
 

@@ -60,7 +60,7 @@ type BaseEffect =
   | { kind: 'dot'; stat: 'attack' | 'magic'; scaling: number; duration: number; element?: Element; perStack?: number }
   // `stack`: each use adds its own copy with its own timer instead of refreshing the last one.
   | { kind: 'buff'; stat: StatKey; amount: number; duration: number; stack?: boolean }
-  | { kind: 'debuff'; stat: StatKey; amount: number; duration: number }
+  | { kind: 'debuff'; stat: StatKey; amount: number; duration: number; stack?: boolean }
   | { kind: 'speed'; factor: number; duration: number; stack?: boolean }
   | { kind: 'summon'; creature: string; share: number }
   // Enemies only: calls `count` more of an enemy type into empty grid cells, never above `cap` alive at once.
@@ -156,6 +156,8 @@ export interface CombatantDef {
   regeneration?: { perSecond: number; blockedBy: Element[]; blockSeconds: number };
   // Boss soft timer: from `after` seconds in, every `step` seconds ATK and MAG grow by `rate` of their base.
   fury?: { after: number; step: number; rate: number };
+  // Enemies only: the first time it dies, it rises again with this share of max HP.
+  reassemble?: number;
 }
 
 export type EquipSlot = 'armor' | 'helmet' | 'boots' | 'weapon' | 'jewelry';
@@ -261,6 +263,7 @@ export interface Combatant {
   regenBlocked: number;
   regenCarry: number;
   flight: { remaining: number; damageTaken: number; damageDealt: number } | null;
+  reassembled: boolean;
 }
 
 export type BattleResult = 'victory' | 'defeat';
@@ -271,7 +274,7 @@ export type BattleEvent =
   | { type: 'heal'; source: string; target: string; amount: number; periodic?: boolean }
   | { type: 'barrier'; target: string; amount: number }
   | { type: 'buff'; target: string; stat: StatKey; amount: number }
-  | { type: 'status'; target: string; status: 'slow' | 'haste' | 'transform' | 'taunt' | 'shapeshift' | 'frenzy' | 'burst' | 'steal' | 'delay' | 'fury' | 'flight' | 'venom' | 'cleanse' }
+  | { type: 'status'; target: string; status: 'slow' | 'haste' | 'transform' | 'taunt' | 'shapeshift' | 'frenzy' | 'burst' | 'steal' | 'delay' | 'fury' | 'flight' | 'venom' | 'cleanse' | 'reassemble' }
   | { type: 'summon'; summoner: string; unit: string }
   | { type: 'gold'; amount: number }
   | { type: 'death'; target: string }

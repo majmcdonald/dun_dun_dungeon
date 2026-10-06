@@ -446,7 +446,7 @@ export class Battle {
       case 'buff':
       case 'debuff': {
         const sign = effect.kind === 'buff' ? 1 : -1;
-        const from = effect.kind === 'buff' && effect.stack ? this.stackSource(source) : source;
+        const from = effect.stack ? this.stackSource(source) : source;
         this.setBuff(target, from, effect.stat, sign * Math.round(effect.amount * mult), effect.duration, events);
         return;
       }
@@ -751,6 +751,13 @@ export class Battle {
     }
 
     if (target.def.mechanic === 'rage') this.gainRage(target, (dealt / target.maxHp) * 100, events);
+    if (target.hp <= 0 && target.def.reassemble && !target.reassembled) {
+      target.reassembled = true;
+      target.hp = Math.max(1, Math.round(target.maxHp * target.def.reassemble));
+      target.dots = [];
+      events.push({ type: 'status', target: target.uid, status: 'reassemble' });
+      return;
+    }
     if (target.hp <= 0) return this.onDeath(target, events, source);
     if (!selfInflicted) {
       this.fireTrigger(target, 'whenHit', events);
@@ -907,6 +914,7 @@ function createCombatant(
     regenBlocked: 0,
     regenCarry: 0,
     flight: null,
+    reassembled: false,
   };
 }
 

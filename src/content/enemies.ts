@@ -636,6 +636,326 @@ export const ELDER_WYRM: CombatantDef = {
   fury: BOSS_FURY,
 };
 
+// --- Act 3, Group 1 (rooms 1–5). Base stats are pre-tuning; the Act 3 balance pass scales them.
+
+const bloodDrain = enemySkill('bloodDrain', 'Blood Drain', 2, { side: 'enemy', select: 'highestHp', area: 'single' }, {
+  kind: 'damage',
+  damageType: 'physical',
+  stat: 'attack',
+  scaling: 1,
+  drain: 0.5,
+});
+const mistForm = enemySkill('mistForm', 'Mist Form', 8, self, { kind: 'flight', duration: 3, damageTaken: 0.5, damageDealt: 1 }, false, {
+  trigger: { kind: 'whenHit' },
+});
+const batSwarm = enemySkill('batSwarm', 'Bat Swarm', 1, self, { kind: 'spawn', enemy: 'bat', count: 3, cap: 8 }, false, {
+  trigger: { kind: 'belowHp', threshold: 0.5 },
+});
+const soulReap = enemySkill('soulReap', 'Soul Reap', 3, { side: 'enemy', select: 'front', area: 'column' }, {
+  kind: 'damage',
+  damageType: 'physical',
+  stat: 'attack',
+  scaling: 1.1,
+  element: 'shadow',
+});
+const unholyAura = enemySkill('unholyAura', 'Unholy Aura', 10, { side: 'ally', select: 'front', area: 'all' }, {
+  kind: 'buff',
+  stat: 'attack',
+  amount: 3,
+  duration: 999,
+  stack: true,
+});
+const deathGrip = enemySkill('deathGrip', 'Death Grip', 1, { side: 'enemy', select: 'highestHp', area: 'single' }, { kind: 'delay', seconds: 2 }, false, {
+  trigger: { kind: 'allyFalls' },
+});
+const shadowBolt = enemySkill('shadowBolt', 'Shadow Bolt', 2, { side: 'enemy', select: 'random', area: 'single' }, {
+  kind: 'damage',
+  damageType: 'magic',
+  stat: 'magic',
+  scaling: 1,
+  element: 'shadow',
+}, true);
+const drainLight = enemySkill('drainLight', 'Drain Light', 9, allHeroes, { kind: 'debuff', stat: 'magic', amount: 4, duration: 6 }, true);
+const fade = enemySkill('fade', 'Fade', 6, self, { kind: 'flight', duration: 2, damageTaken: 0.2, damageDealt: 1 }, true, {
+  trigger: { kind: 'whenHit' },
+});
+
+// Drains blood, turns to mist when hit, and calls bats at half HP.
+export const VAMPIRE: CombatantDef = {
+  id: 'vampire',
+  name: 'Vampire',
+  stats: { hp: 80, attack: 14, magic: 0, defense: 10, resistance: 12 },
+  skills: [bloodDrain, mistForm, batSwarm],
+  resist: { holy: -0.5, fire: -0.5, shadow: 0.5 },
+};
+
+// Its aura stacks +ATK on every enemy, and each fallen ally drags a hero's timers back.
+export const DEATH_KNIGHT: CombatantDef = {
+  id: 'deathKnight',
+  name: 'Death Knight',
+  stats: { hp: 120, attack: 16, magic: 0, defense: 20, resistance: 10 },
+  skills: [soulReap, unholyAura, deathGrip],
+  resist: { holy: -0.5, shadow: 0.5, poison: 0.5 },
+};
+
+// Fades when hit (80% less damage for 2s).
+export const SHADE: CombatantDef = {
+  id: 'shade',
+  name: 'Shade',
+  stats: { hp: 40, attack: 0, magic: 16, defense: 4, resistance: 16 },
+  skills: [shadowBolt, drainLight, fade],
+  resist: { holy: -0.5, shadow: 0.5 },
+};
+
+// --- Act 3, Group 2 (rooms 6–10). Base stats are pre-tuning; the Act 3 balance pass scales them.
+
+const boneCrush = enemySkill('boneCrush', 'Bone Crush', 3, front, physical(1.2));
+const boneSpikes = enemySkill('boneSpikes', 'Bone Spikes', 2, { side: 'enemy', select: 'attackedMe', area: 'single' }, physical(0.6), false, {
+  trigger: { kind: 'whenHit' },
+});
+const bansheeWail = enemySkill('bansheeWail', 'Wail', 8, allHeroes, [
+  { kind: 'damage', damageType: 'magic', stat: 'magic', scaling: 0.9, element: 'shadow' },
+  { kind: 'delay', seconds: 1 },
+], true);
+const keening = enemySkill('keening', 'Keening', 0, allHeroes, { kind: 'debuff', stat: 'defense', amount: 3, duration: 999, stack: true }, true, {
+  trigger: { kind: 'allyFalls' },
+});
+const diveClaw = enemySkill('diveClaw', 'Dive Claw', 2.5, { side: 'enemy', select: 'back', area: 'single' }, physical(1.1));
+const stoneForm = enemySkill('stoneForm', 'Stone Form', 12, self, [
+  { kind: 'flight', duration: 4, damageTaken: 0.1, damageDealt: 1 },
+  { kind: 'delay', seconds: 4 },
+]);
+
+// Spikes whoever hits it; the first time it falls, it reassembles at 40% HP.
+export const BONE_GOLEM: CombatantDef = {
+  id: 'boneGolem',
+  name: 'Bone Golem',
+  stats: { hp: 140, attack: 16, magic: 0, defense: 16, resistance: 8 },
+  skills: [boneCrush, boneSpikes],
+  resist: { holy: -0.5, poison: 0.5, shadow: 0.5 },
+  reassemble: 0.4,
+};
+
+// Each enemy that falls stacks −DEF on every hero for the rest of the fight.
+export const BANSHEE: CombatantDef = {
+  id: 'banshee',
+  name: 'Banshee',
+  stats: { hp: 50, attack: 0, magic: 16, defense: 4, resistance: 16 },
+  skills: [bansheeWail, keening],
+  resist: { holy: -0.5, shadow: 0.5 },
+};
+
+// Every 12s it turns to stone: 90% less damage for 4s, but its timers stop.
+export const GARGOYLE: CombatantDef = {
+  id: 'gargoyle',
+  name: 'Gargoyle',
+  stats: { hp: 90, attack: 15, magic: 0, defense: 18, resistance: 8 },
+  skills: [diveClaw, stoneForm],
+  resist: { lightning: -0.5, poison: 0.5 },
+};
+
+// --- Act 3, Group 3 (rooms 11–15). Base stats are pre-tuning; the Act 3 balance pass scales them.
+
+const hook = enemySkill('hook', 'Hook', 4, { side: 'enemy', select: 'back', area: 'single' }, physical(1.4));
+const rotCloud = enemySkill('rotCloud', 'Rot Cloud', 7, allHeroes, { kind: 'dot', stat: 'attack', scaling: 0.3, duration: 5, element: 'poison' });
+const abominationBurst = enemySkill('abominationBurst', 'Burst', 1, allHeroes, { kind: 'dot', stat: 'attack', scaling: 0.6, duration: 6, element: 'poison' }, false, {
+  trigger: { kind: 'onDefeat' },
+});
+const nightmareTrample = enemySkill('nightmareTrample', 'Trample', 3, { side: 'enemy', select: 'front', area: 'row' }, physical(1));
+const terror = enemySkill('terror', 'Terror', 8, { side: 'enemy', select: 'random', area: 'single' }, [
+  { kind: 'delay', seconds: 2 },
+  { kind: 'debuff', stat: 'attack', amount: 4, duration: 5 },
+], true);
+const hellfire = enemySkill('hellfire', 'Hellfire', 6, allHeroes, { kind: 'dot', stat: 'magic', scaling: 0.3, duration: 4, element: 'fire' }, true);
+const raiseDead = enemySkill('raiseDead', 'Raise Dead', 12, self, { kind: 'spawn', enemy: 'skeletonKnight', count: 1, cap: 2 }, true);
+const unholyMending = enemySkill('unholyMending', 'Unholy Mending', 4, { side: 'ally', select: 'lowestHpPct', area: 'single' }, { kind: 'heal', scaling: 1 }, true);
+const darkWard = enemySkill('darkWard', 'Dark Ward', 2, { side: 'ally', select: 'front', area: 'all' }, {
+  kind: 'barrier',
+  stat: 'resistance',
+  scaling: 1,
+  duration: 4,
+}, true, { trigger: { kind: 'allyFalls' } });
+
+// Poisons the party while alive, and bursts into heavier poison when it dies.
+export const ABOMINATION: CombatantDef = {
+  id: 'abomination',
+  name: 'Abomination',
+  stats: { hp: 200, attack: 18, magic: 0, defense: 12, resistance: 6 },
+  skills: [hook, rotCloud, abominationBurst],
+  resist: { fire: -0.5, poison: 0.5 },
+};
+
+export const NIGHTMARE: CombatantDef = {
+  id: 'nightmare',
+  name: 'Nightmare',
+  stats: { hp: 110, attack: 16, magic: 14, defense: 12, resistance: 12 },
+  skills: [nightmareTrample, terror, hellfire],
+  resist: { holy: -0.5, ice: -0.5, fire: 0.5 },
+};
+
+// Raises Skeleton Knights, mends the most-hurt enemy, and wards every enemy when one falls.
+export const DARK_PRIEST: CombatantDef = {
+  id: 'darkPriest',
+  name: 'Dark Priest',
+  stats: { hp: 60, attack: 4, magic: 16, defense: 6, resistance: 16 },
+  skills: [raiseDead, unholyMending, darkWard],
+  resist: { holy: -0.5, shadow: 0.5 },
+};
+
+// --- Act 3 Epic Monsters. Base stats are pre-tuning; the Act 3 balance pass scales them.
+
+const deathCoil = enemySkill('deathCoil', 'Death Coil', 2.5, { side: 'enemy', select: 'highestHp', area: 'single' }, {
+  kind: 'damage',
+  damageType: 'magic',
+  stat: 'magic',
+  scaling: 1.1,
+  element: 'shadow',
+  drain: 0.5,
+}, true);
+const bonePrison = enemySkill('bonePrison', 'Bone Prison', 8, { side: 'enemy', select: 'random', area: 'single' }, { kind: 'delay', seconds: 3 }, true);
+const chillOfTheGrave = enemySkill('chillOfTheGrave', 'Chill of the Grave', 10, allHeroes, { kind: 'speed', factor: 0.8, duration: 4 }, true);
+const boneBreath = enemySkill('boneBreath', 'Bone Breath', 8, allHeroes, {
+  kind: 'damage',
+  damageType: 'magic',
+  stat: 'magic',
+  scaling: 1,
+  element: 'shadow',
+}, true);
+const tailSweep = enemySkill('tailSweep', 'Tail Sweep', 4, { side: 'enemy', select: 'front', area: 'column' }, physical(1.2));
+const plagueBolt = enemySkill('plagueBolt', 'Plague Bolt', 2, { side: 'enemy', select: 'random', area: 'single' }, {
+  kind: 'dot',
+  stat: 'magic',
+  scaling: 0.4,
+  duration: 6,
+  element: 'poison',
+}, true);
+const pestilence = enemySkill('pestilence', 'Pestilence', 8, allHeroes, { kind: 'tickPoison' }, true);
+const blightedSkin = enemySkill('blightedSkin', 'Blighted Skin', 2, { side: 'enemy', select: 'attackedMe', area: 'single' }, {
+  kind: 'dot',
+  stat: 'magic',
+  scaling: 0.3,
+  duration: 5,
+  element: 'poison',
+}, true, { trigger: { kind: 'whenHit' } });
+
+// Its phylactery brings it back once at 50% HP.
+export const LICH: CombatantDef = {
+  id: 'lich',
+  name: 'Lich',
+  stats: { hp: 280, attack: 4, magic: 20, defense: 10, resistance: 16 },
+  skills: [deathCoil, bonePrison, chillOfTheGrave],
+  resist: { holy: -0.5, fire: -0.5, shadow: 0.5, ice: 0.5 },
+  reassemble: 0.5,
+};
+
+export const BONE_DRAGON: CombatantDef = {
+  id: 'boneDragon',
+  name: 'Bone Dragon',
+  stats: { hp: 320, attack: 20, magic: 18, defense: 14, resistance: 10 },
+  skills: [boneBreath, tailSweep, takeFlight],
+  resist: { holy: -0.5, shadow: 0.5, poison: 0.5 },
+};
+
+// Pestilence makes every poison on every hero tick at once.
+export const PLAGUE_LORD: CombatantDef = {
+  id: 'plagueLord',
+  name: 'Plague Lord',
+  stats: { hp: 300, attack: 6, magic: 18, defense: 10, resistance: 12 },
+  skills: [plagueBolt, pestilence, blightedSkin],
+  resist: { fire: -0.5, poison: 0.5 },
+};
+
+// --- Act 3 bosses (the final fights; 48x48 sprites drawn separately). Base stats are pre-tuning.
+
+const crimsonFeast = enemySkill('crimsonFeast', 'Crimson Feast', 6, allHeroes, {
+  kind: 'damage',
+  damageType: 'magic',
+  stat: 'magic',
+  scaling: 0.8,
+  element: 'shadow',
+  drain: 0.5,
+}, true);
+const bloodLance = enemySkill('bloodLance', 'Blood Lance', 2, { side: 'enemy', select: 'highestHp', area: 'single' }, physical(1.1));
+const bloodMoon = enemySkill(
+  'bloodMoon',
+  'Blood Moon',
+  1,
+  { side: 'ally', select: 'front', area: 'all' },
+  [
+    { kind: 'buff', stat: 'attack', amount: 5, duration: 999 },
+    { kind: 'speed', factor: 1.3, duration: 999 },
+  ],
+  true,
+  { trigger: { kind: 'belowHp', threshold: 0.5 } },
+);
+const bloodMoonBats = enemySkill('bloodMoonBats', 'Blood Moon', 1, self, { kind: 'spawn', enemy: 'bat', count: 4, cap: 8 }, false, {
+  trigger: { kind: 'belowHp', threshold: 0.5 },
+});
+const scythe = enemySkill('scythe', 'Scythe', 3, { side: 'enemy', select: 'front', area: 'row' }, physical(1.1));
+const markOfDeath = enemySkill('markOfDeath', 'Mark of Death', 10, { side: 'enemy', select: 'highestHp', area: 'single' }, {
+  kind: 'dot',
+  stat: 'magic',
+  scaling: 0.8,
+  duration: 6,
+  element: 'shadow',
+}, true);
+// A hero falling counts as "enemy dies" from the Reaper's side.
+const soulHarvest = enemySkill(
+  'soulHarvest',
+  'Soul Harvest',
+  0,
+  self,
+  [
+    { kind: 'heal', scaling: 3 },
+    { kind: 'buff', stat: 'attack', amount: 5, duration: 999, stack: true },
+  ],
+  true,
+  { trigger: { kind: 'enemyDies' } },
+);
+const finalHour = enemySkill('finalHour', 'Final Hour', 1, self, { kind: 'speed', factor: 1.5, duration: 999 }, false, {
+  trigger: { kind: 'belowHp', threshold: 0.25 },
+});
+const infernalCleave = enemySkill('infernalCleave', 'Infernal Cleave', 3, { side: 'enemy', select: 'front', area: 'column' }, {
+  kind: 'damage',
+  damageType: 'physical',
+  stat: 'attack',
+  scaling: 1.2,
+  element: 'fire',
+});
+const rainOfFire = enemySkill('rainOfFire', 'Rain of Fire', 9, allHeroes, { kind: 'dot', stat: 'magic', scaling: 0.4, duration: 5, element: 'fire' }, true);
+const hellgate = enemySkill('hellgate', 'Hellgate', 15, self, { kind: 'spawn', enemy: 'nightmare', count: 1, cap: 3 }, true);
+
+// Below half HP, Blood Moon empowers every enemy and calls 4 Bats.
+export const BLOOD_COUNTESS: CombatantDef = {
+  id: 'bloodCountess',
+  name: 'Blood Countess',
+  stats: { hp: 900, attack: 18, magic: 18, defense: 12, resistance: 16 },
+  skills: [crimsonFeast, bloodLance, mistForm, bloodMoon, bloodMoonBats],
+  resist: { holy: -0.5, fire: -0.5, shadow: 0.5 },
+  fury: BOSS_FURY,
+};
+
+// Grows with every hero it reaps; hastes at 25% HP.
+export const REAPER: CombatantDef = {
+  id: 'reaper',
+  name: 'The Reaper',
+  stats: { hp: 1000, attack: 22, magic: 18, defense: 14, resistance: 14 },
+  skills: [scythe, markOfDeath, soulHarvest, finalHour],
+  resist: { holy: -0.5, shadow: 0.5, poison: 0.5, ice: 0.5 },
+  fury: BOSS_FURY,
+};
+
+// Opens Hellgates for Nightmares; the first time it dies, its pact brings it back at 40% HP.
+export const DEMON_LORD: CombatantDef = {
+  id: 'demonLord',
+  name: 'Demon Lord',
+  stats: { hp: 900, attack: 24, magic: 18, defense: 16, resistance: 12 },
+  skills: [infernalCleave, rainOfFire, hellgate],
+  resist: { holy: -0.5, ice: -0.5, fire: 0.5 },
+  reassemble: 0.4,
+  fury: BOSS_FURY,
+};
+
 // Every enemy type, for pickers.
 export const ENEMIES: CombatantDef[] = [
   SLIME,
@@ -672,6 +992,21 @@ export const ENEMIES: CombatantDef[] = [
   BANDIT_KING,
   ICE_QUEEN,
   ELDER_WYRM,
+  VAMPIRE,
+  DEATH_KNIGHT,
+  SHADE,
+  BONE_GOLEM,
+  BANSHEE,
+  GARGOYLE,
+  ABOMINATION,
+  NIGHTMARE,
+  DARK_PRIEST,
+  LICH,
+  BONE_DRAGON,
+  PLAGUE_LORD,
+  BLOOD_COUNTESS,
+  REAPER,
+  DEMON_LORD,
 ];
 export const ENEMIES_BY_ID: Record<string, CombatantDef> = Object.fromEntries(ENEMIES.map((e) => [e.id, e]));
 
