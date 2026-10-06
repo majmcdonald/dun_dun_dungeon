@@ -84,19 +84,19 @@ export const ACTS: ActEncounters[] = [
     battles: [
       [
         { id: 'oldGrudges', name: 'OLD GRUDGES', enemies: ['gnoll', 'minotaur', 'gnoll', null, null, null, 'wisp', 'medusa', 'wisp'] },
-        { id: 'theNest', name: 'THE NEST', enemies: ['bat', 'bat', 'bat', null, 'vampire', null, 'bat', 'bat', 'bat'] },
+        { id: 'theNest', name: 'THE NEST', enemies: ['bat', 'bat', 'bat', 'vampire', null, 'vampire', 'bat', 'bat', 'bat'] },
         { id: 'hauntedKeep', name: 'HAUNTED KEEP', enemies: ['deathKnight', null, 'deathKnight', null, null, null, 'shade', null, 'shade'] },
         { id: 'bloodCourt', name: 'BLOOD COURT', enemies: [null, 'deathKnight', null, 'vampire', null, 'vampire', null, 'shade', null] },
       ],
       [
-        { id: 'nightWatch', name: 'NIGHT WATCH', enemies: ['deathKnight', null, 'deathKnight', null, 'vampire', null, 'shade', 'shade', 'shade'] },
+        { id: 'nightWatch', name: 'NIGHT WATCH', enemies: ['deathKnight', null, 'deathKnight', null, 'shade', null, 'shade', null, 'shade'] },
         { id: 'bonePit', name: 'BONE PIT', enemies: ['boneGolem', null, 'boneGolem', null, null, null, 'shade', null, 'shade'] },
         { id: 'cathedralRuins', name: 'CATHEDRAL RUINS', enemies: [null, null, null, 'gargoyle', 'gargoyle', 'gargoyle', null, 'banshee', null] },
         { id: 'wailingCrypt', name: 'WAILING CRYPT', enemies: [null, 'boneGolem', null, 'gargoyle', null, 'gargoyle', 'banshee', null, 'banshee'] },
       ],
       [
         { id: 'legionOfTheDead', name: 'LEGION OF THE DEAD', enemies: ['boneGolem', 'deathKnight', 'boneGolem', null, null, null, 'banshee', null, 'banshee'] },
-        { id: 'theFeast', name: 'THE FEAST', enemies: ['abomination', null, 'abomination', null, null, null, 'vampire', null, 'vampire'] },
+        { id: 'theFeast', name: 'THE FEAST', enemies: ['abomination', null, 'abomination', null, null, null, null, 'vampire', null] },
         { id: 'darkMass', name: 'DARK MASS', enemies: [null, 'abomination', null, null, 'nightmare', null, 'darkPriest', null, 'darkPriest'] },
         { id: 'nightmareStampede', name: 'NIGHTMARE STAMPEDE', enemies: [null, null, null, 'nightmare', 'nightmare', 'nightmare', null, 'darkPriest', null] },
       ],

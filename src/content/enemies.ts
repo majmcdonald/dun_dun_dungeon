@@ -684,7 +684,7 @@ const fade = enemySkill('fade', 'Fade', 6, self, { kind: 'flight', duration: 2, 
 export const VAMPIRE: CombatantDef = {
   id: 'vampire',
   name: 'Vampire',
-  stats: { hp: 80, attack: 14, magic: 0, defense: 10, resistance: 12 },
+  stats: { hp: 272, attack: 53, magic: 0, defense: 10, resistance: 12 },
   skills: [bloodDrain, mistForm, batSwarm],
   resist: { holy: -0.5, fire: -0.5, shadow: 0.5 },
 };
@@ -693,7 +693,7 @@ export const VAMPIRE: CombatantDef = {
 export const DEATH_KNIGHT: CombatantDef = {
   id: 'deathKnight',
   name: 'Death Knight',
-  stats: { hp: 120, attack: 16, magic: 0, defense: 20, resistance: 10 },
+  stats: { hp: 408, attack: 61, magic: 0, defense: 20, resistance: 10 },
   skills: [soulReap, unholyAura, deathGrip],
   resist: { holy: -0.5, shadow: 0.5, poison: 0.5 },
 };
@@ -702,7 +702,7 @@ export const DEATH_KNIGHT: CombatantDef = {
 export const SHADE: CombatantDef = {
   id: 'shade',
   name: 'Shade',
-  stats: { hp: 40, attack: 0, magic: 16, defense: 4, resistance: 16 },
+  stats: { hp: 136, attack: 0, magic: 61, defense: 4, resistance: 16 },
   skills: [shadowBolt, drainLight, fade],
   resist: { holy: -0.5, shadow: 0.5 },
 };
@@ -730,7 +730,7 @@ const stoneForm = enemySkill('stoneForm', 'Stone Form', 12, self, [
 export const BONE_GOLEM: CombatantDef = {
   id: 'boneGolem',
   name: 'Bone Golem',
-  stats: { hp: 140, attack: 16, magic: 0, defense: 16, resistance: 8 },
+  stats: { hp: 728, attack: 45, magic: 0, defense: 16, resistance: 8 },
   skills: [boneCrush, boneSpikes],
   resist: { holy: -0.5, poison: 0.5, shadow: 0.5 },
   reassemble: 0.4,
@@ -740,7 +740,7 @@ export const BONE_GOLEM: CombatantDef = {
 export const BANSHEE: CombatantDef = {
   id: 'banshee',
   name: 'Banshee',
-  stats: { hp: 50, attack: 0, magic: 16, defense: 4, resistance: 16 },
+  stats: { hp: 260, attack: 0, magic: 45, defense: 4, resistance: 16 },
   skills: [bansheeWail, keening],
   resist: { holy: -0.5, shadow: 0.5 },
 };
@@ -749,7 +749,7 @@ export const BANSHEE: CombatantDef = {
 export const GARGOYLE: CombatantDef = {
   id: 'gargoyle',
   name: 'Gargoyle',
-  stats: { hp: 90, attack: 15, magic: 0, defense: 18, resistance: 8 },
+  stats: { hp: 468, attack: 42, magic: 0, defense: 18, resistance: 8 },
   skills: [diveClaw, stoneForm],
   resist: { lightning: -0.5, poison: 0.5 },
 };
@@ -780,7 +780,7 @@ const darkWard = enemySkill('darkWard', 'Dark Ward', 2, { side: 'ally', select: 
 export const ABOMINATION: CombatantDef = {
   id: 'abomination',
   name: 'Abomination',
-  stats: { hp: 200, attack: 18, magic: 0, defense: 12, resistance: 6 },
+  stats: { hp: 1320, attack: 52, magic: 0, defense: 12, resistance: 6 },
   skills: [hook, rotCloud, abominationBurst],
   resist: { fire: -0.5, poison: 0.5 },
 };
@@ -788,7 +788,7 @@ export const ABOMINATION: CombatantDef = {
 export const NIGHTMARE: CombatantDef = {
   id: 'nightmare',
   name: 'Nightmare',
-  stats: { hp: 110, attack: 16, magic: 14, defense: 12, resistance: 12 },
+  stats: { hp: 726, attack: 46, magic: 40, defense: 12, resistance: 12 },
   skills: [nightmareTrample, terror, hellfire],
   resist: { holy: -0.5, ice: -0.5, fire: 0.5 },
 };
@@ -797,7 +797,7 @@ export const NIGHTMARE: CombatantDef = {
 export const DARK_PRIEST: CombatantDef = {
   id: 'darkPriest',
   name: 'Dark Priest',
-  stats: { hp: 60, attack: 4, magic: 16, defense: 6, resistance: 16 },
+  stats: { hp: 396, attack: 11, magic: 46, defense: 6, resistance: 16 },
   skills: [raiseDead, unholyMending, darkWard],
   resist: { holy: -0.5, shadow: 0.5 },
 };
@@ -842,7 +842,7 @@ const blightedSkin = enemySkill('blightedSkin', 'Blighted Skin', 2, { side: 'ene
 export const LICH: CombatantDef = {
   id: 'lich',
   name: 'Lich',
-  stats: { hp: 280, attack: 4, magic: 20, defense: 10, resistance: 16 },
+  stats: { hp: 1204, attack: 66, magic: 330, defense: 10, resistance: 16 },
   skills: [deathCoil, bonePrison, chillOfTheGrave],
   resist: { holy: -0.5, fire: -0.5, shadow: 0.5, ice: 0.5 },
   reassemble: 0.5,
@@ -851,7 +851,7 @@ export const LICH: CombatantDef = {
 export const BONE_DRAGON: CombatantDef = {
   id: 'boneDragon',
   name: 'Bone Dragon',
-  stats: { hp: 320, attack: 20, magic: 18, defense: 14, resistance: 10 },
+  stats: { hp: 2240, attack: 70, magic: 63, defense: 14, resistance: 10 },
   skills: [boneBreath, tailSweep, takeFlight],
   resist: { holy: -0.5, shadow: 0.5, poison: 0.5 },
 };
@@ -860,7 +860,7 @@ export const BONE_DRAGON: CombatantDef = {
 export const PLAGUE_LORD: CombatantDef = {
   id: 'plagueLord',
   name: 'Plague Lord',
-  stats: { hp: 300, attack: 6, magic: 18, defense: 10, resistance: 12 },
+  stats: { hp: 2790, attack: 21, magic: 61, defense: 10, resistance: 12 },
   skills: [plagueBolt, pestilence, blightedSkin],
   resist: { fire: -0.5, poison: 0.5 },
 };
@@ -929,7 +929,7 @@ const hellgate = enemySkill('hellgate', 'Hellgate', 15, self, { kind: 'spawn', e
 export const BLOOD_COUNTESS: CombatantDef = {
   id: 'bloodCountess',
   name: 'Blood Countess',
-  stats: { hp: 900, attack: 18, magic: 18, defense: 12, resistance: 16 },
+  stats: { hp: 4959, attack: 36, magic: 36, defense: 12, resistance: 16 },
   skills: [crimsonFeast, bloodLance, mistForm, bloodMoon, bloodMoonBats],
   resist: { holy: -0.5, fire: -0.5, shadow: 0.5 },
   fury: BOSS_FURY,
@@ -939,7 +939,7 @@ export const BLOOD_COUNTESS: CombatantDef = {
 export const REAPER: CombatantDef = {
   id: 'reaper',
   name: 'The Reaper',
-  stats: { hp: 1000, attack: 22, magic: 18, defense: 14, resistance: 14 },
+  stats: { hp: 6695, attack: 37, magic: 31, defense: 14, resistance: 14 },
   skills: [scythe, markOfDeath, soulHarvest, finalHour],
   resist: { holy: -0.5, shadow: 0.5, poison: 0.5, ice: 0.5 },
   fury: BOSS_FURY,
@@ -949,7 +949,7 @@ export const REAPER: CombatantDef = {
 export const DEMON_LORD: CombatantDef = {
   id: 'demonLord',
   name: 'Demon Lord',
-  stats: { hp: 900, attack: 24, magic: 18, defense: 16, resistance: 12 },
+  stats: { hp: 3523, attack: 29, magic: 22, defense: 16, resistance: 12 },
   skills: [infernalCleave, rainOfFire, hellgate],
   resist: { holy: -0.5, ice: -0.5, fire: 0.5 },
   reassemble: 0.4,
