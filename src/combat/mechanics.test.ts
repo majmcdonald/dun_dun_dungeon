@@ -612,6 +612,28 @@ describe('act 3 group 2 mechanics', () => {
   });
 });
 
+describe('party focus target', () => {
+  it('sends every hero front attack to the clicked enemy, and falls back to the front when it dies', () => {
+    const party = [member(unit('a', { attack: 10 }, [skill('poke', [hit(1)])])), member(unit('b', { attack: 10 }, [skill('poke', [hit(1)])]))];
+    const battle = new Battle(party, [unit('front', { hp: 100000 }), unit('mid', { hp: 30, defense: 0 }), unit('back', { hp: 100000 })], NO_JITTER);
+    expect(battle.partyTarget()?.uid).toBe('enemy-0');
+    battle.setFocus('enemy-1');
+    const events = runFor(battle, 0.85);
+    expect(damageTo(events, 'enemy-1').length).toBe(2);
+    expect(damageTo(events, 'enemy-0').length).toBe(0);
+    runFor(battle, 3);
+    expect(battle.get('enemy-1').hp).toBe(0);
+    expect(battle.focus).toBeNull();
+    expect(battle.partyTarget()?.uid).toBe('enemy-0');
+  });
+
+  it('ignores dead enemies and party members', () => {
+    const battle = new Battle([member(unit('a'))], [unit('e', { hp: 100 })], NO_JITTER);
+    battle.setFocus('party-0');
+    expect(battle.focus).toBeNull();
+  });
+});
+
 describe('dying bosses', () => {
   it('can spawn minions as they fall, and the fight goes on', () => {
     const minion = unit('minion', { hp: 50 }, []);

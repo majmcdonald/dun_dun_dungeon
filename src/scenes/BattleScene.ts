@@ -26,6 +26,7 @@ import { currentEncounter } from '../run/encounters';
 import { takeNextFight } from '../run/events';
 import { itemRef } from '../run/run';
 import { PreBattleScene } from './PreBattleScene';
+import { inside } from '../ui/widgets';
 
 const SIDEBAR_W = 152;
 const FIELD_CENTER_X = SIDEBAR_W + (NATIVE_WIDTH - SIDEBAR_W) / 2;
@@ -60,12 +61,17 @@ const STATUS_VFX = new Set(['slow', 'haste', 'transform', 'shapeshift']);
 const FAMILIAR_GHOST_ALPHA = 0.35;
 const FRENZY_BLINK = 0.15;
 const FLIGHT_LIFT = 5;
+const OUTLINE_OFFSETS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+const HP_TEXT_Y = 45;
 const VENOM_PIPS_MAX = 8;
 
 interface SpriteSet {
   idle: HTMLCanvasElement;
   attack: HTMLCanvasElement;
   flash: HTMLCanvasElement;
+  // Gold silhouettes, drawn 1px around the sprite to mark the party's target.
+  outlineIdle: HTMLCanvasElement;
+  outlineAttack: HTMLCanvasElement;
   topRow: number;
   width: number;
   height: number;
@@ -141,6 +147,8 @@ export class BattleScene implements Scene {
         idle: spriteCanvas(def, 'idle'),
         attack: spriteCanvas(def, 'attack'),
         flash: spriteCanvas(def, 'idle', 'white'),
+        outlineIdle: spriteCanvas(def, 'idle', 'gold'),
+        outlineAttack: spriteCanvas(def, 'attack', 'gold'),
         topRow: firstOpaqueRow(def),
         width: def.width,
         height: def.height,
@@ -173,6 +181,16 @@ export class BattleScene implements Scene {
       if (this.battle.result === 'victory') return winNode(this.game, this.battle.gold);
       loseRun(this.game, [...new Set(this.battle.combatants.filter((c) => c.side === 'enemy').map((c) => c.def.name.toUpperCase()))]);
       return;
+    }
+
+    // Clicking an enemy points the whole party's front attacks at it.
+    for (const click of clicks) {
+      const enemy = this.battle.alive('enemy').find((c) => {
+        const set = this.spriteSet(c);
+        const o = this.spriteOrigin(c);
+        return inside(click, { x: o.x, y: o.y, w: set.width, h: set.height });
+      });
+      if (enemy) this.battle.setFocus(enemy.uid);
     }
 
     for (const f of this.floats) {
@@ -330,7 +348,7 @@ export class BattleScene implements Scene {
     if (!set) {
       // Art not drawn yet: a placeholder box, so the fight still runs.
       const box = spriteCanvas(undefined, 'idle');
-      set = { idle: box, attack: box, flash: box, topRow: 6, width: box.width, height: box.height };
+      set = { idle: box, attack: box, flash: box, outlineIdle: box, outlineAttack: box, topRow: 6, width: box.width, height: box.height };
       this.sprites.set(id, set);
     }
     return set;
@@ -352,6 +370,10 @@ export class BattleScene implements Scene {
     // A flying Harpy hovers above its cell.
     const lift = c.flight ? FLIGHT_LIFT + Math.round(Math.sin(this.battle.elapsed * 8)) : 0;
     ctx.globalAlpha = alpha;
+    if (c.hp > 0 && c === this.battle.partyTarget()) {
+      const outline = attacking ? set.outlineAttack : set.outlineIdle;
+      for (const [dx, dy] of OUTLINE_OFFSETS) ctx.drawImage(outline, origin.x + lunge + dx, origin.y - lift + dy);
+    }
     ctx.drawImage(img, origin.x + lunge, origin.y - lift);
     ctx.globalAlpha = 1;
     if (c.hp <= 0) return;
@@ -363,6 +385,8 @@ export class BattleScene implements Scene {
 
     drawBar(ctx, x, y + 34, 32, 3, c.hp / c.maxHp, PALETTE.green);
     if (isSummon(c)) return;
+    const hp = `${c.hp}`;
+    drawText(ctx, hp, x + 16 - textWidth(hp) / 2, y + HP_TEXT_Y, PALETTE.lightGray);
     const slot = c.slots[0];
     if (slot) drawBar(ctx, x, y + 38, 32, 2, slot.timer / slot.def.cooldown, PALETTE.gold);
     // Bandit Venom stacks: one green pip each.

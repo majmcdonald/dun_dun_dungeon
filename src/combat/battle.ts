@@ -137,6 +137,8 @@ export interface BattleOptions {
 export class Battle {
   readonly combatants: Combatant[];
   elapsed = 0;
+  // The enemy the player clicked: every party "front" attack goes to it until it dies. Null = the front enemy.
+  focus: string | null = null;
   result: BattleResult | null = null;
   gold = 0;
   private summonCount = 0;
@@ -324,10 +326,26 @@ export class Battle {
     return expandArea(primary, t.area, pool);
   }
 
+  // Focus an enemy for the whole party; anything else (or a dead enemy) is ignored.
+  setFocus(uid: string): void {
+    const c = this.combatants.find((x) => x.uid === uid);
+    if (c && c.side === 'enemy' && c.hp > 0) this.focus = uid;
+  }
+
+  // Who the party's front attacks are aimed at right now.
+  partyTarget(): Combatant | null {
+    const focused = this.focus ? this.combatants.find((c) => c.uid === this.focus && c.hp > 0) : undefined;
+    return focused ?? frontMost(this.alive('enemy'));
+  }
+
   private select(actor: Combatant, selector: Selector, pool: Combatant[]): Combatant | null {
     const hpPct = (c: Combatant) => c.hp / c.maxHp;
     switch (selector) {
       case 'front':
+        if (actor.side === 'party' && this.focus) {
+          const focused = pool.find((c) => c.uid === this.focus);
+          if (focused) return focused;
+        }
         return frontMost(pool);
       case 'back':
         return pool.reduce((a, b) => (frontKey(b) > frontKey(a) ? b : a));
@@ -767,6 +785,7 @@ export class Battle {
 
   private onDeath(target: Combatant, events: BattleEvent[], killer?: Combatant): void {
     events.push({ type: 'death', target: target.uid });
+    if (this.focus === target.uid) this.focus = null;
     this.breakEquipment(target, events);
     for (const c of this.alive()) {
       if (c.def.mechanic === 'souls') c.meter = Math.min(MECHANIC.soulsMax, c.meter + 1);

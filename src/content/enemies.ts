@@ -116,7 +116,7 @@ const boneShield = enemySkill(
 export const SLIME: CombatantDef = {
   id: 'slime',
   name: 'Slime',
-  stats: { hp: 235, attack: 11, magic: 0, defense: 5, resistance: 5 },
+  stats: { hp: 235, attack: 7, magic: 0, defense: 5, resistance: 5 },
   skills: [bounce],
   resist: { fire: -0.5, poison: 0.5 },
 };
@@ -124,7 +124,7 @@ export const SLIME: CombatantDef = {
 export const BAT: CombatantDef = {
   id: 'bat',
   name: 'Bat',
-  stats: { hp: 141, attack: 8, magic: 0, defense: 3, resistance: 3 },
+  stats: { hp: 141, attack: 5, magic: 0, defense: 3, resistance: 3 },
   skills: [bite],
   resist: { lightning: -0.5 },
 };
@@ -132,7 +132,7 @@ export const BAT: CombatantDef = {
 export const ARCHER: CombatantDef = {
   id: 'archer',
   name: 'Archer',
-  stats: { hp: 188, attack: 6, magic: 0, defense: 4, resistance: 6 },
+  stats: { hp: 188, attack: 4, magic: 0, defense: 4, resistance: 6 },
   skills: [arrow],
   resist: { holy: -0.5, poison: 0.9 },
 };
@@ -140,14 +140,14 @@ export const ARCHER: CombatantDef = {
 export const ORC: CombatantDef = {
   id: 'orc',
   name: 'Orc',
-  stats: { hp: 390, attack: 25, magic: 0, defense: 10, resistance: 4 },
+  stats: { hp: 332, attack: 16, magic: 0, defense: 10, resistance: 4 },
   skills: [orcCleave, charge],
 };
 
 export const SHAMAN: CombatantDef = {
   id: 'shaman',
   name: 'Shaman',
-  stats: { hp: 250, attack: 4, magic: 8, defense: 4, resistance: 10 },
+  stats: { hp: 250, attack: 3, magic: 5, defense: 4, resistance: 10 },
   skills: [mend, hex],
   resist: { shadow: 0.5, poison: 0.3 },
 };
@@ -155,7 +155,7 @@ export const SHAMAN: CombatantDef = {
 export const RAT: CombatantDef = {
   id: 'rat',
   name: 'Rat',
-  stats: { hp: 143, attack: 6, magic: 0, defense: 2, resistance: 2 },
+  stats: { hp: 143, attack: 4, magic: 0, defense: 2, resistance: 2 },
   skills: [nibble],
   resist: { fire: -0.5 },
 };
@@ -163,7 +163,7 @@ export const RAT: CombatantDef = {
 export const MUSHROOM: CombatantDef = {
   id: 'mushroom',
   name: 'Mushroom',
-  stats: { hp: 212, attack: 4, magic: 5, defense: 3, resistance: 8 },
+  stats: { hp: 212, attack: 3, magic: 3, defense: 3, resistance: 8 },
   skills: [sporePuff],
   resist: { fire: -0.5, poison: 0.5 },
 };
@@ -171,7 +171,7 @@ export const MUSHROOM: CombatantDef = {
 export const GOBLIN: CombatantDef = {
   id: 'goblin',
   name: 'Goblin',
-  stats: { hp: 240, attack: 10, magic: 0, defense: 6, resistance: 4 },
+  stats: { hp: 240, attack: 7, magic: 0, defense: 6, resistance: 4 },
   skills: [stab, dirtyTrick],
   resist: { lightning: -0.5 },
 };
@@ -180,7 +180,7 @@ export const GOBLIN: CombatantDef = {
 export const GHOST: CombatantDef = {
   id: 'ghost',
   name: 'Ghost',
-  stats: { hp: 338, attack: 0, magic: 18, defense: 20, resistance: 4 },
+  stats: { hp: 338, attack: 0, magic: 12, defense: 20, resistance: 4 },
   skills: [wail],
   resist: { holy: -0.5, shadow: 0.5, poison: 0.5 },
 };
@@ -188,7 +188,7 @@ export const GHOST: CombatantDef = {
 export const SPIDER: CombatantDef = {
   id: 'spider',
   name: 'Spider',
-  stats: { hp: 263, attack: 16, magic: 0, defense: 5, resistance: 5 },
+  stats: { hp: 263, attack: 11, magic: 0, defense: 5, resistance: 5 },
   skills: [spiderBite, web],
   resist: { fire: -0.5, poison: 0.5 },
 };
@@ -197,7 +197,7 @@ export const SPIDER: CombatantDef = {
 export const SKELETON_KNIGHT: CombatantDef = {
   id: 'skeletonKnight',
   name: 'Skeleton Knight',
-  stats: { hp: 480, attack: 22, magic: 0, defense: 18, resistance: 6 },
+  stats: { hp: 480, attack: 15, magic: 0, defense: 18, resistance: 6 },
   skills: [slash, shieldWall],
   resist: { holy: -0.5, poison: 0.5 },
 };
@@ -205,7 +205,7 @@ export const SKELETON_KNIGHT: CombatantDef = {
 export const GHOUL: CombatantDef = {
   id: 'ghoul',
   name: 'Ghoul',
-  stats: { hp: 330, attack: 18, magic: 0, defense: 8, resistance: 6 },
+  stats: { hp: 330, attack: 12, magic: 0, defense: 8, resistance: 6 },
   skills: [rend],
   resist: { holy: -0.5, fire: -0.5, shadow: 0.5, poison: 0.5 },
 };
@@ -213,7 +213,7 @@ export const GHOUL: CombatantDef = {
 export const CULTIST: CombatantDef = {
   id: 'cultist',
   name: 'Cultist',
-  stats: { hp: 200, attack: 2, magic: 11, defense: 5, resistance: 12 },
+  stats: { hp: 200, attack: 1, magic: 7, defense: 5, resistance: 12 },
   skills: [darkBolt, bloodRite],
   resist: { holy: -0.5, shadow: 0.5 },
 };
@@ -223,7 +223,7 @@ export const CULTIST: CombatantDef = {
 export const OGRE: CombatantDef = {
   id: 'ogre',
   name: 'Ogre',
-  stats: { hp: 1359, attack: 27, magic: 0, defense: 14, resistance: 6 },
+  stats: { hp: 1019, attack: 15, magic: 0, defense: 14, resistance: 6 },
   skills: [smash, stomp],
   resist: { lightning: -0.5 },
 };
@@ -231,7 +231,7 @@ export const OGRE: CombatantDef = {
 export const SPIDER_QUEEN: CombatantDef = {
   id: 'spiderQueen',
   name: 'Spider Queen',
-  stats: { hp: 1254, attack: 19, magic: 13, defense: 10, resistance: 10 },
+  stats: { hp: 941, attack: 10, magic: 7, defense: 10, resistance: 10 },
   skills: [fangs, venomSpray, webVolley],
   resist: { fire: -0.5, poison: 0.5 },
 };
@@ -239,7 +239,7 @@ export const SPIDER_QUEEN: CombatantDef = {
 export const BONE_MAGE: CombatantDef = {
   id: 'boneMage',
   name: 'Bone Mage',
-  stats: { hp: 1155, attack: 12, magic: 54, defense: 8, resistance: 18 },
+  stats: { hp: 866, attack: 7, magic: 30, defense: 8, resistance: 18 },
   skills: [soulDrain, boneShield],
   resist: { holy: -0.5, shadow: 0.5, poison: 0.5 },
 };
@@ -286,7 +286,7 @@ const enrage = enemySkill(
 export const GOBLIN_KING: CombatantDef = {
   id: 'goblinKing',
   name: 'Goblin King',
-  stats: { hp: 2045, attack: 15, magic: 0, defense: 14, resistance: 10 },
+  stats: { hp: 818, attack: 9, magic: 0, defense: 14, resistance: 10 },
   skills: [scepterBash, callTheHorde, warCry],
   fury: BOSS_FURY,
   resist: { lightning: -0.5 },
@@ -295,7 +295,7 @@ export const GOBLIN_KING: CombatantDef = {
 export const SLIME_KING: CombatantDef = {
   id: 'slimeKing',
   name: 'Slime King',
-  stats: { hp: 3082, attack: 14, magic: 0, defense: 8, resistance: 8 },
+  stats: { hp: 1233, attack: 8, magic: 0, defense: 8, resistance: 8 },
   skills: [bodySlam, acidSpit, split('split66', 0.66), split('split33', 0.33), burst],
   fury: BOSS_FURY,
   resist: { fire: -0.5, poison: 0.5 },
@@ -305,7 +305,7 @@ export const SLIME_KING: CombatantDef = {
 export const TROLL: CombatantDef = {
   id: 'troll',
   name: 'Troll',
-  stats: { hp: 4045, attack: 20, magic: 0, defense: 16, resistance: 8 },
+  stats: { hp: 1618, attack: 12, magic: 0, defense: 16, resistance: 8 },
   skills: [club, enrage],
   fury: BOSS_FURY,
   resist: { fire: -0.5 },
@@ -338,7 +338,7 @@ const caltrops = enemySkill('caltrops', 'Caltrops', 6, front, { kind: 'speed', f
 export const FROST_WOLF: CombatantDef = {
   id: 'frostWolf',
   name: 'Frost Wolf',
-  stats: { hp: 163, attack: 10, magic: 0, defense: 8, resistance: 8 },
+  stats: { hp: 139, attack: 6, magic: 0, defense: 8, resistance: 8 },
   skills: [frostBite, howl, frostbiteHide],
   resist: { fire: -0.5, ice: 0.5 },
 };
@@ -347,7 +347,7 @@ export const FROST_WOLF: CombatantDef = {
 export const HARPY: CombatantDef = {
   id: 'harpy',
   name: 'Harpy',
-  stats: { hp: 156, attack: 14, magic: 0, defense: 6, resistance: 6 },
+  stats: { hp: 133, attack: 9, magic: 0, defense: 6, resistance: 6 },
   skills: [dive, screech, takeFlight],
   resist: { lightning: -0.5, poison: 0.5 },
 };
@@ -356,7 +356,7 @@ export const HARPY: CombatantDef = {
 export const BANDIT: CombatantDef = {
   id: 'bandit',
   name: 'Bandit',
-  stats: { hp: 176, attack: 13, magic: 0, defense: 8, resistance: 6 },
+  stats: { hp: 150, attack: 8, magic: 0, defense: 8, resistance: 6 },
   skills: [shiv, envenom, caltrops],
 };
 
@@ -405,7 +405,7 @@ const flameWall = enemySkill('flameWall', 'Flame Wall', 10, allHeroes, {
 export const STONE_GOLEM: CombatantDef = {
   id: 'stoneGolem',
   name: 'Stone Golem',
-  stats: { hp: 624, attack: 20, magic: 0, defense: 22, resistance: 6 },
+  stats: { hp: 530, attack: 12, magic: 0, defense: 22, resistance: 6 },
   skills: [slam, stoneSkin, shatter],
   resist: { lightning: -0.5, poison: 0.5 },
 };
@@ -414,7 +414,7 @@ export const STONE_GOLEM: CombatantDef = {
 export const GNOLL: CombatantDef = {
   id: 'gnoll',
   name: 'Gnoll',
-  stats: { hp: 273, attack: 10, magic: 0, defense: 8, resistance: 5 },
+  stats: { hp: 232, attack: 6, magic: 0, defense: 8, resistance: 5 },
   skills: [gnollRend, bloodlust],
   resist: { fire: -0.5 },
 };
@@ -423,7 +423,7 @@ export const GNOLL: CombatantDef = {
 export const WISP: CombatantDef = {
   id: 'wisp',
   name: 'Wisp',
-  stats: { hp: 156, attack: 0, magic: 14, defense: 4, resistance: 14 },
+  stats: { hp: 133, attack: 0, magic: 9, defense: 4, resistance: 14 },
   skills: [flicker, lure, emberWard, flameWall],
   resist: { ice: -0.5, fire: 0.5 },
 };
@@ -462,7 +462,7 @@ const wyvernBite = enemySkill('wyvernBite', 'Bite', 3, front, [physical(0.9), { 
 export const MINOTAUR: CombatantDef = {
   id: 'minotaur',
   name: 'Minotaur',
-  stats: { hp: 1836, attack: 26, magic: 0, defense: 14, resistance: 8 },
+  stats: { hp: 1561, attack: 16, magic: 0, defense: 14, resistance: 8 },
   skills: [gore, trample, rampage],
   resist: { ice: -0.5 },
 };
@@ -470,7 +470,7 @@ export const MINOTAUR: CombatantDef = {
 export const MEDUSA: CombatantDef = {
   id: 'medusa',
   name: 'Medusa',
-  stats: { hp: 357, attack: 6, magic: 15, defense: 8, resistance: 14 },
+  stats: { hp: 303, attack: 4, magic: 9, defense: 8, resistance: 14 },
   skills: [petrifyingGaze, serpentHair, stoneGlare],
   resist: { holy: -0.5, poison: 0.5 },
 };
@@ -479,7 +479,7 @@ export const MEDUSA: CombatantDef = {
 export const WYVERN: CombatantDef = {
   id: 'wyvern',
   name: 'Wyvern',
-  stats: { hp: 536, attack: 17, magic: 0, defense: 10, resistance: 8 },
+  stats: { hp: 456, attack: 11, magic: 0, defense: 10, resistance: 8 },
   skills: [tailSting, wyvernBite, takeFlight],
   resist: { lightning: -0.5, poison: 0.5 },
 };
@@ -530,7 +530,7 @@ const growHead = (id: string, threshold: number) =>
 export const FROST_GIANT: CombatantDef = {
   id: 'frostGiant',
   name: 'Frost Giant',
-  stats: { hp: 2678, attack: 77, magic: 0, defense: 14, resistance: 8 },
+  stats: { hp: 1741, attack: 48, magic: 0, defense: 14, resistance: 8 },
   skills: [glacialSmash, blizzard, iceArmor],
   resist: { fire: -0.5, ice: 0.5 },
 };
@@ -539,7 +539,7 @@ export const FROST_GIANT: CombatantDef = {
 export const CHIMERA: CombatantDef = {
   id: 'chimera',
   name: 'Chimera',
-  stats: { hp: 2704, attack: 32, magic: 22, defense: 10, resistance: 10 },
+  stats: { hp: 1758, attack: 20, magic: 14, defense: 10, resistance: 10 },
   skills: [lionBite, goatCharge, serpentTail, fireBreath],
 };
 
@@ -547,7 +547,7 @@ export const CHIMERA: CombatantDef = {
 export const HYDRA: CombatantDef = {
   id: 'hydra',
   name: 'Hydra',
-  stats: { hp: 2576, attack: 49, magic: 0, defense: 10, resistance: 8 },
+  stats: { hp: 1674, attack: 30, magic: 0, defense: 10, resistance: 8 },
   skills: [snappingHeads, growHead('growHead75', 0.75), growHead('growHead50', 0.5), growHead('growHead25', 0.25)],
   resist: { fire: -0.5 },
   regeneration: { perSecond: 0.02, blockedBy: ['fire'], blockSeconds: 4 },
@@ -612,7 +612,7 @@ const moltenScales = enemySkill(
 export const BANDIT_KING: CombatantDef = {
   id: 'banditKing',
   name: 'Bandit King',
-  stats: { hp: 4025, attack: 15, magic: 0, defense: 12, resistance: 10 },
+  stats: { hp: 2214, attack: 9, magic: 0, defense: 12, resistance: 10 },
   skills: [twinDaggers, smokeBomb, smokeScreen, callThugs, envenom],
   fury: BOSS_FURY,
 };
@@ -621,7 +621,7 @@ export const BANDIT_KING: CombatantDef = {
 export const ICE_QUEEN: CombatantDef = {
   id: 'iceQueen',
   name: 'Ice Queen',
-  stats: { hp: 4500, attack: 5, magic: 25, defense: 10, resistance: 18 },
+  stats: { hp: 2475, attack: 3, magic: 16, defense: 10, resistance: 18 },
   skills: [frostLance, glacialTomb, mirrorShards, wintersGrip, wintersCall],
   resist: { fire: -0.5, ice: 0.5 },
   fury: BOSS_FURY,
@@ -630,7 +630,7 @@ export const ICE_QUEEN: CombatantDef = {
 export const ELDER_WYRM: CombatantDef = {
   id: 'elderWyrm',
   name: 'Elder Wyrm',
-  stats: { hp: 5344, attack: 25, magic: 23, defense: 14, resistance: 12 },
+  stats: { hp: 2939, attack: 16, magic: 14, defense: 14, resistance: 12 },
   skills: [wyrmClaw, inferno, takeFlight, moltenScales],
   resist: { ice: -0.5, fire: 0.5 },
   fury: BOSS_FURY,
@@ -684,7 +684,7 @@ const fade = enemySkill('fade', 'Fade', 6, self, { kind: 'flight', duration: 2, 
 export const VAMPIRE: CombatantDef = {
   id: 'vampire',
   name: 'Vampire',
-  stats: { hp: 272, attack: 53, magic: 0, defense: 10, resistance: 12 },
+  stats: { hp: 204, attack: 29, magic: 0, defense: 10, resistance: 12 },
   skills: [bloodDrain, mistForm, batSwarm],
   resist: { holy: -0.5, fire: -0.5, shadow: 0.5 },
 };
@@ -693,7 +693,7 @@ export const VAMPIRE: CombatantDef = {
 export const DEATH_KNIGHT: CombatantDef = {
   id: 'deathKnight',
   name: 'Death Knight',
-  stats: { hp: 408, attack: 61, magic: 0, defense: 20, resistance: 10 },
+  stats: { hp: 306, attack: 34, magic: 0, defense: 20, resistance: 10 },
   skills: [soulReap, unholyAura, deathGrip],
   resist: { holy: -0.5, shadow: 0.5, poison: 0.5 },
 };
@@ -702,7 +702,7 @@ export const DEATH_KNIGHT: CombatantDef = {
 export const SHADE: CombatantDef = {
   id: 'shade',
   name: 'Shade',
-  stats: { hp: 136, attack: 0, magic: 61, defense: 4, resistance: 16 },
+  stats: { hp: 102, attack: 0, magic: 34, defense: 4, resistance: 16 },
   skills: [shadowBolt, drainLight, fade],
   resist: { holy: -0.5, shadow: 0.5 },
 };
@@ -730,7 +730,7 @@ const stoneForm = enemySkill('stoneForm', 'Stone Form', 12, self, [
 export const BONE_GOLEM: CombatantDef = {
   id: 'boneGolem',
   name: 'Bone Golem',
-  stats: { hp: 728, attack: 45, magic: 0, defense: 16, resistance: 8 },
+  stats: { hp: 546, attack: 25, magic: 0, defense: 16, resistance: 8 },
   skills: [boneCrush, boneSpikes],
   resist: { holy: -0.5, poison: 0.5, shadow: 0.5 },
   reassemble: 0.4,
@@ -740,7 +740,7 @@ export const BONE_GOLEM: CombatantDef = {
 export const BANSHEE: CombatantDef = {
   id: 'banshee',
   name: 'Banshee',
-  stats: { hp: 260, attack: 0, magic: 45, defense: 4, resistance: 16 },
+  stats: { hp: 195, attack: 0, magic: 25, defense: 4, resistance: 16 },
   skills: [bansheeWail, keening],
   resist: { holy: -0.5, shadow: 0.5 },
 };
@@ -749,7 +749,7 @@ export const BANSHEE: CombatantDef = {
 export const GARGOYLE: CombatantDef = {
   id: 'gargoyle',
   name: 'Gargoyle',
-  stats: { hp: 468, attack: 42, magic: 0, defense: 18, resistance: 8 },
+  stats: { hp: 351, attack: 23, magic: 0, defense: 18, resistance: 8 },
   skills: [diveClaw, stoneForm],
   resist: { lightning: -0.5, poison: 0.5 },
 };
@@ -780,7 +780,7 @@ const darkWard = enemySkill('darkWard', 'Dark Ward', 2, { side: 'ally', select: 
 export const ABOMINATION: CombatantDef = {
   id: 'abomination',
   name: 'Abomination',
-  stats: { hp: 1320, attack: 52, magic: 0, defense: 12, resistance: 6 },
+  stats: { hp: 990, attack: 29, magic: 0, defense: 12, resistance: 6 },
   skills: [hook, rotCloud, abominationBurst],
   resist: { fire: -0.5, poison: 0.5 },
 };
@@ -788,7 +788,7 @@ export const ABOMINATION: CombatantDef = {
 export const NIGHTMARE: CombatantDef = {
   id: 'nightmare',
   name: 'Nightmare',
-  stats: { hp: 726, attack: 46, magic: 40, defense: 12, resistance: 12 },
+  stats: { hp: 545, attack: 25, magic: 22, defense: 12, resistance: 12 },
   skills: [nightmareTrample, terror, hellfire],
   resist: { holy: -0.5, ice: -0.5, fire: 0.5 },
 };
@@ -797,7 +797,7 @@ export const NIGHTMARE: CombatantDef = {
 export const DARK_PRIEST: CombatantDef = {
   id: 'darkPriest',
   name: 'Dark Priest',
-  stats: { hp: 396, attack: 11, magic: 46, defense: 6, resistance: 16 },
+  stats: { hp: 297, attack: 6, magic: 25, defense: 6, resistance: 16 },
   skills: [raiseDead, unholyMending, darkWard],
   resist: { holy: -0.5, shadow: 0.5 },
 };
@@ -842,7 +842,7 @@ const blightedSkin = enemySkill('blightedSkin', 'Blighted Skin', 2, { side: 'ene
 export const LICH: CombatantDef = {
   id: 'lich',
   name: 'Lich',
-  stats: { hp: 1204, attack: 66, magic: 330, defense: 10, resistance: 16 },
+  stats: { hp: 662, attack: 36, magic: 182, defense: 10, resistance: 16 },
   skills: [deathCoil, bonePrison, chillOfTheGrave],
   resist: { holy: -0.5, fire: -0.5, shadow: 0.5, ice: 0.5 },
   reassemble: 0.5,
@@ -851,7 +851,7 @@ export const LICH: CombatantDef = {
 export const BONE_DRAGON: CombatantDef = {
   id: 'boneDragon',
   name: 'Bone Dragon',
-  stats: { hp: 2240, attack: 70, magic: 63, defense: 14, resistance: 10 },
+  stats: { hp: 1232, attack: 39, magic: 35, defense: 14, resistance: 10 },
   skills: [boneBreath, tailSweep, takeFlight],
   resist: { holy: -0.5, shadow: 0.5, poison: 0.5 },
 };
@@ -860,7 +860,7 @@ export const BONE_DRAGON: CombatantDef = {
 export const PLAGUE_LORD: CombatantDef = {
   id: 'plagueLord',
   name: 'Plague Lord',
-  stats: { hp: 2790, attack: 21, magic: 61, defense: 10, resistance: 12 },
+  stats: { hp: 1535, attack: 12, magic: 34, defense: 10, resistance: 12 },
   skills: [plagueBolt, pestilence, blightedSkin],
   resist: { fire: -0.5, poison: 0.5 },
 };
@@ -929,7 +929,7 @@ const hellgate = enemySkill('hellgate', 'Hellgate', 15, self, { kind: 'spawn', e
 export const BLOOD_COUNTESS: CombatantDef = {
   id: 'bloodCountess',
   name: 'Blood Countess',
-  stats: { hp: 4959, attack: 36, magic: 36, defense: 12, resistance: 16 },
+  stats: { hp: 2232, attack: 20, magic: 20, defense: 12, resistance: 16 },
   skills: [crimsonFeast, bloodLance, mistForm, bloodMoon, bloodMoonBats],
   resist: { holy: -0.5, fire: -0.5, shadow: 0.5 },
   fury: BOSS_FURY,
@@ -939,7 +939,7 @@ export const BLOOD_COUNTESS: CombatantDef = {
 export const REAPER: CombatantDef = {
   id: 'reaper',
   name: 'The Reaper',
-  stats: { hp: 6695, attack: 37, magic: 31, defense: 14, resistance: 14 },
+  stats: { hp: 3013, attack: 20, magic: 17, defense: 14, resistance: 14 },
   skills: [scythe, markOfDeath, soulHarvest, finalHour],
   resist: { holy: -0.5, shadow: 0.5, poison: 0.5, ice: 0.5 },
   fury: BOSS_FURY,
@@ -949,7 +949,7 @@ export const REAPER: CombatantDef = {
 export const DEMON_LORD: CombatantDef = {
   id: 'demonLord',
   name: 'Demon Lord',
-  stats: { hp: 3523, attack: 29, magic: 22, defense: 16, resistance: 12 },
+  stats: { hp: 1585, attack: 16, magic: 12, defense: 16, resistance: 12 },
   skills: [infernalCleave, rainOfFire, hellgate],
   resist: { holy: -0.5, ice: -0.5, fire: 0.5 },
   reassemble: 0.4,
