@@ -1,14 +1,14 @@
 # Autobattler Game — Design & Development Plan
 
-Status: Phase 5 complete. Phase 6 in progress.
+Status: Phase 6 complete. Next: Phase 7 (audio).
 
 ## Confirmed Decisions
 
 | Area | Decision |
 |---|---|
 | Platform | Web browser, TypeScript, plain Canvas API (no framework) |
-| Combat | Fully automatic autobattler — no player input mid-battle |
-| Timers | 4 skill slots per character, independent parallel timers, fixed duration (no speed stat) |
+| Combat | Automatic autobattler; the only input mid-battle is clicking an enemy to focus the party's front attacks on it |
+| Timers | 4 skill slots per character with independent parallel timers: slot 1 ×1.25 speed, slot 2 ×1, slot 3 ×0.75, slot 4 trigger skills only |
 | Targeting | Skill-defined per skill; some enemy skills target front position; equipment can alter targeting (taunt-style) |
 | Formation | Front/back position affects targeting; freely reorderable between battles |
 | Enemy count | Varies 1–9 per encounter; regular < elite < boss in difficulty/size |
