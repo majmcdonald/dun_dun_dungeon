@@ -1,5 +1,5 @@
 import { PALETTE } from '../art/palette';
-import { spriteCanvas } from '../art/sprite';
+import { drawFitted, spriteCanvas } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
 import type { CombatantDef } from '../combat/types';
 import { ENEMIES } from '../content/enemies';
@@ -111,7 +111,7 @@ export class MonsterPickerScene implements Scene {
         drawText(ctx, 'EMPTY', rect.x + (rect.w - textWidth('EMPTY')) / 2, rect.y + 28, PALETTE.slate);
         continue;
       }
-      ctx.drawImage(this.sprite(def.id), rect.x + (rect.w - 32) / 2, rect.y + 4);
+      drawFitted(ctx, this.sprite(def.id), rect.x + (rect.w - 32) / 2, rect.y + 4);
       const name = def.name.toUpperCase();
       drawText(ctx, name, rect.x + (rect.w - textWidth(name)) / 2, rect.y + 42, PALETTE.white);
       const hp = `HP ${def.stats.hp}`;

@@ -268,4 +268,231 @@ export const EVENT_LIBRARY: EventDef[] = [
       { label: 'LEAVE', success: { text: 'THE HAMMERING FOLLOWS YOU OUT.', outcomes: [] } },
     ],
   },
+
+  // --- Act 1 events: all good for the party (the worst case is a small setback).
+  {
+    id: 'lostCaravan',
+    act: 0,
+    title: 'THE LOST CARAVAN',
+    art: 'caravan',
+    text: 'A MERCHANT CART LIES ON ITS SIDE. ITS DRIVER IS PINNED BENEATH, CALLING FOR HELP.',
+    choices: [
+      {
+        label: 'LIFT THE CART',
+        check: { stat: 'attack', mode: 'highest', difficulty: 18 },
+        success: { text: 'THE DRIVER THANKS YOU WITH WARES AND COIN.', outcomes: [{ kind: 'item' }, { kind: 'gold', amount: 30 }] },
+        failure: { text: 'YOU STRAIN SOMETHING, BUT HE CRAWLS FREE.', outcomes: [{ kind: 'wounded' }] },
+      },
+      {
+        label: 'SEARCH THE WRECK',
+        chance: 0.7,
+        success: { text: 'A FINE PIECE OF GEAR, STILL WRAPPED.', outcomes: [{ kind: 'item', rarity: 'rare' }] },
+        failure: { text: 'NOTHING BUT BROKEN CRATES.', outcomes: [] },
+      },
+      { label: 'LEAVE', success: { text: 'YOU MOVE ON.', outcomes: [] } },
+    ],
+  },
+  {
+    id: 'hedgeWitch',
+    act: 0,
+    title: 'THE HEDGE WITCH',
+    art: 'witch',
+    text: 'AN OLD WOMAN STIRS A BUBBLING POT AND OFFERS YOU A TASTE.',
+    choices: [
+      {
+        label: 'DRINK',
+        chance: 0.8,
+        success: { text: 'IT BURNS ALL THE WAY DOWN. YOU FEEL MIGHTY.', outcomes: [{ kind: 'blessed', bonus: { attack: 4, magic: 4 } }] },
+        failure: { text: 'YOUR STOMACH TURNS.', outcomes: [{ kind: 'wounded' }] },
+      },
+      { label: 'BUY A CHARM (40 GOLD)', cost: 40, success: { text: 'SHE TEACHES YOU A TRICK.', outcomes: [{ kind: 'gold', amount: -40 }, { kind: 'skill', rarity: 'rare' }] } },
+      { label: 'LEAVE', success: { text: 'SHE CACKLES AS YOU GO.', outcomes: [] } },
+    ],
+  },
+  {
+    id: 'trainingYard',
+    act: 0,
+    title: 'THE TRAINING YARD',
+    art: 'dummies',
+    text: 'AN ABANDONED PRACTICE YARD: STRAW DUMMIES, RACKS OF DULL BLADES, A SHELF OF OLD MANUALS.',
+    choices: [
+      {
+        label: 'SPAR',
+        check: { stat: 'attack', mode: 'total', difficulty: 32 },
+        success: { text: 'A NEW TECHNIQUE CLICKS.', outcomes: [{ kind: 'skill' }] },
+        failure: { text: 'YOU LEARN LITTLE.', outcomes: [] },
+      },
+      {
+        label: 'STUDY THE MANUALS',
+        check: { stat: 'magic', mode: 'highest', difficulty: 18 },
+        success: { text: 'THE MARGINS HOLD A SECRET.', outcomes: [{ kind: 'skill' }] },
+        failure: { text: 'THE PAGES CRUMBLE.', outcomes: [] },
+      },
+      { label: 'REST', success: { text: 'YOU WAKE SHARP AND READY.', outcomes: [{ kind: 'blessed', bonus: { defense: 4, resistance: 4 } }] } },
+    ],
+  },
+  {
+    id: 'fairyRing',
+    act: 0,
+    title: 'THE FAIRY RING',
+    art: 'fairyRing',
+    text: 'A CIRCLE OF GLOWING MUSHROOMS HUMS WITH A TUNE ONLY YOU CAN HEAR.',
+    choices: [
+      {
+        label: 'DANCE',
+        chance: 0.75,
+        success: { text: 'THE MUSIC FILLS YOUR MIND WITH SOMETHING NEW.', outcomes: [{ kind: 'skill', rarity: 'epic' }] },
+        failure: { text: 'YOU STUMBLE OUT, DIZZY.', outcomes: [{ kind: 'wounded' }] },
+      },
+      { label: 'PICK MUSHROOMS', success: { text: 'THEY WILL FETCH A GOOD PRICE.', outcomes: [{ kind: 'gold', amount: 30 }] } },
+      { label: 'LEAVE', success: { text: 'THE TUNE FADES BEHIND YOU.', outcomes: [] } },
+    ],
+  },
+  // --- Act 2 events: two good, two bad.
+  {
+    id: 'mountainHermit',
+    act: 1,
+    title: 'THE MOUNTAIN HERMIT',
+    art: 'hermit',
+    text: 'A SAGE SITS IN A COLD CAVE, BREWING TEA. HE OFFERS TO SHARE WHAT HE KNOWS.',
+    choices: [
+      {
+        label: 'MEDITATE WITH HIM',
+        check: { stat: 'magic', mode: 'highest', difficulty: 30 },
+        success: { text: 'HIS WISDOM TAKES ROOT.', outcomes: [{ kind: 'skill', rarity: 'epic' }] },
+        failure: { text: 'YOUR MIND WANDERS.', outcomes: [] },
+      },
+      { label: 'HELP WITH CHORES', success: { text: 'HE PAYS IN COIN AND KIND WORDS.', outcomes: [{ kind: 'gold', amount: 50 }, { kind: 'blessed', bonus: { attack: 6, magic: 6 } }] } },
+      { label: 'LEAVE', success: { text: 'HE NODS AND RETURNS TO HIS TEA.', outcomes: [] } },
+    ],
+  },
+  {
+    id: 'frozenHoard',
+    act: 1,
+    title: 'THE FROZEN HOARD',
+    art: 'hoard',
+    text: "UNDER A SHEET OF ICE LIES AN OLD DRAGON'S STASH, GLITTERING.",
+    choices: [
+      {
+        label: 'BREAK THE ICE',
+        check: { stat: 'attack', mode: 'total', difficulty: 52 },
+        success: { text: 'THE ICE SHATTERS. TREASURE!', outcomes: [{ kind: 'item', rarity: 'epic' }] },
+        failure: { text: 'SHARDS FLY BACK AT YOU.', outcomes: [{ kind: 'wounded' }] },
+      },
+      {
+        label: 'MELT IT',
+        check: { stat: 'magic', mode: 'total', difficulty: 54 },
+        success: { text: 'THE ICE RUNS AWAY IN STREAMS.', outcomes: [{ kind: 'item', rarity: 'rare' }, { kind: 'gold', amount: 60 }] },
+        failure: { text: 'THE ICE HOLDS.', outcomes: [] },
+      },
+      { label: 'LEAVE', success: { text: 'YOU LEAVE IT TO THE COLD.', outcomes: [] } },
+    ],
+  },
+  {
+    id: 'banditAmbush',
+    act: 1,
+    title: 'BANDIT AMBUSH',
+    art: 'ambush',
+    text: 'BANDITS STEP OUT FROM THE ROCKS ON EVERY SIDE. "YOUR GOLD OR YOUR LIVES."',
+    choices: [
+      { label: 'PAY THE TOLL (100 GOLD)', cost: 100, success: { text: 'THEY COUNT IT TWICE AND LET YOU PASS.', outcomes: [{ kind: 'gold', amount: -100 }] } },
+      { label: 'FIGHT', success: { text: 'THEY ATTACK!', outcomes: [{ kind: 'fight', enemies: ['bandit', 'bandit', 'bandit', 'harpy'] }] } },
+      {
+        label: 'RUN',
+        chance: 0.5,
+        success: { text: 'YOU SLIP AWAY.', outcomes: [] },
+        failure: { text: 'THEY GRAB A PACK AS YOU FLEE.', outcomes: [{ kind: 'loseItem' }] },
+      },
+    ],
+  },
+  {
+    id: 'cursedTotem',
+    act: 1,
+    title: 'THE CURSED TOTEM',
+    art: 'totem',
+    text: 'A CARVED TOTEM WHISPERS AS YOU PASS. THE WHISPERS FOLLOW YOU.',
+    choices: [
+      {
+        label: 'SMASH IT',
+        check: { stat: 'attack', mode: 'highest', difficulty: 36 },
+        success: { text: 'IT SPLITS IN TWO. THE WHISPERS STOP.', outcomes: [] },
+        failure: { text: 'SPIRITS POUR OUT OF THE CRACKS!', outcomes: [{ kind: 'fight', enemies: ['wisp', 'wisp', 'wisp'] }] } },
+      { label: 'APPEASE IT (60 GOLD)', cost: 60, success: { text: 'THE WHISPERS GO QUIET.', outcomes: [{ kind: 'gold', amount: -60 }] } },
+      { label: 'IGNORE IT', success: { text: 'THE WHISPERS CLING TO YOU.', outcomes: [{ kind: 'cursed', penalty: { attack: 6, magic: 6 } }] } },
+    ],
+  },
+  // --- Act 3 events: two good, two bad.
+  {
+    id: 'lastSanctuary',
+    act: 2,
+    title: 'THE LAST SANCTUARY',
+    art: 'sanctuary',
+    text: 'A SMALL CHAPEL STANDS UNTOUCHED BY THE DARK. CANDLES STILL BURN ON ITS ALTAR.',
+    choices: [
+      {
+        label: 'PRAY',
+        check: { stat: 'magic', mode: 'highest', difficulty: 36 },
+        success: { text: 'A GIFT FROM ON HIGH.', outcomes: [{ kind: 'skill', rarity: 'legendary' }] },
+        failure: { text: 'THE ALTAR IS SILENT.', outcomes: [] },
+      },
+      { label: 'REST', success: { text: 'YOU SLEEP SAFELY FOR THE FIRST TIME IN DAYS.', outcomes: [{ kind: 'blessed', bonus: { attack: 8, magic: 8 } }, { kind: 'gold', amount: 80 }] } },
+      { label: 'LEAVE', success: { text: 'THE CANDLES FLICKER AS YOU GO.', outcomes: [] } },
+    ],
+  },
+  {
+    id: 'fallenHerosTomb',
+    act: 2,
+    title: "THE FALLEN HERO'S TOMB",
+    art: 'tomb',
+    text: "A WARRIOR'S TOMB, HER ARMS LAID ACROSS THE LID. A PILE OF OFFERINGS GLINTS BESIDE IT.",
+    choices: [
+      {
+        label: 'PAY RESPECTS',
+        chance: 0.75,
+        success: { text: 'THE LID SLIDES OPEN. SHE WANTS YOU TO HAVE THEM.', outcomes: [{ kind: 'item', rarity: 'legendary' }] },
+        failure: { text: 'HER RESTLESS GUARDS RISE!', outcomes: [{ kind: 'fight', enemies: ['shade', 'shade', 'shade'] }] },
+      },
+      { label: 'TAKE THE OFFERINGS', success: { text: 'THE GOLD IS COLD IN YOUR HANDS.', outcomes: [{ kind: 'gold', amount: 150 }, { kind: 'cursed', penalty: { attack: 8, magic: 8 } }] } },
+      { label: 'LEAVE', success: { text: 'YOU BOW AND MOVE ON.', outcomes: [] } },
+    ],
+  },
+  {
+    id: 'bloodPact',
+    act: 2,
+    title: 'THE BLOOD PACT',
+    art: 'pact',
+    text: 'A VAMPIRE NOBLE BARS THE WAY, SMILING. "A GIFT, FOR A TASTE."',
+    choices: [
+      { label: 'ACCEPT', success: { text: 'THE GIFT IS REAL. SO IS THE BITE.', outcomes: [{ kind: 'item', rarity: 'epic' }, { kind: 'wounded' }, { kind: 'cursed', penalty: { attack: 8, magic: 8 } }] } },
+      {
+        label: 'REFUSE',
+        check: { stat: 'attack', mode: 'highest', difficulty: 44 },
+        success: { text: 'HE STEPS ASIDE, AMUSED.', outcomes: [] },
+        failure: { text: 'HE CALLS HIS KIN.', outcomes: [{ kind: 'fight', enemies: ['vampire', 'vampire'] }] },
+      },
+      { label: 'BRIBE (150 GOLD)', cost: 150, success: { text: 'GOLD SPEAKS EVEN TO THE DEAD.', outcomes: [{ kind: 'gold', amount: -150 }] } },
+    ],
+  },
+  {
+    id: 'plaguePit',
+    act: 2,
+    title: 'THE PLAGUE PIT',
+    art: 'plague',
+    text: 'THE ONLY PATH RUNS THROUGH A PIT OF ROT. SOMETHING BLOATED STIRS IN THE MUCK.',
+    choices: [
+      { label: 'WADE THROUGH', success: { text: 'YOU EMERGE SICK, BUT WITH A DEAD MAN\'S PURSE.', outcomes: [{ kind: 'wounded' }, { kind: 'gold', amount: 80 }] } },
+      {
+        label: 'BURN IT',
+        check: { stat: 'magic', mode: 'highest', difficulty: 44 },
+        success: { text: 'THE PIT GOES UP IN FLAMES.', outcomes: [] },
+        failure: { text: 'THE FIRE WAKES WHAT LIVES THERE!', outcomes: [{ kind: 'fight', enemies: ['abomination', 'abomination'] }] },
+      },
+      {
+        label: 'GO AROUND',
+        chance: 0.5,
+        success: { text: 'A LONG WAY, BUT A SAFE ONE.', outcomes: [] },
+        failure: { text: 'YOU LOSE A PACK IN THE MUD.', outcomes: [{ kind: 'loseItem' }] },
+      },
+    ],
+  },
 ];

@@ -7,6 +7,7 @@ import { CLASSES, type ClassDef } from '../content/classes';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
 import { describeEffect, describeTarget } from '../game/describe';
+import { isUnlocked, loadProfile, UNLOCKS, type Profile } from '../run/profile';
 import { saveRun, startRun } from '../run/run';
 import { drawBackground } from '../ui/background';
 import { drawText, LINE_HEIGHT, textWidth } from '../ui/font';
@@ -40,20 +41,29 @@ interface Chip {
   sprite: HTMLCanvasElement;
 }
 
-// Run start: pick 3 of the unlocked classes. Locked classes show as silhouettes until run milestones unlock them.
+// Run start: pick 3 of the slot profile's unlocked classes. Locked classes show as silhouettes with their unlock condition.
 export class RosterScene implements Scene {
-  private chips: Chip[] = CLASSES.map((def, i) => ({
-    def,
-    rect: { x: GRID_X + (i % COLUMNS) * CHIP_W, y: GRID_Y + Math.floor(i / COLUMNS) * CHIP_H, w: CHIP_W - 4, h: CHIP_H - 4 },
-    sprite: def.starting ? spriteCanvas(SPRITES[def.id], 'idle') : spriteCanvas(SPRITES[def.id], 'idle', 'night'),
-  }));
+  private profile: Profile;
+  private chips: Chip[];
   private picked: ClassDef[] = [];
   private focus: ClassDef | null = null;
 
   constructor(
     private game: GameContext,
     private slot: number,
-  ) {}
+  ) {
+    this.profile = loadProfile(slot);
+    game.state.profile = this.profile;
+    this.chips = CLASSES.map((def, i) => ({
+      def,
+      rect: { x: GRID_X + (i % COLUMNS) * CHIP_W, y: GRID_Y + Math.floor(i / COLUMNS) * CHIP_H, w: CHIP_W - 4, h: CHIP_H - 4 },
+      sprite: spriteCanvas(SPRITES[def.id], 'idle', this.unlocked(def) ? undefined : 'night'),
+    }));
+  }
+
+  private unlocked(def: ClassDef): boolean {
+    return isUnlocked(this.profile, def.id);
+  }
 
   update(): void {
     for (const click of this.game.input.consumeClicks()) {
@@ -65,7 +75,7 @@ export class RosterScene implements Scene {
       const chip = this.chips.find((c) => inside(click, c.rect));
       if (!chip) continue;
       this.focus = chip.def;
-      if (!chip.def.starting) continue;
+      if (!this.unlocked(chip.def)) continue;
       const index = this.picked.indexOf(chip.def);
       if (index >= 0) this.picked.splice(index, 1);
       else if (this.picked.length < PARTY_SIZE) this.picked.push(chip.def);
@@ -89,8 +99,9 @@ export class RosterScene implements Scene {
     const border = order >= 0 ? PALETTE.gold : hover ? PALETTE.lightGray : PALETTE.darkSlate;
     drawPanel(ctx, rect, border);
     ctx.drawImage(chip.sprite, rect.x + (rect.w - 32) / 2, rect.y + 3);
-    const name = def.starting ? def.name.toUpperCase() : 'LOCKED';
-    const color = order >= 0 ? PALETTE.gold : def.starting ? PALETTE.white : PALETTE.slate;
+    const open = this.unlocked(def);
+    const name = open ? def.name.toUpperCase() : 'LOCKED';
+    const color = order >= 0 ? PALETTE.gold : open ? PALETTE.white : PALETTE.slate;
     drawText(ctx, name, rect.x + (rect.w - textWidth(name)) / 2, rect.y + 38, color);
     if (order >= 0) drawText(ctx, `${order + 1}`, rect.x + 4, rect.y + 4, PALETTE.gold);
   }
@@ -107,9 +118,10 @@ export class RosterScene implements Scene {
       line('SELECT A CLASS TO SEE ITS DETAILS.', PALETTE.gray);
       return;
     }
-    if (!def.starting) {
+    if (!this.unlocked(def)) {
       line('LOCKED', PALETTE.slate);
-      line('UNLOCKED BY REACHING RUN MILESTONES.', PALETTE.gray);
+      const unlock = UNLOCKS.find((u) => u.classId === def.id);
+      line(`TO UNLOCK: ${unlock?.condition ?? 'REACH RUN MILESTONES'}.`, PALETTE.gray);
       return;
     }
     drawText(ctx, def.name.toUpperCase(), x, y, PALETTE.white);

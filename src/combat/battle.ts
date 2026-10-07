@@ -16,6 +16,7 @@ import type {
   SkillEffect,
   StatKey,
   Stats,
+  TriggerEvent,
   Ticking,
   Timed,
 } from './types';
@@ -28,6 +29,12 @@ export const ENEMY_ROWS = 3;
 const MAX_RESIST = 0.9;
 export const FIRST_SUMMON_POSITION = 3;
 export const SUMMONS_PER_MEMBER = 2;
+// Hero skill slots 1–3 run their timers at these speeds; slot 4 holds a trigger.
+export const SLOT_RATES = [1.25, 1, 0.75];
+export const TRIGGER_SLOT = 3;
+// Party HP share for partyLow triggers, own HP share for selfLow.
+const PARTY_LOW = 0.35;
+const SELF_LOW = 0.5;
 
 export const MECHANIC = {
   rageMax: 100,
@@ -123,14 +130,21 @@ export interface PartyStart {
 export interface BattleOptions {
   party?: PartyStart;
   creatures?: Record<string, CombatantDef>;
+  // Enemy types that enemy abilities can call in (spawn effects).
+  bestiary?: Record<string, CombatantDef>;
 }
 
 export class Battle {
   readonly combatants: Combatant[];
   elapsed = 0;
+  // The enemy the player clicked: every party "front" attack goes to it until it dies. Null = the front enemy.
+  focus: string | null = null;
   result: BattleResult | null = null;
   gold = 0;
   private summonCount = 0;
+  private spawnCount = 0;
+  private started = false;
+  private bestiary: Record<string, CombatantDef>;
   private creatures: Record<string, CombatantDef>;
 
   constructor(
@@ -141,10 +155,11 @@ export class Battle {
     options: BattleOptions = {},
   ) {
     this.creatures = options.creatures ?? {};
+    this.bestiary = options.bestiary ?? {};
     const bonus = options.party?.bonus;
     const boosted = bonus ? party.map((m) => ({ ...m, def: { ...m.def, stats: addStats(m.def.stats, bonus) } })) : party;
     this.combatants = [
-      ...boosted.map((m, i) => createCombatant(m.def, m.skills, 'party', i, { ...m.equipment }, rng)),
+      ...boosted.map((m, i) => heroCombatant(m, i, rng)),
       ...enemies.flatMap((def, i) => (def ? [createCombatant(def, def.skills, 'enemy', i, {}, rng)] : [])),
     ];
     for (const c of this.combatants) if (c.def.familiar) c.channel = MECHANIC.channelSeconds;
@@ -159,8 +174,13 @@ export class Battle {
     this.elapsed += dt;
     const events: BattleEvent[] = [];
 
+    if (!this.started) {
+      this.started = true;
+      for (const c of this.alive()) this.fireTrigger(c, 'battleStart', events);
+    }
     for (const c of this.alive()) this.tickStatuses(c, dt, events);
     this.tickPeriodic(dt, events);
+    this.tickFury(dt, events);
 
     for (const actor of [...this.combatants]) {
       if (actor.hp <= 0 || this.result || actor.channel > 0 || actor.transformed > 0) continue;
@@ -169,10 +189,12 @@ export class Battle {
         if (actor.hp <= 0 || this.result) break;
         const skill = slot.def;
         if (actor.shapeshift && !skill.form) continue;
-        const trigger = skill.trigger;
-        if (trigger?.kind === 'onDefeat') continue;
-        const running = !trigger || (trigger.kind === 'partyLow' && this.partyHpRatio() < trigger.threshold);
-        if (running) slot.timer += dt * rate;
+        // Triggers recharge in real time and fire only on their event (see fireTrigger).
+        if (skill.trigger) {
+          slot.timer = Math.min(skill.cooldown, slot.timer + dt);
+          continue;
+        }
+        slot.timer += dt * rate * slot.rate;
         if (slot.timer + TIMER_EPSILON < skill.cooldown) continue;
         if (!this.conditionMet(actor, skill.condition)) {
           slot.timer = skill.cooldown;
@@ -182,6 +204,13 @@ export class Battle {
         if (skill.condition?.kind === 'souls') actor.meter -= skill.condition.cost;
         this.useSkill(actor, skill, events);
       }
+    }
+
+    // Low-HP triggers fire whenever they are ready while the condition holds.
+    for (const c of this.alive()) {
+      if (this.result) break;
+      if (this.sideHpRatio(c.side) < PARTY_LOW) this.fireTrigger(c, 'partyLow', events);
+      if (c.hp / c.maxHp < SELF_LOW) this.fireTrigger(c, 'selfLow', events);
     }
 
     return events;
@@ -206,7 +235,11 @@ export class Battle {
   }
 
   partyHpRatio(): number {
-    const party = this.combatants.filter((c) => c.side === 'party' && !isSummon(c));
+    return this.sideHpRatio('party');
+  }
+
+  sideHpRatio(side: Side): number {
+    const party = this.combatants.filter((c) => c.side === side && !isSummon(c));
     const max = party.reduce((s, c) => s + c.maxHp, 0);
     return max === 0 ? 0 : party.reduce((s, c) => s + Math.max(0, c.hp), 0) / max;
   }
@@ -231,7 +264,19 @@ export class Battle {
     }
   }
 
+  // A ready trigger skill fires at once when its event happens, then recharges over its cooldown.
+  private fireTrigger(c: Combatant, event: TriggerEvent, events: BattleEvent[]): void {
+    for (const slot of c.slots) {
+      if (this.result) return;
+      if (slot.def.trigger?.kind !== event || slot.timer + TIMER_EPSILON < slot.def.cooldown) continue;
+      if (c.hp <= 0 && event !== 'onDefeat') return;
+      slot.timer = 0;
+      this.useSkill(c, slot.def, events);
+    }
+  }
+
   private tickStatuses(c: Combatant, dt: number, events: BattleEvent[]): void {
+    this.tickRegeneration(c, dt, events);
     if (c.barrier) {
       c.barrier.remaining -= dt;
       if (c.barrier.remaining <= TIMER_EPSILON) c.barrier = null;
@@ -247,6 +292,10 @@ export class Battle {
       if (c.shapeshift.remaining <= TIMER_EPSILON) c.shapeshift = null;
     }
     if (c.burst > 0) c.burst = Math.max(0, c.burst - dt);
+    if (c.flight) {
+      c.flight.remaining -= dt;
+      if (c.flight.remaining <= TIMER_EPSILON) c.flight = null;
+    }
     if (c.channel > 0) {
       c.channel -= dt;
       if (c.channel <= TIMER_EPSILON) {
@@ -277,10 +326,26 @@ export class Battle {
     return expandArea(primary, t.area, pool);
   }
 
+  // Focus an enemy for the whole party; anything else (or a dead enemy) is ignored.
+  setFocus(uid: string): void {
+    const c = this.combatants.find((x) => x.uid === uid);
+    if (c && c.side === 'enemy' && c.hp > 0) this.focus = uid;
+  }
+
+  // Who the party's front attacks are aimed at right now.
+  partyTarget(): Combatant | null {
+    const focused = this.focus ? this.combatants.find((c) => c.uid === this.focus && c.hp > 0) : undefined;
+    return focused ?? frontMost(this.alive('enemy'));
+  }
+
   private select(actor: Combatant, selector: Selector, pool: Combatant[]): Combatant | null {
     const hpPct = (c: Combatant) => c.hp / c.maxHp;
     switch (selector) {
       case 'front':
+        if (actor.side === 'party' && this.focus) {
+          const focused = pool.find((c) => c.uid === this.focus);
+          if (focused) return focused;
+        }
         return frontMost(pool);
       case 'back':
         return pool.reduce((a, b) => (frontKey(b) > frontKey(a) ? b : a));
@@ -305,6 +370,10 @@ export class Battle {
         return frontMost(pool.filter((c) => c.castSpell));
       case 'castDefensive':
         return frontMost(pool.filter((c) => c.castDefensive));
+      case 'casterClass': {
+        const casters = pool.filter((c) => c.def.tags?.includes('caster'));
+        return casters.length > 0 ? casters[Math.floor(this.rng() * casters.length)] : null;
+      }
     }
   }
 
@@ -332,10 +401,13 @@ export class Battle {
     }
     for (const target of targets) {
       for (const effect of skill.effects.filter((e) => !e.self && !e.onSummons)) {
-        if (this.result || target.hp <= 0) break;
+        if (this.result) return;
+        // Spawning works from a fallen caster too (a boss bursting into minions as it dies).
+        if (target.hp <= 0 && effect.kind !== 'spawn') break;
         this.applyEffect(actor, skill.id, effect, target, mult, events, true);
       }
     }
+    if (skill.category === 'spell' && !skill.trigger) this.fireTrigger(actor, 'castSpell', events);
   }
 
   // `direct` is false for effects triggered by enchantments, which must not trigger further on-hit enchantments.
@@ -356,6 +428,8 @@ export class Battle {
           if (actor.def.mechanic === 'chi') power *= actor.burst > 0 ? MECHANIC.chiBurst : MECHANIC.chiFilling;
           if (effect.vsCasters) power *= target.castSpell ? 1 + effect.vsCasters.bonus : 1 - effect.vsCasters.penalty;
           if (target.transformed > 0) power *= MECHANIC.transformedDamageTaken;
+          if (actor.flight) power *= actor.flight.damageDealt;
+          if (target.flight) power *= target.flight.damageTaken;
           const mitigation = statOf(target, effect.damageType === 'physical' ? 'defense' : 'resistance');
           const amount = mitigate(power, mitigation, resistOf(target, effect.element));
           const total = this.applyDamage(actor, target, amount, events, { element: effect.element, direct: true });
@@ -381,7 +455,8 @@ export class Battle {
         return;
       }
       case 'dot': {
-        const amount = Math.round(statOf(actor, effect.stat) * effect.scaling * mult);
+        const stacks = effect.perStack ? 1 + effect.perStack * actor.meter : 1;
+        const amount = Math.round(statOf(actor, effect.stat) * effect.scaling * mult * stacks);
         const dot: Ticking = { source, owner: actor.uid, amount, element: effect.element, remaining: effect.duration, tick: 0 };
         target.dots = refresh(target.dots, dot);
         return;
@@ -389,7 +464,8 @@ export class Battle {
       case 'buff':
       case 'debuff': {
         const sign = effect.kind === 'buff' ? 1 : -1;
-        this.setBuff(target, source, effect.stat, sign * Math.round(effect.amount * mult), effect.duration, events);
+        const from = effect.stack ? this.stackSource(source) : source;
+        this.setBuff(target, from, effect.stat, sign * Math.round(effect.amount * mult), effect.duration, events);
         return;
       }
       case 'siphon': {
@@ -399,7 +475,7 @@ export class Battle {
         return;
       }
       case 'speed':
-        target.speed = refreshTimed(target.speed, { source, value: effect.factor, remaining: effect.duration });
+        target.speed = refreshTimed(target.speed, { source: effect.stack ? this.stackSource(source) : source, value: effect.factor, remaining: effect.duration });
         events.push({ type: 'status', target: target.uid, status: effect.factor < 1 ? 'slow' : 'haste' });
         return;
       case 'transform':
@@ -446,6 +522,29 @@ export class Battle {
       case 'summon':
         this.summon(actor, effect.creature, effect.share * mult, events, false);
         return;
+      case 'spawn':
+        this.spawn(actor, effect.enemy, effect.count, effect.cap, events);
+        return;
+      case 'flight':
+        target.flight = { remaining: effect.duration, damageTaken: effect.damageTaken, damageDealt: effect.damageDealt };
+        events.push({ type: 'status', target: target.uid, status: 'flight' });
+        return;
+      case 'cleanse':
+        if (target.dots.length === 0) return;
+        target.dots = [];
+        events.push({ type: 'status', target: target.uid, status: 'cleanse' });
+        return;
+      case 'tickPoison':
+        for (const d of target.dots.filter((dot) => dot.element === 'poison')) {
+          if (target.hp <= 0 || this.result) return;
+          const amount = Math.max(1, Math.round(d.amount * (1 - resistOf(target, d.element))));
+          this.applyDamage(this.get(d.owner), target, amount, events, { element: d.element, direct: false, periodic: true });
+        }
+        return;
+      case 'venom':
+        target.meter += 1;
+        events.push({ type: 'status', target: target.uid, status: 'venom' });
+        return;
       case 'consumeSummon': {
         const victim = this.summonsOf(actor)[0];
         if (!victim) return;
@@ -456,10 +555,35 @@ export class Battle {
     }
   }
 
+  private stacks = 0;
+
+  // A unique source per use, so stacking effects never replace each other.
+  private stackSource(source: string): string {
+    this.stacks += 1;
+    return `${source}#${this.stacks}`;
+  }
+
   private setBuff(target: Combatant, source: string, stat: StatKey, amount: number, duration: number, events: BattleEvent[]): void {
     target.buffs = target.buffs.filter((b) => b.source !== source || b.stat !== stat);
     target.buffs.push({ source, stat, amount, remaining: duration });
     events.push({ type: 'buff', target: target.uid, stat, amount });
+  }
+
+  // Enemy reinforcements fill empty grid cells front to back, up to `cap` of that type alive at once.
+  private spawn(actor: Combatant, enemyId: string, count: number, cap: number, events: BattleEvent[]): void {
+    const def = this.bestiary[enemyId];
+    if (!def || actor.side !== 'enemy') return;
+    for (let i = 0; i < count; i++) {
+      const alive = this.alive('enemy');
+      if (alive.filter((c) => c.def.id === enemyId).length >= cap) return;
+      const taken = new Set(alive.map((c) => c.position));
+      const position = [...Array(ENEMY_ROWS * ENEMY_ROWS).keys()].find((p) => !taken.has(p));
+      if (position === undefined) return;
+      const unit = createCombatant(def, def.skills, 'enemy', position, {}, this.rng);
+      unit.uid = `enemy-spawn-${++this.spawnCount}`;
+      this.combatants.push(unit);
+      events.push({ type: 'summon', summoner: actor.uid, unit: unit.uid });
+    }
   }
 
   private summon(owner: Combatant, creatureId: string, share: number, events: BattleEvent[], familiar: boolean): void {
@@ -519,6 +643,7 @@ export class Battle {
     const amount = Math.min(target.maxHp - target.hp, raw);
     target.hp += amount;
     events.push({ type: 'heal', source: source.uid, target: target.uid, amount, ...(periodic && { periodic }) });
+    if (amount > 0) this.fireTrigger(target, 'whenHealed', events);
   }
 
   private triggerOnHit(actor: Combatant, target: Combatant, events: BattleEvent[]): void {
@@ -563,6 +688,35 @@ export class Battle {
     }
   }
 
+  // Stacks reapply the 'fury' buff with a larger amount, so it never expires and only grows.
+  private tickFury(dt: number, events: BattleEvent[]): void {
+    for (const c of this.alive()) {
+      const fury = c.def.fury;
+      if (!fury) continue;
+      const before = Math.floor((this.elapsed - dt - fury.after) / fury.step);
+      const stacks = Math.floor((this.elapsed - fury.after) / fury.step);
+      if (stacks < 0 || stacks === before) continue;
+      if (stacks === 0) events.push({ type: 'status', target: c.uid, status: 'fury' });
+      const share = fury.rate * (stacks + 1);
+      for (const stat of ['attack', 'magic'] as const) {
+        if (c.def.stats[stat] > 0) this.setBuff(c, 'fury', stat, Math.round(c.def.stats[stat] * share), Infinity, events);
+      }
+    }
+  }
+
+  // Passive regeneration heals in whole points as they build up, unless a blocking element hit it recently.
+  private tickRegeneration(c: Combatant, dt: number, events: BattleEvent[]): void {
+    const regen = c.def.regeneration;
+    c.regenBlocked = Math.max(0, c.regenBlocked - dt);
+    if (!regen || c.regenBlocked > 0 || c.hp >= c.maxHp) return;
+    c.regenCarry += c.maxHp * regen.perSecond * dt;
+    const amount = Math.min(Math.floor(c.regenCarry), c.maxHp - c.hp);
+    if (amount < 1) return;
+    c.regenCarry -= amount;
+    c.hp += amount;
+    events.push({ type: 'heal', source: c.uid, target: c.uid, amount, periodic: true });
+  }
+
   // Returns the total damage landed (barrier absorption included) so drain and thorns can scale from it.
   private applyDamage(
     source: Combatant,
@@ -571,11 +725,16 @@ export class Battle {
     events: BattleEvent[],
     opts: { element?: Element; direct: boolean; periodic?: boolean },
   ): number {
+    const regen = target.def.regeneration;
+    if (regen && opts.element && regen.blockedBy.includes(opts.element)) target.regenBlocked = regen.blockSeconds;
     let absorbed = 0;
     if (target.barrier) {
       absorbed = Math.min(target.barrier.amount, amount);
       target.barrier.amount -= absorbed;
-      if (target.barrier.amount <= 0) target.barrier = null;
+      if (target.barrier.amount <= 0) {
+        target.barrier = null;
+        this.fireTrigger(target, 'barrierBreaks', events);
+      }
     }
     const dealt = Math.min(target.hp, amount - absorbed);
     source.damageDealt += dealt;
@@ -600,27 +759,45 @@ export class Battle {
     const dealt = selfInflicted ? Math.min(amount, target.hp - 1) : Math.min(amount, target.hp);
     if (dealt <= 0) return;
     target.hp -= dealt;
-
-    if (target.def.mechanic === 'rage') this.gainRage(target, (dealt / target.maxHp) * 100, events);
-    if (!selfInflicted) {
-      for (const slot of target.slots) if (slot.def.trigger?.kind === 'whenHit') slot.timer += slot.def.trigger.perEvent;
-      for (const ally of this.alive(target.side)) {
-        if (ally === target) continue;
-        for (const slot of ally.slots) if (slot.def.trigger?.kind === 'allyHurt') slot.timer += slot.def.trigger.perEvent;
+    // Polymorph breaks on the first damage (the breaking hit still gets the transformed bonus).
+    if (!selfInflicted && target.transformed > 0) target.transformed = 0;
+    if (target.hp > 0) {
+      for (const slot of target.slots) {
+        const trigger = slot.def.trigger;
+        if (trigger?.kind !== 'belowHp' || slot.spent || target.hp / target.maxHp >= trigger.threshold) continue;
+        slot.spent = true;
+        this.useSkill(target, slot.def, events);
       }
     }
-    if (target.hp <= 0) this.onDeath(target, events);
+
+    if (target.def.mechanic === 'rage') this.gainRage(target, (dealt / target.maxHp) * 100, events);
+    if (target.hp <= 0 && target.def.reassemble && !target.reassembled) {
+      target.reassembled = true;
+      target.hp = Math.max(1, Math.round(target.maxHp * target.def.reassemble));
+      target.dots = [];
+      events.push({ type: 'status', target: target.uid, status: 'reassemble' });
+      return;
+    }
+    if (target.hp <= 0) return this.onDeath(target, events, source);
+    if (!selfInflicted) {
+      this.fireTrigger(target, 'whenHit', events);
+      for (const ally of this.alive(target.side)) if (ally !== target) this.fireTrigger(ally, 'allyHurt', events);
+    }
   }
 
-  private onDeath(target: Combatant, events: BattleEvent[]): void {
+  private onDeath(target: Combatant, events: BattleEvent[], killer?: Combatant): void {
     events.push({ type: 'death', target: target.uid });
+    if (this.focus === target.uid) this.focus = null;
     this.breakEquipment(target, events);
     for (const c of this.alive()) {
       if (c.def.mechanic === 'souls') c.meter = Math.min(MECHANIC.soulsMax, c.meter + 1);
     }
 
-    for (const slot of target.slots) {
-      if (slot.def.trigger?.kind === 'onDefeat' && !this.result) this.useSkill(target, slot.def, events);
+    this.fireTrigger(target, 'onDefeat', events);
+    if (killer && killer.hp > 0 && killer.side !== target.side) this.fireTrigger(killer, 'onKill', events);
+    for (const c of this.alive()) {
+      if (c.side === target.side && !isSummon(target)) this.fireTrigger(c, 'allyFalls', events);
+      if (c.side !== target.side) this.fireTrigger(c, 'enemyDies', events);
     }
 
     if (target.familiar && target.summoner) {
@@ -654,8 +831,9 @@ export class Battle {
 }
 
 // Reapplying resets the duration but keeps tick progress, so an effect refreshed every second still ticks.
+// The same skill from the same caster refreshes its effect; different casters stack.
 function refresh(list: Ticking[], next: Ticking): Ticking[] {
-  const existing = list.find((t) => t.source === next.source);
+  const existing = list.find((t) => t.source === next.source && t.owner === next.owner);
   return [...list.filter((t) => t !== existing), { ...next, tick: existing?.tick ?? 0 }];
 }
 
@@ -708,6 +886,16 @@ function expandArea(primary: Combatant, area: Area, pool: Combatant[]): Combatan
 }
 
 // A negative starting timer delays the first activation so identical units don't fire in lockstep.
+// A hero's 3 timed slots run at their slot speeds; the trigger (if any) sits in slot 4.
+function heroCombatant(m: PartyMember, index: number, rng: Rng): Combatant {
+  const c = createCombatant(m.def, m.trigger ? [...m.skills, m.trigger] : m.skills, 'party', index, { ...m.equipment }, rng);
+  c.slots.forEach((slot, i) => {
+    if (slot.def.trigger) slot.position = TRIGGER_SLOT;
+    else slot.rate = SLOT_RATES[i] ?? 1;
+  });
+  return c;
+}
+
 function createCombatant(
   def: CombatantDef,
   skills: SkillDef[],
@@ -730,7 +918,8 @@ function createCombatant(
     dots: [],
     regens: [],
     speed: [],
-    slots: skills.map((s) => ({ def: s, timer: s.trigger ? 0 : -rng() * MAX_START_DELAY })),
+    // Triggers start the fight ready; timed skills start with a small random offset.
+    slots: skills.map((s, i) => ({ def: s, timer: s.trigger ? s.cooldown : -rng() * MAX_START_DELAY, position: i, rate: 1 })),
     damageDealt: 0,
     lastAttacker: null,
     castSpell: false,
@@ -743,6 +932,10 @@ function createCombatant(
     channel: 0,
     meter: 0,
     burst: 0,
+    regenBlocked: 0,
+    regenCarry: 0,
+    flight: null,
+    reassembled: false,
   };
 }
 

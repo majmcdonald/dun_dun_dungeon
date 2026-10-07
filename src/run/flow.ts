@@ -10,11 +10,14 @@ import { PreBattleScene } from '../scenes/PreBattleScene';
 import { RewardScene } from '../scenes/RewardScene';
 import { RunEndScene } from '../scenes/RunEndScene';
 import { StoreScene } from '../scenes/StoreScene';
+import { pickEncounter } from './encounters';
 import { openEvent } from './events';
 import { openStore } from './store';
 import type { MapNode } from './map';
+import { keepFinishedLog, loadout, logEvent } from './log';
+import { noteRoom, noteRunEnd, saveProfile } from './profile';
 import { rollReward } from './rewards';
-import { beginNode, clearNode, pendingNodeOf, recordWin, runSummary, saveRun, setRewardPicks } from './run';
+import { beginNode, clearNode, pendingNodeOf, recordWin, roomType, runSummary, saveRun, setRewardPicks } from './run';
 
 // Moves the run between screens: map → node → (fight) → reward → party → map. Every step is autosaved.
 // The run rules themselves live in run.ts.
@@ -23,10 +26,12 @@ export function enterNode(game: GameContext, node: MapNode): void {
   const run = game.state.run;
   if (!run) return;
   beginNode(run, node);
-  switch (node.type) {
+  logEvent(run, 'room', { type: roomType(run, node), mapType: node.type, gold: run.gold });
+  switch (roomType(run, node)) {
     case 'battle':
     case 'epic':
     case 'boss':
+      pickEncounter(game.state, node);
       return game.scenes.switchTo(new PreBattleScene(game));
     case 'event':
       openEvent(game.state, node, EVENT_LIBRARY);
@@ -44,13 +49,19 @@ export function pendingNode(game: GameContext): MapNode | null {
 }
 
 // A won fight or an opened treasure; `battleGold` is gold won by Gold skills during the fight.
-// Event fights pay out like an Epic Monster.
+// A "?" room pays as what it turned out to be; fights started by an event pay out like an Epic Monster.
 export function winNode(game: GameContext, battleGold = 0): void {
   const run = game.state.run;
   const node = pendingNode(game);
   if (!run || !node) return;
-  const payAs = node.type === 'event' ? 'epic' : node.type;
-  recordWin(run, node, rollReward(payAs, game.state.party, SKILL_LIBRARY, ITEM_LIBRARY, Math.random, battleGold));
+  const type = roomType(run, node);
+  const payAs = type === 'event' ? 'epic' : type;
+  if (game.state.profile) noteRoom(game.state.profile, type, run.level);
+  const level = run.level;
+  const reward = rollReward(payAs, game.state.party, SKILL_LIBRARY, ITEM_LIBRARY, Math.random, battleGold);
+  logEvent(run, 'reward', { type, gold: reward.gold, skills: reward.skills.map((s) => s.id), items: reward.items.map((i) => i.id) });
+  recordWin(run, { ...node, type }, reward);
+  if (run.level !== level) logEvent(run, 'act', { party: loadout(game.state.party), gold: run.gold });
   saveRun(game.state);
   if (run.result === 'won') return endRun(game);
   game.scenes.switchTo(new RewardScene(game));
@@ -61,6 +72,8 @@ export function completeNode(game: GameContext): void {
   const run = game.state.run;
   const node = pendingNode(game);
   if (!run || !node) return;
+  const type = roomType(run, node);
+  if (game.state.profile && type === 'event') noteRoom(game.state.profile, type, run.level);
   clearNode(run, node.id);
   saveRun(game.state);
   game.scenes.switchTo(new MapScene(game));
@@ -69,6 +82,7 @@ export function completeNode(game: GameContext): void {
 // Takes the chosen picks; anything new is shown on the party screen, otherwise straight back to the map.
 export function choosePicks(game: GameContext, skill: string | null, item: string | null): void {
   setRewardPicks(game.state, skill, item);
+  if (game.state.run) logEvent(game.state.run, 'picks', { skill, item });
   saveRun(game.state);
   game.scenes.switchTo(skill || item ? new PartyScene(game) : new MapScene(game));
 }
@@ -93,6 +107,14 @@ function endRun(game: GameContext, slayers: string[] = []): void {
   const run = game.state.run;
   if (!run) return;
   const summary = runSummary(game.state, slayers);
+  logEvent(run, 'end', { won: summary.won, where: summary.where, slayers, stats: summary.stats, party: loadout(game.state.party), gold: run.gold });
+  keepFinishedLog(game.state, summary.won);
+  const profile = game.state.profile;
+  if (profile) {
+    noteRunEnd(profile, summary.won, summary.party, run.level, summary.room);
+    summary.unlocked = profile.newUnlocks.splice(0);
+    saveProfile(run.slot, profile);
+  }
   clearSlot(run.slot);
   game.state.run = null;
   game.scenes.switchTo(new RunEndScene(game, summary));

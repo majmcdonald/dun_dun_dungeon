@@ -11,20 +11,23 @@ import {
 import { PALETTE } from '../art/palette';
 import { spriteCanvas, TRANSPARENT, type SpriteDef } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
-import { Battle, gridCell, isSummon, MECHANIC } from '../combat/battle';
+import { Battle, gridCell, isSummon, MECHANIC, TRIGGER_SLOT } from '../combat/battle';
 import { CREATURES } from '../content/creatures';
-import { MAP_ENCOUNTER } from '../content/enemies';
 import { EQUIP_SLOTS, type BattleEvent, type Combatant, type CombatantDef, type EquipSlot } from '../combat/types';
 import { NATIVE_HEIGHT, NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
 import { drawBackground } from '../ui/background';
 import { CHAR_ADVANCE, drawText, textWidth } from '../ui/font';
-import { drawEquipmentIcons, drawEquipmentTooltip, hoveredSlot, ICON_STEP } from '../ui/partyCard';
+import { drawEquipmentIcons, drawEquipmentTooltip, hoveredSlot, ICON_STEP, skillColor } from '../ui/partyCard';
 import { dotVfxId, VFX } from '../vfx/effects';
 import { loseRun, winNode } from '../run/flow';
+import { ENEMIES_BY_ID } from '../content/enemies';
+import { currentEncounter } from '../run/encounters';
 import { takeNextFight } from '../run/events';
+import { loadout, logEvent } from '../run/log';
 import { itemRef } from '../run/run';
 import { PreBattleScene } from './PreBattleScene';
+import { inside } from '../ui/widgets';
 
 const SIDEBAR_W = 152;
 const FIELD_CENTER_X = SIDEBAR_W + (NATIVE_WIDTH - SIDEBAR_W) / 2;
@@ -58,12 +61,21 @@ const STATUS_ICONS_MAX = 4;
 const STATUS_VFX = new Set(['slow', 'haste', 'transform', 'shapeshift']);
 const FAMILIAR_GHOST_ALPHA = 0.35;
 const FRENZY_BLINK = 0.15;
+const FLIGHT_LIFT = 5;
+const OUTLINE_OFFSETS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+const HP_TEXT_Y = 45;
+const VENOM_PIPS_MAX = 8;
 
 interface SpriteSet {
   idle: HTMLCanvasElement;
   attack: HTMLCanvasElement;
   flash: HTMLCanvasElement;
+  // Gold silhouettes, drawn 1px around the sprite to mark the party's target.
+  outlineIdle: HTMLCanvasElement;
+  outlineAttack: HTMLCanvasElement;
   topRow: number;
+  width: number;
+  height: number;
 }
 
 interface Anim {
@@ -105,6 +117,7 @@ interface Notice {
 type FloatAmounts = Partial<Pick<FloatText, 'damage' | 'absorbed' | 'barrier' | 'heal'>>;
 
 export class BattleScene implements Scene {
+  private focusClicks = 0;
   private battle!: Battle;
   private anims = new Map<string, Anim>();
   private floats: FloatText[] = [];
@@ -128,7 +141,7 @@ export class BattleScene implements Scene {
   // The debug screen passes its own encounter, and `done` to return to it after the fight.
   constructor(
     private game: GameContext,
-    private encounter: (CombatantDef | null)[] = MAP_ENCOUNTER,
+    private encounter?: (CombatantDef | null)[],
     private done?: () => Scene,
   ) {
     for (const [id, def] of Object.entries(SPRITES)) {
@@ -136,7 +149,11 @@ export class BattleScene implements Scene {
         idle: spriteCanvas(def, 'idle'),
         attack: spriteCanvas(def, 'attack'),
         flash: spriteCanvas(def, 'idle', 'white'),
+        outlineIdle: spriteCanvas(def, 'idle', 'gold'),
+        outlineAttack: spriteCanvas(def, 'attack', 'gold'),
         topRow: firstOpaqueRow(def),
+        width: def.width,
+        height: def.height,
       });
     }
   }
@@ -148,7 +165,8 @@ export class BattleScene implements Scene {
   private start(): void {
     // Wounded/blessed effects from events apply to this fight only.
     const party = this.game.state.run ? takeNextFight(this.game.state) : undefined;
-    this.battle = new Battle(this.game.state.party, this.encounter, Math.random, { creatures: CREATURES, party });
+    const enemies = this.encounter ?? currentEncounter(this.game.state);
+    this.battle = new Battle(this.game.state.party, enemies, Math.random, { creatures: CREATURES, party, bestiary: ENEMIES_BY_ID });
     this.anims.clear();
     this.floats = [];
     this.vfx = [];
@@ -165,6 +183,19 @@ export class BattleScene implements Scene {
       if (this.battle.result === 'victory') return winNode(this.game, this.battle.gold);
       loseRun(this.game, [...new Set(this.battle.combatants.filter((c) => c.side === 'enemy').map((c) => c.def.name.toUpperCase()))]);
       return;
+    }
+
+    // Clicking an enemy points the whole party's front attacks at it.
+    for (const click of clicks) {
+      const enemy = this.battle.alive('enemy').find((c) => {
+        const set = this.spriteSet(c);
+        const o = this.spriteOrigin(c);
+        return inside(click, { x: o.x, y: o.y, w: set.width, h: set.height });
+      });
+      if (enemy) {
+        this.battle.setFocus(enemy.uid);
+        this.focusClicks += 1;
+      }
     }
 
     for (const f of this.floats) {
@@ -245,11 +276,32 @@ export class BattleScene implements Scene {
         if (item && state.run) state.run.broken.push(itemRef(item));
         break;
       }
+      case 'end':
+        this.logFight(event.result);
+        break;
       case 'buff':
       case 'death':
-      case 'end':
         break;
     }
+  }
+
+  // Records the fight in the run log: what it was, how long, what it cost, and the party that fought it.
+  private logFight(result: 'victory' | 'defeat'): void {
+    const run = this.game.state.run;
+    if (!run) return;
+    const heroes = this.battle.combatants.filter((c) => c.side === 'party' && !isSummon(c));
+    const maxHp = heroes.reduce((s, c) => s + c.maxHp, 0);
+    const hpLeft = heroes.reduce((s, c) => s + Math.max(0, c.hp), 0);
+    logEvent(run, 'fight', {
+      encounter: run.encounter?.id ?? null,
+      enemies: this.battle.combatants.filter((c) => c.side === 'enemy').map((c) => c.def.id),
+      result,
+      seconds: Math.round(this.battle.elapsed * 10) / 10,
+      hpLost: maxHp === 0 ? 0 : Math.round((1 - hpLeft / maxHp) * 100) / 100,
+      kos: heroes.filter((c) => c.hp <= 0).map((c) => c.def.id),
+      focusClicks: this.focusClicks,
+      party: loadout(this.game.state.party),
+    });
   }
 
   // Created on first use, since summons join mid-battle.
@@ -289,7 +341,7 @@ export class BattleScene implements Scene {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    drawBackground(ctx);
+    drawBackground(ctx, this.game.state.run?.level ?? 0);
 
     const party = this.battle.combatants.filter((c) => c.side === 'party' && !isSummon(c));
     party.forEach((c) => this.drawCard(ctx, c));
@@ -318,8 +370,13 @@ export class BattleScene implements Scene {
     const anim = this.anim(c.uid);
     anim.critter = c.transformed > 0 && anim.morph <= 0;
     const id = anim.critter ? 'critter' : c.def.id;
-    const set = this.sprites.get(id);
-    if (!set) throw new Error(`No sprite for ${c.def.id}`);
+    let set = this.sprites.get(id);
+    if (!set) {
+      // Art not drawn yet: a placeholder box, so the fight still runs.
+      const box = spriteCanvas(undefined, 'idle');
+      set = { idle: box, attack: box, flash: box, outlineIdle: box, outlineAttack: box, topRow: 6, width: box.width, height: box.height };
+      this.sprites.set(id, set);
+    }
     return set;
   }
 
@@ -335,11 +392,18 @@ export class BattleScene implements Scene {
     const lunge = Math.round(Math.sin(progress * Math.PI) * LUNGE_PX) * (c.side === 'party' ? 1 : -1);
     const img = anim.flash > 0 ? set.flash : attacking ? set.attack : set.idle;
 
+    const origin = this.spriteOrigin(c);
+    // A flying Harpy hovers above its cell.
+    const lift = c.flight ? FLIGHT_LIFT + Math.round(Math.sin(this.battle.elapsed * 8)) : 0;
     ctx.globalAlpha = alpha;
-    ctx.drawImage(img, x + lunge, y);
+    if (c.hp > 0 && c === this.battle.partyTarget()) {
+      const outline = attacking ? set.outlineAttack : set.outlineIdle;
+      for (const [dx, dy] of OUTLINE_OFFSETS) ctx.drawImage(outline, origin.x + lunge + dx, origin.y - lift + dy);
+    }
+    ctx.drawImage(img, origin.x + lunge, origin.y - lift);
     ctx.globalAlpha = 1;
     if (c.hp <= 0) return;
-    this.statusIcons(c).forEach((icon, i) => ctx.drawImage(icon, x - 9, y + 23 - i * 9));
+    this.statusIcons(c).forEach((icon, i) => ctx.drawImage(icon, origin.x - 9, y + 23 - i * 9));
     if (c.side === 'party' && !isSummon(c)) {
       this.drawMeter(ctx, c, x, y + 34);
       return;
@@ -347,8 +411,18 @@ export class BattleScene implements Scene {
 
     drawBar(ctx, x, y + 34, 32, 3, c.hp / c.maxHp, PALETTE.green);
     if (isSummon(c)) return;
+    const hp = `${c.hp}`;
+    drawText(ctx, hp, x + 16 - textWidth(hp) / 2, y + HP_TEXT_Y, PALETTE.lightGray);
     const slot = c.slots[0];
     if (slot) drawBar(ctx, x, y + 38, 32, 2, slot.timer / slot.def.cooldown, PALETTE.gold);
+    // Bandit Venom stacks: one green pip each.
+    for (let i = 0; i < Math.min(c.meter, VENOM_PIPS_MAX); i++) drawBar(ctx, x + i * 4, y + 41, 3, 2, 1, PALETTE.green);
+    // Boss fury: fills until it starts, then blinks red while it grows.
+    const fury = c.def.fury;
+    if (!fury) return;
+    const furious = this.battle.elapsed >= fury.after;
+    const blink = Math.floor(this.battle.elapsed / FRENZY_BLINK) % 2 === 0;
+    drawBar(ctx, x, y + 41, 32, 2, Math.min(1, this.battle.elapsed / fury.after), furious ? (blink ? PALETTE.hotRed : PALETTE.white) : PALETTE.orange);
   }
 
   // Most important first; only the first few fit beside the sprite.
@@ -413,8 +487,16 @@ export class BattleScene implements Scene {
   }
 
   private visualCenter(c: Combatant): { cx: number; cy: number } {
+    const set = this.spriteSet(c);
+    const { x, y } = this.spriteOrigin(c);
+    return { cx: x + set.width / 2, cy: y + Math.round((set.topRow + set.height - 1) / 2) };
+  }
+
+  // Where a sprite's top-left goes: bigger sprites (48x48 bosses) stand on the same feet line, centered on the cell.
+  private spriteOrigin(c: Combatant): { x: number; y: number } {
+    const set = this.spriteSet(c);
     const { x, y } = slotPosition(c);
-    return { cx: x + 16, cy: y + Math.round((this.spriteSet(c).topRow + 31) / 2) };
+    return { x: x - (set.width - 32) / 2, y: y - (set.height - 32) };
   }
 
   private drawVfx(ctx: CanvasRenderingContext2D, v: ActiveVfx): void {
@@ -425,8 +507,8 @@ export class BattleScene implements Scene {
 
   private drawNotice(ctx: CanvasRenderingContext2D, n: Notice): void {
     const target = this.battle.get(n.target);
-    const { x, y } = slotPosition(target);
-    const top = y + this.spriteSet(target).topRow - 20 - n.age * NOTICE_RISE_PER_SEC;
+    const { x } = slotPosition(target);
+    const top = this.spriteOrigin(target).y + this.spriteSet(target).topRow - 20 - n.age * NOTICE_RISE_PER_SEC;
     drawText(ctx, n.text, x + 16 - textWidth(n.text) / 2, top, PALETTE.hotRed);
   }
 
@@ -439,7 +521,8 @@ export class BattleScene implements Scene {
     if (segments.length === 0) return;
 
     const target = this.battle.get(f.target);
-    const { x, y } = slotPosition(target);
+    const { x } = slotPosition(target);
+    const y = this.spriteOrigin(target).y;
     const scale = f.pop > 0 ? 2 : 1;
     const full = segments.map((s) => s.text).join(' ');
     const baseline = y + this.spriteSet(target).topRow - 3 - f.age * FLOAT_RISE_PER_SEC;
@@ -477,14 +560,14 @@ export class BattleScene implements Scene {
     const anim = this.anim(c.uid);
     for (let i = 0; i < SKILL_SLOTS; i++) {
       const rowY = cy + 24 + i * 11;
-      const slot = c.slots[i];
+      const index = c.slots.findIndex((s) => s.position === i);
+      const slot = c.slots[index];
       if (!slot) {
-        drawText(ctx, '- EMPTY -', inner, rowY, PALETTE.night, null);
+        drawText(ctx, i === TRIGGER_SLOT ? '- TRIGGER -' : '- EMPTY -', inner, rowY, PALETTE.night, null);
         continue;
       }
-      const nameColor = !alive ? PALETTE.slate : slot.def.category === 'spell' ? PALETTE.cyan : PALETTE.lightGray;
-      drawText(ctx, slot.def.name, inner, rowY, nameColor);
-      const justFired = !this.battle.result && this.battle.elapsed - anim.lastFired[i] < FIRE_HIGHLIGHT;
+      drawText(ctx, slot.def.name, inner, rowY, alive ? skillColor(slot.def) : PALETTE.slate);
+      const justFired = !this.battle.result && this.battle.elapsed - anim.lastFired[index] < FIRE_HIGHLIGHT;
       const fill = !alive ? 0 : justFired ? 1 : slot.timer / slot.def.cooldown;
       drawBar(ctx, inner, rowY + 8, innerW, 2, fill, justFired ? PALETTE.white : PALETTE.gold, false);
     }

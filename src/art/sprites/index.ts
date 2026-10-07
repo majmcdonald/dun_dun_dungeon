@@ -10,6 +10,38 @@ import { WRAITH_SPRITE } from './wraith';
 import { IMP_SPRITE } from './imp';
 import { CRITTER_SPRITE } from './critter';
 import { SHOPKEEPER_SPRITE } from './shopkeeper';
+import { RAT_SPRITE } from './rat';
+import { MUSHROOM_SPRITE } from './mushroom';
+import { GOBLIN_SPRITE } from './goblin';
+import { GHOST_SPRITE } from './ghost';
+import { SPIDER_SPRITE } from './spider';
+import { SKELETON_KNIGHT_SPRITE } from './skeletonKnight';
+import { GHOUL_SPRITE } from './ghoul';
+import { CULTIST_SPRITE } from './cultist';
+import { FROST_WOLF_SPRITE } from './frostWolf';
+import { HARPY_SPRITE } from './harpy';
+import { BANDIT_SPRITE } from './bandit';
+import { STONE_GOLEM_SPRITE } from './stoneGolem';
+import { GNOLL_SPRITE } from './gnoll';
+import { WISP_SPRITE } from './wisp';
+import { MINOTAUR_SPRITE } from './minotaur';
+import { MEDUSA_SPRITE } from './medusa';
+import { WYVERN_SPRITE } from './wyvern';
+import { FROST_GIANT_SPRITE } from './frostGiant';
+import { CHIMERA_SPRITE } from './chimera';
+import { HYDRA_SPRITE } from './hydra';
+import { BANDIT_KING_SPRITE } from './banditKing';
+import { ICE_QUEEN_SPRITE } from './iceQueen';
+import { ELDER_WYRM_SPRITE } from './elderWyrm';
+import { VAMPIRE_SPRITE } from './vampire';
+import { DEATH_KNIGHT_SPRITE } from './deathKnight';
+import { SHADE_SPRITE } from './shade';
+import { OGRE_SPRITE } from './ogre';
+import { SPIDER_QUEEN_SPRITE } from './spiderQueen';
+import { BONE_MAGE_SPRITE } from './boneMage';
+import { GOBLIN_KING_SPRITE } from './goblinKing';
+import { SLIME_KING_SPRITE } from './slimeKing';
+import { TROLL_SPRITE } from './troll';
 import { ARCHER_SPRITE } from './archer';
 import { BARBARIAN_SPRITE } from './barbarian';
 import { BARD_SPRITE } from './bard';
@@ -27,6 +59,18 @@ import { ROGUE_SPRITE } from './rogue';
 import { SHAMAN_SPRITE } from './shaman';
 import { SLIME_SPRITE } from './slime';
 import { WARLOCK_SPRITE } from './warlock';
+import { ABOMINATION_SPRITE } from './abomination';
+import { NIGHTMARE_SPRITE } from './nightmare';
+import { DARK_PRIEST_SPRITE } from './darkPriest';
+import { BONE_GOLEM_SPRITE } from './boneGolem';
+import { BANSHEE_SPRITE } from './banshee';
+import { GARGOYLE_SPRITE } from './gargoyle';
+import { LICH_SPRITE } from './lich';
+import { BONE_DRAGON_SPRITE } from './boneDragon';
+import { PLAGUE_LORD_SPRITE } from './plagueLord';
+import { BLOOD_COUNTESS_SPRITE } from './bloodCountess';
+import { REAPER_SPRITE } from './reaper';
+import { DEMON_LORD_SPRITE } from './demonLord';
 
 export const SPRITES: Record<string, SpriteDef> = {
   knight: KNIGHT_SPRITE,
@@ -57,4 +101,48 @@ export const SPRITES: Record<string, SpriteDef> = {
   imp: IMP_SPRITE,
   critter: CRITTER_SPRITE,
   shopkeeper: SHOPKEEPER_SPRITE,
+  rat: RAT_SPRITE,
+  mushroom: MUSHROOM_SPRITE,
+  goblin: GOBLIN_SPRITE,
+  ghost: GHOST_SPRITE,
+  spider: SPIDER_SPRITE,
+  skeletonKnight: SKELETON_KNIGHT_SPRITE,
+  ghoul: GHOUL_SPRITE,
+  cultist: CULTIST_SPRITE,
+  ogre: OGRE_SPRITE,
+  spiderQueen: SPIDER_QUEEN_SPRITE,
+  boneMage: BONE_MAGE_SPRITE,
+  goblinKing: GOBLIN_KING_SPRITE,
+  slimeKing: SLIME_KING_SPRITE,
+  troll: TROLL_SPRITE,
+  frostWolf: FROST_WOLF_SPRITE,
+  harpy: HARPY_SPRITE,
+  bandit: BANDIT_SPRITE,
+  stoneGolem: STONE_GOLEM_SPRITE,
+  gnoll: GNOLL_SPRITE,
+  wisp: WISP_SPRITE,
+  minotaur: MINOTAUR_SPRITE,
+  medusa: MEDUSA_SPRITE,
+  wyvern: WYVERN_SPRITE,
+  frostGiant: FROST_GIANT_SPRITE,
+  chimera: CHIMERA_SPRITE,
+  hydra: HYDRA_SPRITE,
+  banditKing: BANDIT_KING_SPRITE,
+  iceQueen: ICE_QUEEN_SPRITE,
+  elderWyrm: ELDER_WYRM_SPRITE,
+  vampire: VAMPIRE_SPRITE,
+  deathKnight: DEATH_KNIGHT_SPRITE,
+  shade: SHADE_SPRITE,
+  abomination: ABOMINATION_SPRITE,
+  nightmare: NIGHTMARE_SPRITE,
+  darkPriest: DARK_PRIEST_SPRITE,
+  boneGolem: BONE_GOLEM_SPRITE,
+  banshee: BANSHEE_SPRITE,
+  gargoyle: GARGOYLE_SPRITE,
+  lich: LICH_SPRITE,
+  boneDragon: BONE_DRAGON_SPRITE,
+  plagueLord: PLAGUE_LORD_SPRITE,
+  bloodCountess: BLOOD_COUNTESS_SPRITE,
+  reaper: REAPER_SPRITE,
+  demonLord: DEMON_LORD_SPRITE,
 };

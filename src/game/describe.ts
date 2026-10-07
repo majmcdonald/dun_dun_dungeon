@@ -38,7 +38,7 @@ function describeBase(e: SkillEffect): string {
     case 'speed':
       return e.factor < 1 ? `SLOW ${pct(1 - e.factor)} FOR ${e.duration}S` : `HASTE +${pct(e.factor - 1)} FOR ${e.duration}S`;
     case 'transform':
-      return `TRANSFORM INTO A CRITTER FOR ${e.duration}S`;
+      return `TRANSFORM INTO A CRITTER FOR ${e.duration}S (DAMAGE BREAKS IT)`;
     case 'taunt':
       return `TAUNT FOR ${e.duration}S`;
     case 'delay':
@@ -53,8 +53,18 @@ function describeBase(e: SkillEffect): string {
       return `LOSE ${pct(e.fraction)} MAX HP`;
     case 'summon':
       return `SUMMON ${e.creature.toUpperCase()} (${pct(e.share)} OF STATS)`;
+    case 'spawn':
+      return `CALL ${e.count} ${e.enemy.toUpperCase()} (MAX ${e.cap})`;
     case 'consumeSummon':
       return 'SACRIFICE A SUMMON';
+    case 'flight':
+      return `FLY ${e.duration}S: TAKE ${pct(1 - e.damageTaken)} LESS, DEAL ${pct(e.damageDealt - 1)} MORE`;
+    case 'venom':
+      return '+1 VENOM STACK';
+    case 'cleanse':
+      return 'CLEANSE (REMOVE POISON AND BLEED)';
+    case 'tickPoison':
+      return 'ALL POISON ON THE TARGET TICKS NOW';
     case 'chaos':
       return `RANDOM: ${e.options.map(describeBase).join(' / ')}`;
   }
@@ -65,17 +75,25 @@ export function describeEffect(e: SkillEffect): string {
   return e.self ? `SELF: ${describeBase(e)}` : describeBase(e);
 }
 
+const TRIGGER_TEXT: Record<Exclude<Trigger['kind'], 'belowHp'>, string> = {
+  battleStart: 'AT THE START OF BATTLE',
+  whenHit: 'WHEN HIT',
+  allyHurt: 'WHEN AN ALLY IS HURT',
+  allyFalls: 'WHEN AN ALLY FALLS',
+  partyLow: 'WHILE PARTY HP IS BELOW 35%',
+  selfLow: 'WHILE OWN HP IS BELOW 50%',
+  onKill: 'WHEN YOU DEFEAT AN ENEMY',
+  enemyDies: 'WHEN ANY ENEMY DIES',
+  whenHealed: 'WHEN HEALED',
+  barrierBreaks: 'WHEN YOUR BARRIER BREAKS',
+  castSpell: 'WHEN YOU CAST A SPELL',
+  onDefeat: 'WHEN DEFEATED',
+};
+
+// Triggers fire at once on their event, then recharge over the skill's cooldown.
 export function describeTrigger(t: Trigger): string {
-  switch (t.kind) {
-    case 'whenHit':
-      return `FILLS ${t.perEvent}S EACH TIME HIT`;
-    case 'allyHurt':
-      return `FILLS ${t.perEvent}S EACH TIME AN ALLY IS HURT`;
-    case 'partyLow':
-      return `RUNS WHILE PARTY HP BELOW ${pct(t.threshold)}`;
-    case 'onDefeat':
-      return 'FIRES WHEN DEFEATED';
-  }
+  if (t.kind === 'belowHp') return `FIRES ONCE BELOW ${pct(t.threshold)} HP`;
+  return `TRIGGER: ${TRIGGER_TEXT[t.kind]}`;
 }
 
 export function describeCondition(c: Condition): string {
@@ -126,6 +144,7 @@ const SELECTOR: Record<Selector, string> = {
   mostDamage: 'TOP DAMAGE DEALER',
   castSpell: 'SPELLCASTER',
   castDefensive: 'DEFENSIVE CASTER',
+  casterClass: 'CASTER-CLASS',
 };
 
 export function describeTarget(t: Targeting): string {

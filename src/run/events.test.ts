@@ -40,9 +40,9 @@ describe('event checks', () => {
   it('read the best member or the whole party, gear included', () => {
     const state = atEvent();
     state.party[1] = { ...state.party[1], equipment: { weapon: ITEMS_BY_ID.oakStaff } };
-    const mage = 18 + (ITEMS_BY_ID.oakStaff.stats.magic ?? 0);
+    const mage = CLASSES_BY_ID.mage.stats.magic + (ITEMS_BY_ID.oakStaff.stats.magic ?? 0);
     expect(partyStat(state, { stat: 'magic', mode: 'highest', difficulty: 1 })).toBe(mage);
-    expect(partyStat(state, { stat: 'magic', mode: 'total', difficulty: 1 })).toBe(0 + mage + 14);
+    expect(partyStat(state, { stat: 'magic', mode: 'total', difficulty: 1 })).toBe(0 + mage + CLASSES_BY_ID.cleric.stats.magic);
   });
 
   it('can be plain luck instead of a stat', () => {
@@ -54,8 +54,9 @@ describe('event checks', () => {
 
   it('give 50% at the difficulty, scaling with the stat, clamped to 10–95%', () => {
     const state = atEvent();
-    expect(checkChance(state, { stat: 'magic', mode: 'highest', difficulty: 18 })).toBe(0.5);
-    expect(checkChance(state, { stat: 'magic', mode: 'highest', difficulty: 36 })).toBe(0.25);
+    const best = CLASSES_BY_ID.mage.stats.magic;
+    expect(checkChance(state, { stat: 'magic', mode: 'highest', difficulty: best })).toBe(0.5);
+    expect(checkChance(state, { stat: 'magic', mode: 'highest', difficulty: best * 2 })).toBe(0.25);
     expect(checkChance(state, { stat: 'magic', mode: 'highest', difficulty: 1 })).toBe(0.95);
     expect(checkChance(state, { stat: 'magic', mode: 'highest', difficulty: 1000 })).toBe(0.1);
   });
@@ -132,6 +133,31 @@ describe('events', () => {
     fromSave(JSON.parse(JSON.stringify(toSave(state))), loaded);
     expect(loaded.run!.event).toEqual(state.run!.event);
     expect(loaded.run!.nextFight).toEqual({ bonus: { attack: 5 } });
+  });
+});
+
+describe('act events', () => {
+  it('only appear in their own act, alongside the shared events', () => {
+    const state = atEvent();
+    const act2Only: EventDef = { ...SHRINE, id: 'act2Only', act: 1 };
+    for (let floor = 1; floor < 10; floor++) {
+      const n = { ...node, id: `${floor}-0`, floor, column: 0 };
+      beginNode(state.run!, n);
+      expect(openEvent(state, n, [SHRINE, act2Only]).id).toBe('shrine');
+    }
+    state.run!.level = 1;
+    state.run!.seenEvents = ['shrine'];
+    const n = { ...node, id: '9-1', floor: 9, column: 1 };
+    beginNode(state.run!, n);
+    expect(openEvent(state, n, [SHRINE, act2Only]).id).toBe('act2Only');
+  });
+
+  it('curse the next fight, cancelling out a blessing', () => {
+    const state = atEvent();
+    const curse: EventDef = { ...SHRINE, choices: [{ label: 'X', success: { text: '', outcomes: [{ kind: 'cursed', penalty: { attack: 6, magic: 6 } }] } }] };
+    openEvent(state, node, [curse]);
+    expect(chooseOption(state, curse, 0)!.lines).toEqual(['CURSED: -6 ATK, -6 MAG NEXT FIGHT']);
+    expect(state.run!.nextFight).toEqual({ bonus: { attack: -6, magic: -6 } });
   });
 });
 

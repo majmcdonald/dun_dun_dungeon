@@ -2,7 +2,7 @@ import { PALETTE } from '../art/palette';
 import type { EquipmentDef, PartyMember, SkillDef } from '../combat/types';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
-import { equipItemBlock, skillAccessBlock } from '../game/loadout';
+import { equipItemBlock, equippedSkills, skillAccessBlock } from '../game/loadout';
 import { ITEMS_BY_ID } from '../content/items';
 import { SKILLS_BY_ID } from '../content/skills';
 import { choosePicks } from '../run/flow';
@@ -86,7 +86,7 @@ export class RewardScene implements Scene {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    drawBackground(ctx);
+    drawBackground(ctx, this.game.state.run?.level ?? 0);
     const treasure = this.reward.type === 'treasure';
     const title = treasure ? 'TREASURE' : 'VICTORY';
     drawText(ctx, title, (NATIVE_WIDTH - textWidth(title)) / 2, 8, PALETTE.gold);
@@ -138,7 +138,7 @@ export class RewardScene implements Scene {
     const state = this.game.state;
     const inInventory = (kind === 'skill' ? state.inventory.skills : state.inventory.items).filter((x) => x.id === id).length;
     let holders = state.party.filter((m) =>
-      kind === 'skill' ? m.skills.some((s) => s.id === id) : Object.values(m.equipment).some((i) => i?.id === id),
+      kind === 'skill' ? equippedSkills(m).some((s) => s.id === id) : Object.values(m.equipment).some((i) => i?.id === id),
     );
     let spare = inInventory;
     if (id === (kind === 'skill' ? this.reward.skill : this.reward.item)) {

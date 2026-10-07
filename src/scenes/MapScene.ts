@@ -5,8 +5,8 @@ import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
 import { enterNode, reviewReward } from '../run/flow';
 import { FLOORS, type MapNode, type NodeType } from '../run/map';
-import { currentNode, nextNodes, type RunState } from '../run/run';
-import { drawBackground } from '../ui/background';
+import { currentNode, nextNodes, roomType, type RunState } from '../run/run';
+import { drawBackground, pathColor } from '../ui/background';
 import { drawText, textWidth } from '../ui/font';
 import { drawButton, drawFrame, drawPanel, inside, type Button, type Rect } from '../ui/widgets';
 import { PartyScene } from './PartyScene';
@@ -28,7 +28,7 @@ const TITLE = 'CHOOSE YOUR PATH';
 const NODE_LABEL: Record<NodeType, string> = {
   battle: 'BATTLE',
   epic: 'EPIC MONSTER',
-  event: 'EVENT',
+  event: 'UNKNOWN',
   store: 'STORE',
   treasure: 'TREASURE',
   boss: 'BOSS',
@@ -59,13 +59,13 @@ export class MapScene implements Scene {
       if (node) return enterNode(this.game, node);
       const last = this.reviewable();
       if (last && inside(click, this.nodeRect(last))) {
-        return last.type === 'store' ? this.game.scenes.switchTo(new StoreScene(this.game)) : reviewReward(this.game);
+        return roomType(this.run, last) === 'store' ? this.game.scenes.switchTo(new StoreScene(this.game)) : reviewReward(this.game);
       }
     }
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    drawBackground(ctx);
+    drawBackground(ctx, this.game.state.run?.level ?? 0);
     const run = this.run;
     const current = currentNode(run);
     const floor = current ? current.floor + 1 : 0;
@@ -102,7 +102,7 @@ export class MapScene implements Scene {
 
   private hoverLabel(node: MapNode): string {
     if (node !== this.reviewable()) return NODE_LABEL[node.type];
-    return node.type === 'store' ? 'REVISIT STORE' : 'REVIEW REWARDS';
+    return roomType(this.run, node) === 'store' ? 'REVISIT STORE' : 'REVIEW REWARDS';
   }
 
   private drawEdges(ctx: CanvasRenderingContext2D, nodes: MapNode[], open: Set<string>, path: Set<string>): void {
@@ -113,7 +113,7 @@ export class MapScene implements Scene {
         const to = byId.get(id)!;
         const walked = path.has(node.id) && path.has(id);
         const ahead = node.id === position && open.has(id);
-        const color = walked ? PALETTE.gold : ahead ? PALETTE.white : PALETTE.black;
+        const color = walked ? PALETTE.gold : ahead ? PALETTE.white : pathColor(this.run.level);
         drawDots(ctx, this.center(node), this.center(to), color);
       }
     }

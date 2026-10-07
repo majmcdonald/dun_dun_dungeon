@@ -38,19 +38,23 @@ function classDef(
 }
 
 export const CLASSES: ClassDef[] = [
-  classDef('knight', 'Knight', 'tank', ['martial', 'heavy'], ['slash', 'ironGuard'], true),
-  classDef('mage', 'Mage', 'caster', ['caster', 'arcane'], ['fireball', 'frostBolt'], true),
-  classDef('cleric', 'Cleric', 'support', ['caster', 'holy'], ['heal', 'blessing'], true),
-  classDef('rogue', 'Rogue', 'striker', ['martial', 'shadow'], ['backstab', 'poisonedBlade'], true),
-  classDef('ranger', 'Ranger', 'striker', ['martial', 'ranged', 'nature'], ['aimedShot', 'volley'], true),
+  // Class pass (Act 2): the Knight's tanking carried trios furthest, so it trades a little HP and ATK.
+  classDef('knight', 'Knight', 'tank', ['martial', 'heavy'], ['slash', 'ironGuard'], true, { hp: 140, attack: 12 }),
+  classDef('mage', 'Mage', 'caster', ['caster', 'arcane'], ['fireball', 'frostBolt'], true, { magic: 20 }),
+  // Support baseline with 1 less MAG: its healing carried long fights too far ahead of other parties (Act 2 balance).
+  classDef('cleric', 'Cleric', 'support', ['caster', 'holy'], ['heal', 'blessing'], true, { magic: 13 }),
+  // Striker baseline with extra HP and DEF so tankless trios can survive Act 1 (balance pass 2).
+  classDef('rogue', 'Rogue', 'striker', ['martial', 'shadow'], ['backstab', 'poisonedBlade'], true, { hp: 115, defense: 12 }),
+  classDef('ranger', 'Ranger', 'striker', ['martial', 'ranged', 'nature'], ['aimedShot', 'volley'], true, { hp: 110, defense: 11, attack: 20 }),
   classDef('barbarian', 'Barbarian', 'bruiser', ['martial', 'heavy'], ['cleave', 'rage'], true, {}, { mechanic: 'rage' }),
   // Tank baseline with 6 ATK moved into MAG so Lay on Hands (a Magic Power heal) does something.
   classDef('paladin', 'Paladin', 'tank', ['martial', 'heavy', 'holy'], ['holyStrike', 'layOnHands'], false, { attack: 8, magic: 6 }),
-  classDef('necromancer', 'Necromancer', 'caster', ['caster', 'shadow'], ['siphonLife', 'curseOfFrailty'], false, {}, { mechanic: 'souls' }),
+  classDef('necromancer', 'Necromancer', 'caster', ['caster', 'shadow'], ['siphonLife', 'curseOfFrailty'], false, { magic: 22 }, { mechanic: 'souls' }),
   classDef('druid', 'Druid', 'support', ['caster', 'nature'], ['rejuvenate', 'barkskin'], false),
   classDef('monk', 'Monk', 'bruiser', ['martial', 'holy'], ['flurry', 'innerPeace'], false, {}, { mechanic: 'chi' }),
-  classDef('bard', 'Bard', 'support', ['caster', 'arcane'], ['inspire', 'discord'], false),
-  classDef('warlock', 'Warlock', 'caster', ['caster', 'shadow', 'arcane'], ['corruption', 'eldritchBlast'], false, {}, {
+  // Class pass (Act 2): the weakest class; sturdier and stronger so it can carry a party as its only support.
+  classDef('bard', 'Bard', 'support', ['caster', 'arcane'], ['inspire', 'discord'], false, { hp: 120, attack: 10, magic: 22, defense: 10 }),
+  classDef('warlock', 'Warlock', 'caster', ['caster', 'shadow', 'arcane'], ['corruption', 'eldritchBlast'], false, { hp: 95, magic: 28 }, {
     mechanic: 'familiar',
     familiar: 'imp',
   }),

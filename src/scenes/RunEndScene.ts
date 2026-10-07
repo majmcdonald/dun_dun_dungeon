@@ -1,9 +1,10 @@
 import { PALETTE } from '../art/palette';
 import { spriteCanvas } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
+import { CLASSES_BY_ID } from '../content/classes';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
-import type { RunSummary } from '../run/run';
+import { LEVELS, type RunSummary } from '../run/run';
 import { drawBackground } from '../ui/background';
 import { drawText, textWidth } from '../ui/font';
 import { drawButton, drawPanel, inside, type Button, type Rect } from '../ui/widgets';
@@ -15,10 +16,12 @@ const VALUE_COLOR: Record<string, string> = { 'GOLD EARNED': PALETTE.gold, 'DAMA
 const SPRITE_SCALE = 2;
 const SPRITE_STEP = 96;
 const SPRITES_TOP = 64;
+const UNLOCK_Y = 122;
 const STATS: Rect = { x: 130, y: 132, w: 220, h: 110 };
 const TITLE_BUTTON: Button = { x: 170, y: 246, w: 140, h: 20, label: 'BACK TO TITLE' };
 
-// End of a run: victory after the level 3 boss, or Run Over when the whole party falls. The save slot is already freed.
+// End of a run: victory after the last boss, or Run Over when the whole party falls. The slot's run is already freed;
+// its profile keeps the run's stats and any classes it unlocked.
 export class RunEndScene implements Scene {
   private sprites: HTMLCanvasElement[];
 
@@ -42,7 +45,7 @@ export class RunEndScene implements Scene {
 
   render(ctx: CanvasRenderingContext2D): void {
     const { won, level, where, stats } = this.summary;
-    drawBackground(ctx);
+    drawBackground(ctx, level - 1);
     const title = won ? 'VICTORY' : 'RUN OVER';
     drawText(ctx, title, (NATIVE_WIDTH - textWidth(title, TITLE_SCALE)) / 2, 13, won ? PALETTE.gold : PALETTE.red, PALETTE.black, TITLE_SCALE);
 
@@ -60,9 +63,15 @@ export class RunEndScene implements Scene {
     const left = (NATIVE_WIDTH - (this.sprites.length - 1) * SPRITE_STEP - size) / 2;
     this.sprites.forEach((sprite, i) => ctx.drawImage(sprite, left + i * SPRITE_STEP, SPRITES_TOP, size, size));
 
+    const unlocked = this.summary.unlocked ?? [];
+    if (unlocked.length > 0) {
+      const text = `NEW CLASS UNLOCKED: ${unlocked.map((id) => CLASSES_BY_ID[id].name.toUpperCase()).join(', ')}`;
+      drawText(ctx, text, (NATIVE_WIDTH - textWidth(text)) / 2, UNLOCK_Y, PALETTE.green);
+    }
+
     drawPanel(ctx, STATS, won ? PALETTE.gold : PALETTE.darkSlate);
     const rows: [string, string][] = [
-      ['LEVEL REACHED', `${level}/3`],
+      ['LEVEL REACHED', `${level}/${LEVELS}`],
       ['ROOMS CLEARED', `${stats.rooms}`],
       ['FIGHTS WON', `${stats.fights}`],
       ['EPIC MONSTERS', `${stats.epics}`],

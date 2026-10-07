@@ -23,20 +23,30 @@ export const GLORY_START = 0.8;
 const STEAL_BUFF_POINTS = 10;
 const SELF_DAMAGE_CREDIT = 10;
 const CONSUME_SUMMON_CREDIT = 0.3;
+// A cleanse is worth this many seconds of the skill's budget, per target.
+const CLEANSE_SECONDS = 0.6;
 
 // Harder-to-fire skills get more power per second of cooldown.
+// Triggers fire at most once per cooldown, and only when their event happens: the rarer the event, the more
+// each firing may do. Frequent events (hits, spells) get about the timed budget.
+const TRIGGER_ALLOWANCE: Record<Exclude<Trigger['kind'], 'belowHp'>, number> = {
+  whenHit: 1,
+  allyHurt: 1,
+  castSpell: 1,
+  whenHealed: 1.1,
+  enemyDies: 1.2,
+  onKill: 1.3,
+  barrierBreaks: 1.4,
+  partyLow: 1.4,
+  selfLow: 1.4,
+  battleStart: 2,
+  allyFalls: 2,
+  onDefeat: 3,
+};
+
 export function triggerAllowance(trigger: Trigger | undefined): number {
-  switch (trigger?.kind) {
-    case 'whenHit':
-    case 'allyHurt':
-      return 1.25;
-    case 'partyLow':
-      return 1.4;
-    case 'onDefeat':
-      return 3;
-    default:
-      return 1;
-  }
+  if (!trigger || trigger.kind === 'belowHp') return 1;
+  return TRIGGER_ALLOWANCE[trigger.kind];
 }
 
 export function conditionAllowance(condition: Condition | undefined): number {
@@ -95,6 +105,9 @@ export function effectCost(e: SkillEffect, cooldown: number, rarity: Rarity): nu
       return (Math.abs(1 - e.factor) * e.duration) / cooldown / b.speed;
     case 'summon':
       return e.share / cooldown / b.summon;
+    // Enemy-only; enemy abilities are never budgeted.
+    case 'spawn':
+      return 0;
     case 'transform':
     case 'taunt':
       return e.duration / cooldown / b.control;
@@ -110,6 +123,12 @@ export function effectCost(e: SkillEffect, cooldown: number, rarity: Rarity): nu
       return -(e.fraction * SELF_DAMAGE_CREDIT) / cooldown;
     case 'consumeSummon':
       return -CONSUME_SUMMON_CREDIT;
+    case 'cleanse':
+      return CLEANSE_SECONDS / cooldown;
+    case 'flight':
+    case 'venom':
+    case 'tickPoison':
+      return 0;
     case 'chaos':
       return e.options.reduce((sum, o) => sum + effectCost(o, cooldown, rarity), 0) / e.options.length;
   }

@@ -10,8 +10,9 @@ import { createState } from './game/state';
 import { enterNode } from './run/flow';
 import { startRun } from './run/run';
 import { DebugScene } from './scenes/DebugScene';
+import { MapScene } from './scenes/MapScene';
 import { RunEndScene } from './scenes/RunEndScene';
-import { TitleScene } from './scenes/TitleScene';
+import { SplashScene } from './scenes/SplashScene';
 import { VfxPreviewScene } from './scenes/VfxPreviewScene';
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
@@ -28,11 +29,19 @@ const params = new URLSearchParams(location.search);
 
 // Dev-only: ?preview=vfx loops the battle VFX; ?preview=victory or ?preview=defeat shows the run-end screen.
 const preview = params.get('preview');
-if (preview === 'event') {
+// &act=N (1-3) on the event and map previews shows that act's backdrop.
+const previewAct = Math.max(0, Number(params.get('act') ?? 1) - 1);
+if (preview === 'map') {
+  const state = game.state;
+  startRun(state, 0, ['knight', 'mage', 'cleric'].map((id) => CLASSES_BY_ID[id]), 7);
+  state.run!.level = previewAct;
+  game.scenes.switchTo(new MapScene(game));
+} else if (preview === 'event') {
   // A run sitting just before an Event room; &id= picks the event (the first one by default).
   const state = game.state;
   startRun(state, 0, ['knight', 'mage', 'cleric'].map((id) => CLASSES_BY_ID[id]), 7);
   const run = state.run!;
+  run.level = previewAct;
   const node = run.map.floors.flat().find((n) => n.type === 'event')!;
   run.position = run.map.floors.flat().find((n) => n.next.includes(node.id))?.id ?? null;
   run.gold = 100;
@@ -60,7 +69,9 @@ if (preview === 'event') {
       won,
       level: won ? 3 : 2,
       where: won ? 'THE BOSS' : 'ROOM 7',
+      room: won ? 15 : 7,
       party: ['knight', 'barbarian', 'cleric'],
+      unlocked: won ? ['paladin', 'warlock'] : [],
       slayers: won ? [] : ['SLIME', 'ORC', 'BAT', 'ARCHER', 'SHAMAN'],
       stats: won
         ? { rooms: 48, fights: 31, epics: 6, bosses: 3, goldEarned: 1284, damageDone: 48210, damageTaken: 21377 }
@@ -68,7 +79,7 @@ if (preview === 'event') {
     }),
   );
   // Dev-only: ?debug opens the debug screen directly.
-} else game.scenes.switchTo(params.has('debug') ? new DebugScene(game) : new TitleScene(game));
+} else game.scenes.switchTo(params.has('debug') ? new DebugScene(game) : new SplashScene(game));
 
 startLoop({
   update: (dt) => game.scenes.update(dt),

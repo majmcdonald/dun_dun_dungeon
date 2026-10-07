@@ -1,18 +1,24 @@
 import type { PartyStart } from '../combat/battle';
-import type { EquipmentDef, EquipSlot, PartyMember } from '../combat/types';
+import type { EquipmentDef, EquipSlot, PartyMember, SkillDef } from '../combat/types';
 import { CLASSES_BY_ID, type ClassDef } from '../content/classes';
 import { ITEMS_BY_ID } from '../content/items';
 import { SKILLS_BY_ID } from '../content/skills';
 import { seededRng } from '../engine/random';
+import { logEvent, loadout, type LogEntry } from './log';
+import { checkUnlocks, loadProfile, saveProfile } from './profile';
 import { loadSlot, saveSlot } from '../engine/save';
+import { equippedSkills } from '../game/loadout';
 import { recruit, type GameState } from '../game/state';
 import { findNode, FLOORS, generateMap, reachable, type MapNode, type NodeType, type RunMap } from './map';
 import type { EventVisit } from './events';
 import type { Reward } from './rewards';
 
+// A run is three acts; beating the Act 3 boss wins it.
 export const LEVELS = 3;
 
 export interface RunState {
+  // What has happened this run (see log.ts).
+  log: LogEntry[];
   slot: number;
   seed: number;
   // 0-based; the player sees level + 1.
@@ -38,6 +44,9 @@ export interface RunState {
   seenEvents: string[];
   // Wounded/blessed effects from events, applied to the next fight.
   nextFight: PartyStart | null;
+  // The fight picked for the room being played, and every fight used this run (oldest first).
+  encounter: { node: string; id: string } | null;
+  usedEncounters: string[];
 }
 
 export interface StoreVisit {
@@ -77,7 +86,8 @@ export interface LastReward {
 export function startRun(state: GameState, slot: number, classes: ClassDef[], seed: number): void {
   state.party = classes.map(recruit);
   state.inventory = { skills: [], items: [] };
-  state.run = { slot, seed, level: 0, map: levelMap(seed, 0), position: null, path: [], pending: null, gold: 0, result: null, lastReward: null, stats: { ...NO_STATS }, broken: [], store: null, event: null, seenEvents: [], nextFight: null };
+  state.run = { log: [], slot, seed, level: 0, map: levelMap(seed, 0), position: null, path: [], pending: null, gold: 0, result: null, lastReward: null, stats: { ...NO_STATS }, broken: [], store: null, event: null, seenEvents: [], nextFight: null, encounter: null, usedEncounters: [] };
+  logEvent(state.run, 'start', { seed, slot, party: loadout(state.party) });
 }
 
 function levelMap(seed: number, level: number): RunMap {
@@ -115,6 +125,26 @@ export function beginNode(run: RunState, node: MapNode): void {
   run.pending = node.id;
   if (run.store?.node !== node.id) run.store = null;
   if (run.event?.node !== node.id) run.event = null;
+  if (run.encounter?.node !== node.id) run.encounter = null;
+}
+
+// What a "?" room turns out to be, rolled when entered and seeded by the room so a reload gets the same.
+export const UNKNOWN_ODDS: [NodeType, number][] = [
+  ['event', 70],
+  ['battle', 15],
+  ['store', 10],
+  ['treasure', 5],
+];
+
+export function roomType(run: RunState, node: MapNode): NodeType {
+  if (node.type !== 'event' || run.event?.node === node.id) return node.type;
+  const rng = seededRng(run.seed * 457 + run.level * 71 + node.floor * 17 + node.column);
+  let roll = rng() * UNKNOWN_ODDS.reduce((sum, [, w]) => sum + w, 0);
+  for (const [type, weight] of UNKNOWN_ODDS) {
+    roll -= weight;
+    if (roll < 0) return type;
+  }
+  return 'event';
 }
 
 export function pendingNodeOf(run: RunState): MapNode | null {
@@ -146,12 +176,15 @@ export function recordWin(run: RunState, node: MapNode, reward: Reward): void {
 export interface RunSummary {
   won: boolean;
   level: number;
-  // Where the run ended, e.g. "ROOM 7" or "THE BOSS".
+  // Where the run ended, e.g. "ROOM 7" or "THE BOSS", and that room's number.
   where: string;
+  room: number;
   party: string[];
   stats: RunStats;
   // Enemy types in the fight that wiped the party; empty on a win.
   slayers: string[];
+  // Classes unlocked during the run.
+  unlocked?: string[];
 }
 
 // What the victory / Run Over screen shows; `slayers` are the enemy types of the fight that wiped the party.
@@ -162,6 +195,7 @@ export function runSummary(state: GameState, slayers: string[] = []): RunSummary
     won: run.result === 'won',
     level: run.level + 1,
     where: at?.type === 'boss' ? 'THE BOSS' : `ROOM ${at ? Math.min(at.floor + 1, FLOORS) : 1}`,
+    room: at ? Math.min(at.floor + 1, FLOORS) : 1,
     party: state.party.map((m) => m.def.id),
     stats: { ...run.stats },
     slayers,
@@ -189,7 +223,7 @@ export function setRewardPicks(state: GameState, skill: string | null, item: str
 export function pickHolder(state: GameState, kind: 'skill' | 'item', id: string): PartyMember | null {
   if (kind === 'skill') {
     if (state.inventory.skills.some((s) => s.id === id)) return null;
-    return state.party.find((m) => m.skills.some((s) => s.id === id)) ?? null;
+    return state.party.find((m) => equippedSkills(m).some((s) => s.id === id)) ?? null;
   }
   if (state.inventory.items.some((i) => i.id === id)) return null;
   return state.party.find((m) => Object.values(m.equipment).some((i) => i?.id === id)) ?? null;
@@ -201,13 +235,14 @@ function takeBackSkill(state: GameState, id: string): void {
     state.inventory.skills.splice(index, 1);
     return;
   }
-  const holder = state.party.find((m) => m.skills.some((s) => s.id === id));
+  const holder = state.party.find((m) => equippedSkills(m).some((s) => s.id === id));
   if (!holder) return;
   // Skills that needed it can't stay equipped without it.
-  const dependents = holder.skills.filter((s) => s.prerequisite === id);
-  state.inventory.skills.push(...dependents);
-  const skills = holder.skills.filter((s) => s.id !== id && s.prerequisite !== id);
-  state.party = state.party.map((m) => (m === holder ? { ...m, skills } : m));
+  const gone = (s: SkillDef) => s.id === id || s.prerequisite === id;
+  state.inventory.skills.push(...equippedSkills(holder).filter((s) => s.prerequisite === id));
+  const skills = holder.skills.filter((s) => !gone(s));
+  const trigger = holder.trigger && !gone(holder.trigger) ? holder.trigger : null;
+  state.party = state.party.map((m) => (m === holder ? { ...m, skills, trigger } : m));
 }
 
 function takeBackItem(state: GameState, id: string): void {
@@ -245,6 +280,7 @@ export function withBoost(item: EquipmentDef, boost: NonNullable<EquipmentDef['b
 interface SavedMember {
   classId: string;
   skills: string[];
+  trigger?: string | null;
   equipment: Partial<Record<EquipSlot, ItemRef>>;
 }
 
@@ -261,6 +297,7 @@ export function toSave(state: GameState): SavedRun {
     party: state.party.map((m) => ({
       classId: m.def.id,
       skills: m.skills.map((s) => s.id),
+      trigger: m.trigger?.id ?? null,
       equipment: Object.fromEntries(Object.entries(m.equipment).map(([slot, item]) => [slot, itemRef(item!)])),
     })),
     inventory: { skills: state.inventory.skills.map((s) => s.id), items: state.inventory.items.map(itemRef) },
@@ -268,23 +305,41 @@ export function toSave(state: GameState): SavedRun {
 }
 
 // A run reloaded mid-node restarts that node from the map.
+// Skills and items removed from the game since the save was made are dropped wherever their ids appear.
+const knownSkill = (id: string | null) => id === null || !!SKILLS_BY_ID[id];
+const knownItem = (id: string | null) => id === null || !!ITEMS_BY_ID[id];
+
 export function fromSave(saved: SavedRun, state: GameState): void {
+  const reward = saved.run.lastReward;
+  const store = saved.run.store;
   state.run = {
     ...saved.run,
+    log: saved.run.log ?? [],
     path: saved.run.path ?? [],
     pending: null,
-    lastReward: saved.run.lastReward ?? null,
+    lastReward: reward
+      ? {
+          ...reward,
+          skills: reward.skills.filter(knownSkill),
+          items: reward.items.filter(knownItem),
+          skill: knownSkill(reward.skill) ? reward.skill : null,
+          item: knownItem(reward.item) ? reward.item : null,
+        }
+      : null,
     stats: { ...NO_STATS, ...saved.run.stats },
     broken: saved.run.broken ?? [],
-    store: saved.run.store ?? null,
+    store: store ? { ...store, skills: store.skills.filter(knownSkill), items: store.items.filter(knownItem) } : null,
     event: saved.run.event ?? null,
     seenEvents: saved.run.seenEvents ?? [],
     nextFight: saved.run.nextFight ?? null,
+    encounter: saved.run.encounter ?? null,
+    usedEncounters: saved.run.usedEncounters ?? [],
   };
   state.party = saved.party.map(
     (m): PartyMember => ({
       def: CLASSES_BY_ID[m.classId],
       skills: m.skills.map((id) => SKILLS_BY_ID[id]).filter(Boolean),
+      trigger: (m.trigger && SKILLS_BY_ID[m.trigger]) || null,
       equipment: Object.fromEntries(
         Object.entries(m.equipment).flatMap(([slot, ref]) => {
           const item = itemFromRef(ref!);
@@ -299,13 +354,20 @@ export function fromSave(saved: SavedRun, state: GameState): void {
   };
 }
 
+// Also saves the slot's profile, unlocking anything the run's gold now earns.
 export function saveRun(state: GameState): boolean {
-  return !!state.run && saveSlot(state.run.slot, toSave(state));
+  if (!state.run) return false;
+  if (state.profile) {
+    checkUnlocks(state.profile, state.run.gold);
+    saveProfile(state.run.slot, state.profile);
+  }
+  return saveSlot(state.run.slot, toSave(state));
 }
 
 export function loadRun(slot: number, state: GameState): boolean {
   const saved = loadSlot<SavedRun>(slot);
   if (!saved) return false;
   fromSave(saved.data, state);
+  state.profile = loadProfile(slot);
   return true;
 }

@@ -107,7 +107,7 @@ describe('familiar', () => {
     runFor(battle, 5.1);
     const imp = battle.combatants.find((c) => c.familiar)!;
     imp.hp = 1;
-    battle.get('enemy-0').slots.push({ def: skill('snipe', [hit()], { target: { side: 'enemy', select: 'front', area: 'single' } }), timer: 1 });
+    battle.get('enemy-0').slots.push({ def: skill('snipe', [hit()], { target: { side: 'enemy', select: 'front', area: 'single' } }), timer: 1, position: 1, rate: 1 });
     runFor(battle, 0.1);
     expect(battle.get('party-0').channel).toBeGreaterThan(4);
   });
@@ -152,29 +152,55 @@ describe('meters', () => {
   });
 });
 
-describe('event skills', () => {
+describe('trigger skills', () => {
   const honor = (trigger: Trigger) => skill('honor', [hit()], { cooldown: 3, trigger });
+  const poker = () => unit('e', {}, [skill('poke', [hit()], { cooldown: 1 })]);
 
-  it('whenHit timers only fill when the owner is hit', () => {
-    const knight = unit('knight', {}, [honor({ kind: 'whenHit', perEvent: 1 })]);
+  it('whenHit fires the moment the owner is hit, then waits out its cooldown', () => {
+    const knight = unit('knight', {}, [honor({ kind: 'whenHit' })]);
     const quiet = new Battle([member(knight)], [unit('e', { attack: 0 })], NO_JITTER);
     expect(fired(runFor(quiet, 10), 'honor')).toBe(0);
-    const busy = new Battle([member(knight)], [unit('e', {}, [skill('poke', [hit()], { cooldown: 1 })])], NO_JITTER);
-    expect(fired(runFor(busy, 3.1), 'honor')).toBe(1);
+    const busy = new Battle([member(knight)], [poker()], NO_JITTER);
+    const first = runFor(busy, 1.05);
+    expect(fired(first, 'honor')).toBe(1);
+    expect(fired(runFor(busy, 2.9), 'honor')).toBe(0);
+    expect(fired(runFor(busy, 1.2), 'honor')).toBe(1);
   });
 
-  it('allyHurt timers fill when another party member is hurt', () => {
-    const paladin = unit('pal', {}, [honor({ kind: 'allyHurt', perEvent: 1 })]);
-    const battle = new Battle([member(unit('front')), member(paladin)], [unit('e', {}, [skill('poke', [hit()], { cooldown: 1 })])], NO_JITTER);
-    expect(fired(runFor(battle, 3.1), 'honor')).toBe(1);
+  it('allyHurt fires when another party member is hurt', () => {
+    const paladin = unit('pal', {}, [honor({ kind: 'allyHurt' })]);
+    const battle = new Battle([member(unit('front')), member(paladin)], [poker()], NO_JITTER);
+    expect(fired(runFor(battle, 1.05), 'honor')).toBe(1);
   });
 
-  it('partyLow timers only run while the party is below the threshold', () => {
-    const cleric = unit('cleric', {}, [honor({ kind: 'partyLow', threshold: 0.35 })]);
+  it('partyLow fires whenever ready while the party is below 35%', () => {
+    const cleric = unit('cleric', {}, [honor({ kind: 'partyLow' })]);
     const battle = new Battle([member(cleric)], [unit('e', { attack: 0 })], NO_JITTER);
     expect(fired(runFor(battle, 5), 'honor')).toBe(0);
     battle.get('party-0').hp = 300;
-    expect(fired(runFor(battle, 3.1), 'honor')).toBe(1);
+    expect(fired(runFor(battle, 3.1), 'honor')).toBe(2);
+  });
+
+  it('battleStart fires once as the fight opens', () => {
+    const opener = unit('opener', {}, [honor({ kind: 'battleStart' })]);
+    const battle = new Battle([member(opener)], [unit('e')], NO_JITTER);
+    expect(fired(runFor(battle, 0.05), 'honor')).toBe(1);
+    expect(fired(runFor(battle, 10), 'honor')).toBe(0);
+  });
+
+  it('onKill fires for the hero who lands the killing blow, enemyDies for the whole party', () => {
+    const slayer = unit('slayer', { attack: 999 }, [skill('chop', [hit()], { cooldown: 1 }), skill('kill', [hit(0)], { cooldown: 1, trigger: { kind: 'onKill' } })]);
+    const watcher = unit('watcher', {}, [skill('cheer', [hit(0)], { cooldown: 1, trigger: { kind: 'enemyDies' } })]);
+    const battle = new Battle([member(slayer), member(watcher)], [unit('e1', { hp: 10 }), unit('e2', { hp: 10000 })], NO_JITTER);
+    const events = runFor(battle, 1.05);
+    expect([fired(events, 'kill'), fired(events, 'cheer')]).toEqual([1, 1]);
+  });
+
+  it('castSpell fires after the owner casts a spell', () => {
+    const bolt = skill('bolt', [hit(0)], { cooldown: 1, category: 'spell' });
+    const mage = unit('mage', {}, [bolt, skill('echo', [hit(0)], { cooldown: 5, trigger: { kind: 'castSpell' } })]);
+    const battle = new Battle([member(mage)], [unit('e')], NO_JITTER);
+    expect(fired(runFor(battle, 1.05), 'echo')).toBe(1);
   });
 
   it('onDefeat skills fire once when the owner falls', () => {
@@ -183,10 +209,37 @@ describe('event skills', () => {
       target: { side: 'ally', select: 'front', area: 'all' },
     });
     const knight = unit('knight', { hp: 5, defense: 50 }, [lastWord]);
-    const battle = new Battle([member(knight), member(unit('friend'))], [unit('e', {}, [skill('poke', [hit()], { cooldown: 1 })])], NO_JITTER);
+    const battle = new Battle([member(knight), member(unit('friend'))], [poker()], NO_JITTER);
     const events = runFor(battle, 1.1);
     expect(fired(events, 'lastWord')).toBe(1);
     expect(battle.get('party-1').barrier?.amount).toBe(50);
+  });
+});
+
+describe('skill slots', () => {
+  it('run slot 1 at x1.25, slot 2 normal, slot 3 at x0.75', () => {
+    const a = skill('a', [hit(0)], { cooldown: 1 });
+    const b = skill('b', [hit(0)], { cooldown: 1 });
+    const c = skill('c', [hit(0)], { cooldown: 1 });
+    const battle = new Battle([member(unit('h', {}, [a, b, c]))], [unit('e')], NO_JITTER);
+    const events = runFor(battle, 4.02);
+    expect([fired(events, 'a'), fired(events, 'b'), fired(events, 'c')]).toEqual([5, 4, 3]);
+  });
+
+  it('put the trigger in slot 4 whatever list position it came from', () => {
+    const t = skill('t', [hit(0)], { cooldown: 2, trigger: { kind: 'whenHit' } });
+    const battle = new Battle([{ def: unit('h'), equipment: {}, skills: [skill('a', [hit(0)])], trigger: t }], [unit('e')], NO_JITTER);
+    expect(battle.get('party-0').slots.map((s) => [s.def.id, s.position])).toEqual([
+      ['a', 0],
+      ['t', 3],
+    ]);
+  });
+
+  it('leave enemy skills at normal speed', () => {
+    const e = unit('e', {}, [skill('x', [hit(0)], { cooldown: 1 }), skill('y', [hit(0)], { cooldown: 1 }), skill('z', [hit(0)], { cooldown: 1 })]);
+    const battle = new Battle([member(unit('h'))], [e], NO_JITTER);
+    const events = runFor(battle, 4.02);
+    expect([fired(events, 'x'), fired(events, 'y'), fired(events, 'z')]).toEqual([4, 4, 4]);
   });
 });
 
@@ -214,7 +267,7 @@ describe('control effects', () => {
     const events = runFor(battle, 101.1);
     expect(fired(events, 'poke')).toBeGreaterThan(90);
     const b2 = new Battle([member(unit('m', {}, [polymorph]))], [unit('e', {}, [skill('poke', [hit()], { cooldown: 1 })])], NO_JITTER);
-    runFor(b2, 100);
+    runFor(b2, 80);
     expect(fired(runFor(b2, 4), 'poke')).toBe(0);
   });
 
@@ -239,9 +292,9 @@ describe('control effects', () => {
     const bear = skill('bear', [{ kind: 'shapeshift', duration: 5, bonus: 1 }], { cooldown: 100, target: { side: 'self' } });
     const maul = skill('maul', [hit(1)], { cooldown: 1, form: true });
     const spell = skill('spell', [hit(1)], { cooldown: 1 });
-    const druid = unit('d', { attack: 50 }, [maul, spell, bear]);
+    const druid = unit('d', { attack: 50 }, [bear, maul, spell]);
     const battle = new Battle([member(druid)], [unit('e', { hp: 100000 })], NO_JITTER);
-    runFor(battle, 100);
+    runFor(battle, 80);
     const events = runFor(battle, 3);
     expect(fired(events, 'spell')).toBe(0);
     expect(damageTo(events, 'enemy-0')[0].amount).toBe(100);
@@ -281,7 +334,8 @@ describe('thief and misc effects', () => {
 
   it('glory grows with fight length', () => {
     const glory = skill('glory', [hit(1)], { cooldown: 10, glory: 0.05 });
-    const battle = new Battle([member(unit('p', { attack: 100 }, [glory]))], [unit('e', { hp: 100000 })], NO_JITTER);
+    const wait = skill('wait', [hit(0)], { cooldown: 999 });
+    const battle = new Battle([member(unit('p', { attack: 100 }, [wait, glory]))], [unit('e', { hp: 100000 })], NO_JITTER);
     const amounts = damageTo(runFor(battle, 20), 'enemy-0').map((d) => d.amount);
     expect(amounts).toEqual([110, 120]);
   });
@@ -315,5 +369,300 @@ describe('enemy grid', () => {
       ['mid', { row: 0, column: 1 }],
       ['back', { row: 2, column: 2 }],
     ]);
+  });
+});
+
+describe('boss mechanics', () => {
+  const minion = unit('minion', { hp: 50 }, [skill('poke', [hit(0)], { cooldown: 99 })]);
+  const call = (count: number, cap: number) =>
+    skill('call', [{ kind: 'spawn', enemy: 'minion', count, cap }], { cooldown: 1, target: { side: 'self' } });
+
+  it('spawn reinforcements into empty cells front to back, never above the cap', () => {
+    const boss = unit('boss', {}, [call(2, 3)]);
+    const battle = new Battle([member(unit('a', { attack: 0 }))], [null, null, null, null, boss], NO_JITTER, { bestiary: { minion } });
+    const events = runFor(battle, 1.05);
+    expect(events.filter((e) => e.type === 'summon')).toHaveLength(2);
+    runFor(battle, 2);
+    const minions = battle.alive('enemy').filter((c) => c.def.id === 'minion');
+    expect(minions.map((c) => c.position)).toEqual([0, 1, 2]);
+  });
+
+  it('fire a below-HP ability once when crossing the threshold', () => {
+    const rage = skill('rage', [{ kind: 'buff', stat: 'attack', amount: 5, duration: 99 }], {
+      cooldown: 1,
+      target: { side: 'self' },
+      trigger: { kind: 'belowHp', threshold: 0.5 },
+    });
+    const boss = unit('boss', { hp: 100, defense: 0 }, [rage]);
+    const battle = new Battle([member(unit('a', { attack: 30 }, [skill('hit', [hit()], { cooldown: 1 })]))], [boss], NO_JITTER);
+    const early = runFor(battle, 1.05);
+    expect(fired(early, 'rage')).toBe(0);
+    const later = runFor(battle, 1);
+    expect(fired(later, 'rage')).toBe(1);
+    expect(fired(runFor(battle, 0.9), 'rage')).toBe(0);
+  });
+
+  it('regenerate a share of max HP per second, paused by the blocking element', () => {
+    const troll = unit('troll', { hp: 100 }, [], { regeneration: { perSecond: 0.1, blockedBy: ['fire'], blockSeconds: 2 } });
+    const battle = new Battle([member(unit('a'))], [troll], NO_JITTER);
+    const t = battle.get('enemy-0');
+    t.hp = 50;
+    runFor(battle, 1);
+    expect(t.hp).toBeGreaterThanOrEqual(59);
+    expect(t.hp).toBeLessThanOrEqual(60);
+    const burn = skill('burn', [{ kind: 'damage', damageType: 'magic', stat: 'magic', scaling: 0, element: 'fire' }], { cooldown: 99 });
+    battle.get('party-0').slots.push({ def: burn, timer: 99, position: 1, rate: 1 });
+    runFor(battle, 1.5);
+    expect(t.hp).toBeLessThanOrEqual(60);
+    runFor(battle, 2);
+    expect(t.hp).toBeGreaterThan(60);
+  });
+
+  it('grow fiercer after the fury timer, one stack per step', () => {
+    const boss = unit('boss', { hp: 100000, attack: 20, magic: 0 }, [], { fury: { after: 10, step: 2, rate: 0.5 } });
+    const battle = new Battle([member(unit('a', { hp: 100000 }))], [boss], NO_JITTER);
+    const b = battle.get('enemy-0');
+    const attack = () => b.buffs.filter((x) => x.source === 'fury' && x.stat === 'attack').reduce((n, x) => n + x.amount, 0);
+    runFor(battle, 9.9);
+    expect(attack()).toBe(0);
+    expect(runFor(battle, 0.2).some((e) => e.type === 'status' && e.status === 'fury')).toBe(true);
+    expect(attack()).toBe(10);
+    runFor(battle, 4);
+    expect(attack()).toBe(30);
+    expect(b.buffs.filter((x) => x.source === 'fury' && x.stat === 'magic')).toHaveLength(0);
+  });
+});
+
+describe('act 2 enemy mechanics', () => {
+  it('slow whoever hits them, through an enemy when-hit trigger', () => {
+    const hide = skill('hide', [{ kind: 'speed', factor: 0.7, duration: 3 }], {
+      cooldown: 3,
+      target: { side: 'enemy', select: 'attackedMe', area: 'single' },
+      trigger: { kind: 'whenHit' },
+    });
+    const battle = new Battle([member(unit('a', {}, [skill('poke', [hit(1)])]))], [unit('wolf', { hp: 100000 }, [hide])], NO_JITTER);
+    runFor(battle, 1);
+    expect(battle.get('party-0').speed.map((s) => s.value)).toEqual([0.7]);
+  });
+
+  it('fly when hit: take less and deal more direct damage for a while', () => {
+    const fly = skill('fly', [{ kind: 'flight', duration: 3, damageTaken: 0.3, damageDealt: 1.7 }], {
+      cooldown: 8,
+      target: { side: 'self' },
+      trigger: { kind: 'whenHit' },
+    });
+    const harpy = unit('harpy', { hp: 100000, defense: 0 }, [fly]);
+    const battle = new Battle([member(unit('a', { attack: 100 }, [skill('poke', [hit(1)])]))], [harpy], NO_JITTER);
+    const h = battle.get('enemy-0');
+    const damage = (events: BattleEvent[]) => events.filter((e) => e.type === 'damage' && e.target === h.uid).map((e) => (e as { amount: number }).amount);
+    const first = damage(runFor(battle, 1));
+    expect(h.flight).not.toBeNull();
+    const second = damage(runFor(battle, 1));
+    expect(second[0]).toBeLessThan(first[0] * 0.35);
+    runFor(battle, 3);
+    expect(h.flight).toBeNull();
+  });
+
+  it('grow their poison with each Venom stack', () => {
+    const envenom = skill('envenom', [{ kind: 'venom' }], { cooldown: 5, target: { side: 'self' } });
+    const shiv = skill('shiv', [{ kind: 'dot', stat: 'attack', scaling: 1, duration: 5, element: 'poison', perStack: 0.5 }], { cooldown: 2.5 });
+    const battle = new Battle([member(unit('a', { hp: 100000 }))], [unit('b', { attack: 20, hp: 100000 }, [shiv, envenom])], NO_JITTER);
+    const hero = battle.get('party-0');
+    runFor(battle, 2.6);
+    expect(hero.dots[0].amount).toBe(20);
+    runFor(battle, 10);
+    expect(battle.get('enemy-0').meter).toBe(2);
+    expect(hero.dots[0].amount).toBe(40);
+  });
+});
+
+describe('act 2 group 2 mechanics', () => {
+  it('shatter on defeat, hitting every hero', () => {
+    const shatter = skill('shatter', [hit(2)], { cooldown: 1, target: { side: 'enemy', select: 'front', area: 'all' }, trigger: { kind: 'onDefeat' } });
+    const golem = unit('golem', { hp: 1, attack: 50 }, [shatter]);
+    const other = unit('other', { hp: 100000 }, []);
+    const party = [member(unit('a', { hp: 1000, defense: 0, attack: 100 }, [skill('poke', [hit(1)])])), member(unit('b', { hp: 1000, defense: 0 }))];
+    const battle = new Battle(party, [golem, other], NO_JITTER);
+    const events = runFor(battle, 1.5);
+    expect(fired(events, 'shatter')).toBe(1);
+    expect(damageTo(events, 'party-0').length).toBeGreaterThan(0);
+    expect(damageTo(events, 'party-1').length).toBeGreaterThan(0);
+  });
+
+  it('stack bloodlust haste and attack for each fallen ally, each on its own timer', () => {
+    const lust = skill(
+      'lust',
+      [
+        { kind: 'buff', stat: 'attack', amount: 4, duration: 10, stack: true },
+        { kind: 'speed', factor: 1.3, duration: 10, stack: true },
+      ],
+      { cooldown: 0, target: { side: 'self' }, trigger: { kind: 'allyFalls' } },
+    );
+    const gnoll = unit('gnoll', { hp: 100000 }, [lust]);
+    const fodder = () => unit('fodder', { hp: 1 }, []);
+    const hero = unit('a', { attack: 100, hp: 100000 }, [skill('poke', [hit(1)], { target: { side: 'enemy', select: 'lowestHp', area: 'single' } })]);
+    const battle = new Battle([member(hero)], [gnoll, fodder(), fodder()], NO_JITTER);
+    const g = battle.get('enemy-0');
+    runFor(battle, 2.5);
+    expect(speedOf(g)).toBeCloseTo(1.69, 2);
+    expect(statOf(g, 'attack')).toBe(g.def.stats.attack + 8);
+    runFor(battle, 10);
+    expect(speedOf(g)).toBe(1);
+  });
+
+  it('ward and heal a wisp when it is hit', () => {
+    const ward = skill('ward', [{ kind: 'barrier', stat: 'resistance', scaling: 1, duration: 3 }, { kind: 'heal', scaling: 1 }], {
+      cooldown: 4,
+      target: { side: 'self' },
+      trigger: { kind: 'whenHit' },
+    });
+    const wisp = unit('wisp', { hp: 1000, magic: 50, resistance: 20 }, [ward]);
+    const battle = new Battle([member(unit('a', { attack: 30 }, [skill('poke', [hit(1)])]))], [wisp], NO_JITTER);
+    const events = runFor(battle, 1);
+    expect(fired(events, 'ward')).toBe(1);
+    expect(events.some((e) => e.type === 'heal' && e.target === 'enemy-0')).toBe(true);
+  });
+});
+
+describe('act 2 group 3 mechanics', () => {
+  const sting = skill('sting', [{ kind: 'dot', stat: 'attack', scaling: 1, duration: 10, element: 'poison' }], { cooldown: 1 });
+
+  it('stack the same poison from different casters', () => {
+    const battle = new Battle([member(unit('a', { hp: 100000 }))], [unit('w1', { attack: 10, hp: 100000 }, [sting]), unit('w2', { attack: 10, hp: 100000 }, [sting])], NO_JITTER);
+    runFor(battle, 1.05);
+    expect(battle.get('party-0').dots).toHaveLength(2);
+  });
+
+  it('bite: every poison on the target ticks once more, and keeps running', () => {
+    const bite = skill('bite', [{ kind: 'tickPoison' }], { cooldown: 3 });
+    const periodicTicks = (skills: SkillDef[]) => {
+      const battle = new Battle([member(unit('a', { hp: 100000, defense: 0 }))], [unit('w', { attack: 10, hp: 100000 }, skills)], NO_JITTER);
+      const events = runFor(battle, 3.05);
+      return { ticks: damageTo(events, 'party-0').filter((e) => e.periodic).length, dots: battle.get('party-0').dots.length };
+    };
+    const without = periodicTicks([sting, skill('wait', [hit(0)], { cooldown: 3 })]);
+    const withBite = periodicTicks([sting, bite]);
+    expect(withBite.ticks).toBe(without.ticks + 1);
+    expect(withBite.dots).toBe(1);
+  });
+});
+
+describe('act 2 epic monster mechanics', () => {
+  it('target caster-class heroes, or the front hero when none are left', () => {
+    const bite = skill('bite', [hit(1)], { target: { side: 'enemy', select: 'casterClass', area: 'single' } });
+    const party = [member(unit('tank', { hp: 100000 })), member(unit('mage', { hp: 100000 }, [], { tags: ['caster'] }))];
+    const battle = new Battle(party, [unit('chimera', { attack: 10, hp: 100000 }, [bite])], NO_JITTER);
+    const events = runFor(battle, 3.05);
+    expect(damageTo(events, 'party-1').length).toBe(3);
+    expect(damageTo(events, 'party-0').length).toBe(0);
+    const noCasters = new Battle([member(unit('tank', { hp: 100000 }))], [unit('chimera', { attack: 10, hp: 100000 }, [bite])], NO_JITTER);
+    expect(damageTo(runFor(noCasters, 1.05), 'party-0').length).toBe(1);
+  });
+
+  it('harden with every hit: ice armor stacks DEF', () => {
+    const armor = skill('armor', [{ kind: 'buff', stat: 'defense', amount: 3, duration: 8, stack: true }], {
+      cooldown: 1,
+      target: { side: 'self' },
+      trigger: { kind: 'whenHit' },
+    });
+    const giant = unit('giant', { hp: 100000, defense: 10 }, [armor]);
+    // Slot 1 runs x1.25, so a 1.25s poke lands once a second, matching the armor's 1s cooldown.
+    const battle = new Battle([member(unit('a', {}, [skill('poke', [hit(1)], { cooldown: 1.25 })]))], [giant], NO_JITTER);
+    runFor(battle, 3.05);
+    expect(statOf(battle.get('enemy-0'), 'defense')).toBe(19);
+  });
+});
+
+describe('cleanse', () => {
+  it('removes every damage-over-time effect from its targets', () => {
+    const sting = skill('sting', [{ kind: 'dot', stat: 'attack', scaling: 1, duration: 20, element: 'poison' }], { cooldown: 1 });
+    const purge = skill('purge', [{ kind: 'cleanse' }], { cooldown: 2, target: { side: 'ally', select: 'front', area: 'all' } });
+    const party = [member(unit('a', { hp: 100000 }, [purge])), member(unit('b', { hp: 100000 }))];
+    const battle = new Battle(party, [unit('w', { attack: 10, hp: 100000 }, [sting])], NO_JITTER);
+    runFor(battle, 1.1);
+    expect(battle.get('party-0').dots).toHaveLength(1);
+    const events = runFor(battle, 0.6);
+    expect(events.some((e) => e.type === 'status' && e.status === 'cleanse')).toBe(true);
+    expect(battle.get('party-0').dots).toHaveLength(0);
+  });
+});
+
+describe('act 3 group 2 mechanics', () => {
+  it('reassemble once at a share of max HP, then die for good', () => {
+    const golem = unit('golem', { hp: 100, defense: 0 }, [], { reassemble: 0.4 });
+    const battle = new Battle([member(unit('a', { attack: 1000 }, [skill('smash', [hit(1)])]))], [golem, unit('other', { hp: 100000 })], NO_JITTER);
+    const g = battle.get('enemy-0');
+    const first = runFor(battle, 0.85);
+    expect(first.some((e) => e.type === 'status' && e.status === 'reassemble')).toBe(true);
+    expect(g.hp).toBe(40);
+    const second = runFor(battle, 0.85);
+    expect(second.some((e) => e.type === 'death' && e.target === g.uid)).toBe(true);
+  });
+
+  it('stack keening -DEF on every hero for each fallen enemy', () => {
+    const keen = skill('keen', [{ kind: 'debuff', stat: 'defense', amount: 3, duration: 999, stack: true }], {
+      cooldown: 0,
+      target: { side: 'enemy', select: 'front', area: 'all' },
+      trigger: { kind: 'allyFalls' },
+    });
+    const hero = unit('a', { attack: 100, hp: 100000, defense: 20 }, [skill('poke', [hit(1)], { target: { side: 'enemy', select: 'lowestHp', area: 'single' } })]);
+    const battle = new Battle([member(hero)], [unit('banshee', { hp: 100000 }, [keen]), unit('f', { hp: 1 }), unit('f', { hp: 1 })], NO_JITTER);
+    runFor(battle, 2.5);
+    expect(statOf(battle.get('party-0'), 'defense')).toBe(14);
+  });
+});
+
+describe('party focus target', () => {
+  it('sends every hero front attack to the clicked enemy, and falls back to the front when it dies', () => {
+    const party = [member(unit('a', { attack: 10 }, [skill('poke', [hit(1)])])), member(unit('b', { attack: 10 }, [skill('poke', [hit(1)])]))];
+    const battle = new Battle(party, [unit('front', { hp: 100000 }), unit('mid', { hp: 30, defense: 0 }), unit('back', { hp: 100000 })], NO_JITTER);
+    expect(battle.partyTarget()?.uid).toBe('enemy-0');
+    battle.setFocus('enemy-1');
+    const events = runFor(battle, 0.85);
+    expect(damageTo(events, 'enemy-1').length).toBe(2);
+    expect(damageTo(events, 'enemy-0').length).toBe(0);
+    runFor(battle, 3);
+    expect(battle.get('enemy-1').hp).toBe(0);
+    expect(battle.focus).toBeNull();
+    expect(battle.partyTarget()?.uid).toBe('enemy-0');
+  });
+
+  it('ignores dead enemies and party members', () => {
+    const battle = new Battle([member(unit('a'))], [unit('e', { hp: 100 })], NO_JITTER);
+    battle.setFocus('party-0');
+    expect(battle.focus).toBeNull();
+  });
+});
+
+describe('polymorph', () => {
+  it('breaks on the first damage the critter takes', () => {
+    const poly = skill('poly', [{ kind: 'transform', duration: 30 }], { cooldown: 0.5, target: { side: 'enemy', select: 'front', area: 'single' } });
+    const hit2 = skill('poke', [hit(1)], { cooldown: 4 });
+    const battle = new Battle([member(unit('mage', {}, [poly])), member(unit('fighter', { attack: 10 }, [hit2]))], [unit('boss', { hp: 100000 })], NO_JITTER);
+    runFor(battle, 0.45);
+    const boss = battle.get('enemy-0');
+    expect(boss.transformed).toBeGreaterThan(0);
+    // Only cast once: the mage's slot then sits idle.
+    battle.get('party-0').slots[0].timer = -1000;
+    runFor(battle, 3.5);
+    expect(boss.transformed).toBe(0);
+  });
+});
+
+describe('dying bosses', () => {
+  it('can spawn minions as they fall, and the fight goes on', () => {
+    const minion = unit('minion', { hp: 50 }, []);
+    const burst = skill('burst', [{ kind: 'spawn', enemy: 'minion', count: 3, cap: 9 }], {
+      cooldown: 1,
+      target: { side: 'self' },
+      trigger: { kind: 'onDefeat' },
+    });
+    const boss = unit('boss', { hp: 10, defense: 0 }, [burst]);
+    const battle = new Battle([member(unit('a', { attack: 50 }, [skill('hit', [hit()], { cooldown: 1 })]))], [boss], NO_JITTER, {
+      bestiary: { minion },
+    });
+    runFor(battle, 1.05);
+    expect(battle.alive('enemy').map((c) => c.def.id)).toEqual(['minion', 'minion', 'minion']);
+    expect(battle.result).toBeNull();
   });
 });

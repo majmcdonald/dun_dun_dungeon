@@ -28,7 +28,9 @@ export function spritePixels(def: SpriteDef, frame: string): Uint8ClampedArray<A
   return pixels;
 }
 
-export function spriteCanvas(def: SpriteDef, frame: string, flatColor?: PaletteColor): HTMLCanvasElement {
+// A missing sprite (art not drawn yet) shows as a "?" box instead of crashing the frame.
+export function spriteCanvas(def: SpriteDef | undefined, frame: string, flatColor?: PaletteColor): HTMLCanvasElement {
+  if (!def) return placeholderCanvas();
   const pixels = spritePixels(def, frame);
   if (flatColor) {
     const hex = PALETTE[flatColor];
@@ -46,4 +48,29 @@ export function spriteCanvas(def: SpriteDef, frame: string, flatColor?: PaletteC
   if (!ctx) throw new Error('Canvas 2D context unavailable');
   ctx.putImageData(new ImageData(pixels, def.width, def.height), 0, 0);
   return canvas;
+}
+
+const PLACEHOLDER_SIZE = 32;
+
+function placeholderCanvas(): HTMLCanvasElement {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = PLACEHOLDER_SIZE;
+  const ctx = canvas.getContext('2d')!;
+  ctx.fillStyle = PALETTE.magenta;
+  ctx.fillRect(6, 6, 20, 20);
+  ctx.fillStyle = PALETTE.white;
+  // A pixel "?".
+  for (const [x, y, w, h] of [[12, 10, 8, 2], [18, 12, 2, 4], [14, 16, 4, 2], [14, 18, 2, 2], [14, 22, 2, 2]]) ctx.fillRect(x, y, w, h);
+  return canvas;
+}
+
+// Draws a sprite into a box (32px by default), scaling larger sprites such as 48x48 bosses down to fit.
+export function drawFitted(ctx: CanvasRenderingContext2D, img: HTMLCanvasElement, x: number, y: number, box = 32): void {
+  const scale = Math.min(1, box / Math.max(img.width, img.height));
+  const w = Math.round(img.width * scale);
+  const h = Math.round(img.height * scale);
+  const smoothing = ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(img, x + (box - w) / 2, y + (box - h), w, h);
+  ctx.imageSmoothingEnabled = smoothing;
 }

@@ -36,13 +36,13 @@ const pathfinder: SkillDef[] = [
   r({ id: 'trackersEye', name: "Tracker's Eye", theme: 'pathfinder', rarity: 'common', cooldown: 3, target: foe('castSpell'), fx: [dmg(1)] }),
   r({ id: 'findWeakness', name: 'Find Weakness', theme: 'pathfinder', rarity: 'rare', cooldown: 6, target: foe('highestHp'), fx: [debuff('defense', 0.5, 5), debuff('resistance', 0.5, 5)] }),
   r({ id: 'flankingShot', name: 'Flanking Shot', theme: 'pathfinder', rarity: 'rare', cooldown: 5, target: foe('back', 'row'), fx: [dmg(1)] }),
-  r({ id: 'terrainAdvantage', name: 'Terrain Advantage', theme: 'pathfinder', rarity: 'epic', cooldown: 8, target: ally('front', 'all'), fx: [buff('attack', 1, 6)], vfx: 'blessing' }),
+  r({ id: 'terrainAdvantage', name: 'Terrain Advantage', theme: 'pathfinder', rarity: 'epic', cooldown: 8, target: ally('front', 'all'), fx: [buff('attack', 0.6, 6), buff('defense', 0.4, 6)], vfx: 'blessing' }),
   r({ id: 'exploit', name: 'Exploit', theme: 'pathfinder', rarity: 'epic', cooldown: 5, target: foe('lowestHpPct'), fx: [dmg(0.6), debuff('defense', 0.4, 4)], synergy: { with: 'scout', bonus: 0.3 } }),
 ];
 
 const general: SkillDef[] = [
   r({ id: 'fireArrow', name: 'Fire Arrow', theme: 'ranger', rarity: 'common', cooldown: 3, target: foe('random'), fx: [dmg(1, { element: 'fire' })] }),
-  r({ id: 'camouflage', name: 'Camouflage', theme: 'ranger', rarity: 'common', cooldown: 6, target: SELF, fx: [barrier(1, 4)] }),
+  r({ id: 'camouflage', name: 'Camouflage', theme: 'ranger', rarity: 'common', cooldown: 6, target: SELF, fx: [barrier(0.7, 4), buff('attack', 0.3, 4)] }),
   r({ id: 'barbedArrow', name: 'Barbed Arrow', theme: 'ranger', rarity: 'rare', cooldown: 4, target: foe('front'), fx: [dmg(0.5), dot(0.5, 4)] }),
 ];
 

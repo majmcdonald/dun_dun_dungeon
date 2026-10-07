@@ -4,6 +4,7 @@ import { SKILL_LIBRARY, SKILLS_BY_ID } from '../content/skills';
 import { seededRng } from '../engine/random';
 import { equipItemBlock, skillAccessBlock } from '../game/loadout';
 import type { GameState } from '../game/state';
+import { logEvent } from './log';
 import type { MapNode } from './map';
 import { itemFromRef, withBoost } from './run';
 import { NORMAL_WEIGHTS, pickWeighted, RICH_WEIGHTS } from './rewards';
@@ -78,6 +79,7 @@ export function buy(state: GameState, kind: 'skill' | 'item', id: string): strin
   store.bought.push(id);
   if (kind === 'skill') state.inventory.skills.push(SKILLS_BY_ID[id]);
   else state.inventory.items.push(ITEMS_BY_ID[id]);
+  logEvent(run, 'buy', { kind, id, price });
   return null;
 }
 
@@ -87,6 +89,7 @@ export function sell(state: GameState, item: EquipmentDef): string | null {
   if (index < 0) return 'NOT IN INVENTORY';
   state.inventory.items.splice(index, 1);
   state.run!.gold += sellPrice(item);
+  logEvent(state.run!, 'sell', { id: item.id, price: sellPrice(item) });
   return null;
 }
 
@@ -108,6 +111,7 @@ export function repair(state: GameState, index: number): string | null {
   run.broken.splice(index, 1);
   run.store!.repaired = true;
   state.inventory.items.push(item);
+  logEvent(run, 'repair', { id: item.id, price });
   return null;
 }
 
@@ -127,5 +131,6 @@ export function enchant(state: GameState, item: EquipmentDef, rng: () => number 
     state.party = state.party.map((m) => (m === holder ? { ...m, equipment: { ...m.equipment, [item.slot]: enchanted } } : m));
   }
   run.gold -= price;
+  logEvent(run, 'enchant', { id: item.id, price, boost: enchanted.boost });
   return enchanted;
 }

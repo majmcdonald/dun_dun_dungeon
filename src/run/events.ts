@@ -6,6 +6,7 @@ import { seededRng, type Rng } from '../engine/random';
 import { equipItemBlock, skillAccessBlock } from '../game/loadout';
 import type { GameState } from '../game/state';
 import { STAT_LABEL } from '../ui/partyCard';
+import { logEvent } from './log';
 import type { MapNode } from './map';
 import { NORMAL_WEIGHTS, pickWeighted, RICH_WEIGHTS } from './rewards';
 
@@ -30,6 +31,8 @@ export type Outcome =
   | { kind: 'loseItem' }
   | { kind: 'wounded' }
   | { kind: 'blessed'; bonus: Partial<Stats> }
+  // The opposite of blessed: these stats are lowered for the next fight.
+  | { kind: 'cursed'; penalty: Partial<Stats> }
   // A fight against these enemy ids (the map encounter if omitted); a win pays an Epic Monster reward.
   | { kind: 'fight'; enemies?: string[] };
 
@@ -63,6 +66,8 @@ export interface EventDef {
   art: string;
   text: string;
   choices: EventChoice[];
+  // Act-specific events (0-based) only appear in that act; shared events have none.
+  act?: number;
 }
 
 // The event at a node and, once chosen, what happened; saved so a reload can't reroll it.
@@ -101,8 +106,9 @@ export function openEvent(state: GameState, node: MapNode, library: EventDef[]):
   const run = state.run!;
   const byId = (id: string) => library.find((e) => e.id === id)!;
   if (run.event?.node === node.id) return byId(run.event.id);
-  const unseen = library.filter((e) => !run.seenEvents.includes(e.id));
-  const pool = unseen.length > 0 ? unseen : library;
+  const inAct = library.filter((e) => e.act === undefined || e.act === run.level);
+  const unseen = inAct.filter((e) => !run.seenEvents.includes(e.id));
+  const pool = unseen.length > 0 ? unseen : inAct;
   const rng = seededRng(run.seed * 613 + run.level * 97 + node.floor * 11 + node.column);
   const event = pool[Math.floor(rng() * pool.length)];
   run.event = { node: node.id, id: event.id, result: null };
@@ -130,6 +136,7 @@ export function chooseOption(state: GameState, event: EventDef, index: number, r
     else lines.push(...apply(state, outcome, rng));
   }
   visit.result = { choice: index, success, text: result.text, lines, fight };
+  logEvent(state.run!, 'event', { id: event.id, choice: choice.label, chance: Math.round(choiceChance(state, choice) * 100) / 100, success, lines, fight });
   return visit.result;
 }
 
@@ -186,10 +193,17 @@ function apply(state: GameState, outcome: Exclude<Outcome, { kind: 'fight' }>, r
       const parts = (Object.entries(outcome.bonus) as [keyof Stats, number][]).map(([k, v]) => `+${v} ${label(k)}`);
       return [`BLESSED: ${parts.join(', ')} NEXT FIGHT`];
     }
+    case 'cursed': {
+      const bonus = { ...run.nextFight?.bonus };
+      for (const [k, v] of Object.entries(outcome.penalty) as [keyof Stats, number][]) bonus[k] = (bonus[k] ?? 0) - v;
+      run.nextFight = { ...run.nextFight, bonus };
+      const parts = (Object.entries(outcome.penalty) as [keyof Stats, number][]).map(([k, v]) => `-${v} ${label(k)}`);
+      return [`CURSED: ${parts.join(', ')} NEXT FIGHT`];
+    }
   }
 }
 
-// The wounded/blessed effects waiting for the next fight; using them clears them.
+// The wounded/blessed/cursed effects waiting for the next fight; using them clears them.
 export function takeNextFight(state: GameState): PartyStart | undefined {
   const run = state.run;
   if (!run?.nextFight) return undefined;

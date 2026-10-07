@@ -29,7 +29,9 @@ export type Selector =
   | 'attackedMe'
   | 'mostDamage'
   | 'castSpell'
-  | 'castDefensive';
+  | 'castDefensive'
+  // A random hero of the Caster tag (Mage, Cleric, ...).
+  | 'casterClass';
 
 export type Area = 'single' | 'row' | 'column' | 'all';
 
@@ -54,11 +56,15 @@ type BaseEffect =
   | { kind: 'barrier'; stat: 'defense' | 'resistance'; scaling: number; duration: number }
   | { kind: 'heal'; scaling: number }
   | { kind: 'regen'; scaling: number; duration: number }
-  | { kind: 'dot'; stat: 'attack' | 'magic'; scaling: number; duration: number; element?: Element }
-  | { kind: 'buff'; stat: StatKey; amount: number; duration: number }
-  | { kind: 'debuff'; stat: StatKey; amount: number; duration: number }
-  | { kind: 'speed'; factor: number; duration: number }
+  // `perStack`: enemies only, each of the user's Venom stacks adds this share to the damage.
+  | { kind: 'dot'; stat: 'attack' | 'magic'; scaling: number; duration: number; element?: Element; perStack?: number }
+  // `stack`: each use adds its own copy with its own timer instead of refreshing the last one.
+  | { kind: 'buff'; stat: StatKey; amount: number; duration: number; stack?: boolean }
+  | { kind: 'debuff'; stat: StatKey; amount: number; duration: number; stack?: boolean }
+  | { kind: 'speed'; factor: number; duration: number; stack?: boolean }
   | { kind: 'summon'; creature: string; share: number }
+  // Enemies only: calls `count` more of an enemy type into empty grid cells, never above `cap` alive at once.
+  | { kind: 'spawn'; enemy: string; count: number; cap: number }
   | { kind: 'transform'; duration: number }
   | { kind: 'steal' }
   | { kind: 'siphon'; stat: StatKey; amount: number; duration: number }
@@ -69,7 +75,15 @@ type BaseEffect =
   | { kind: 'chaos'; options: SkillEffect[] }
   | { kind: 'shapeshift'; duration: number; bonus: number }
   | { kind: 'meter'; amount: number }
-  | { kind: 'consumeSummon' };
+  | { kind: 'consumeSummon' }
+  // Enemies only: Harpy flight, multiplying direct damage taken and dealt for a while.
+  | { kind: 'flight'; duration: number; damageTaken: number; damageDealt: number }
+  // Removes every damage-over-time effect (poison, bleed, burn) from the target.
+  | { kind: 'cleanse' }
+  // Enemies only: every poison on the target ticks once right away (it keeps running).
+  | { kind: 'tickPoison' }
+  // Enemies only: +1 permanent Venom stack (kept in `meter`).
+  | { kind: 'venom' };
 
 // `self` applies the effect once to the caster instead of to each target (e.g. "hit them, lower my ATK");
 // `onSummons` applies it to each of the caster's summons (e.g. "hit them, empower my familiar").
@@ -78,11 +92,25 @@ export type SkillEffect = BaseEffect & { self?: boolean; onSummons?: boolean };
 export type SkillAccess = { kind: 'shared' } | { kind: 'tag'; tag: Tag } | { kind: 'class'; classId: string };
 
 // Event skills only advance their timer when the event happens (or while the state holds).
+// Hero triggers (slot 4) fire the moment their event happens, then wait out their cooldown.
+export type TriggerEvent =
+  | 'battleStart'
+  | 'whenHit'
+  | 'allyHurt'
+  | 'allyFalls'
+  | 'partyLow'
+  | 'selfLow'
+  | 'onKill'
+  | 'enemyDies'
+  | 'whenHealed'
+  | 'barrierBreaks'
+  | 'castSpell'
+  | 'onDefeat';
+
 export type Trigger =
-  | { kind: 'whenHit'; perEvent: number }
-  | { kind: 'allyHurt'; perEvent: number }
-  | { kind: 'partyLow'; threshold: number }
-  | { kind: 'onDefeat' };
+  | { kind: TriggerEvent }
+  // Enemies only: fires once, the moment the user drops below this share of its max HP.
+  | { kind: 'belowHp'; threshold: number };
 
 // Conditional skills fill their timer, then wait until the condition holds.
 export type Condition =
@@ -124,6 +152,12 @@ export interface CombatantDef {
   resist?: Partial<Record<Element, number>>;
   mechanic?: Mechanic;
   familiar?: string;
+  // Passive regeneration: this share of max HP each second, paused for `blockSeconds` after damage of these elements.
+  regeneration?: { perSecond: number; blockedBy: Element[]; blockSeconds: number };
+  // Boss soft timer: from `after` seconds in, every `step` seconds ATK and MAG grow by `rate` of their base.
+  fury?: { after: number; step: number; rate: number };
+  // Enemies only: the first time it dies, it rises again with this share of max HP.
+  reassemble?: number;
 }
 
 export type EquipSlot = 'armor' | 'helmet' | 'boots' | 'weapon' | 'jewelry';
@@ -155,12 +189,20 @@ export type Equipment = Partial<Record<EquipSlot, EquipmentDef>>;
 export interface PartyMember {
   def: CombatantDef;
   equipment: Equipment;
+  // Slots 1–3: timed skills, in slot order.
   skills: SkillDef[];
+  // Slot 4: a trigger skill, or none.
+  trigger?: SkillDef | null;
 }
 
 export interface SkillSlot {
   def: SkillDef;
   timer: number;
+  // Which of the 4 slots it sits in (0–2 timed, 3 the trigger) and how fast its timer runs there.
+  position: number;
+  rate: number;
+  // A one-time trigger (belowHp) that has already fired.
+  spent?: boolean;
 }
 
 export interface Barrier {
@@ -217,6 +259,11 @@ export interface Combatant {
   channel: number;
   meter: number;
   burst: number;
+  // Seconds left before passive regeneration resumes, and healing built up below one whole point.
+  regenBlocked: number;
+  regenCarry: number;
+  flight: { remaining: number; damageTaken: number; damageDealt: number } | null;
+  reassembled: boolean;
 }
 
 export type BattleResult = 'victory' | 'defeat';
@@ -227,7 +274,7 @@ export type BattleEvent =
   | { type: 'heal'; source: string; target: string; amount: number; periodic?: boolean }
   | { type: 'barrier'; target: string; amount: number }
   | { type: 'buff'; target: string; stat: StatKey; amount: number }
-  | { type: 'status'; target: string; status: 'slow' | 'haste' | 'transform' | 'taunt' | 'shapeshift' | 'frenzy' | 'burst' | 'steal' | 'delay' }
+  | { type: 'status'; target: string; status: 'slow' | 'haste' | 'transform' | 'taunt' | 'shapeshift' | 'frenzy' | 'burst' | 'steal' | 'delay' | 'fury' | 'flight' | 'venom' | 'cleanse' | 'reassemble' }
   | { type: 'summon'; summoner: string; unit: string }
   | { type: 'gold'; amount: number }
   | { type: 'death'; target: string }

@@ -1,5 +1,23 @@
 import type { SkillDef, Targeting } from '../../combat/types';
-import { barrier, buff, cls, debuff, delay, dmg, dot, foe, haste, SELF, selfDamage, skill, slow, summon, type SkillSpec } from '../build';
+import {
+  barrier,
+  buff,
+  cls,
+  debuff,
+  delay,
+  dmg,
+  dot,
+  foe,
+  haste,
+  meter,
+  SELF,
+  self,
+  selfDamage,
+  skill,
+  slow,
+  summon,
+  type SkillSpec,
+} from '../build';
 
 type Spec = Omit<SkillSpec, 'access' | 'category'> & { category?: SkillSpec['category'] };
 const n = (spec: Spec): SkillDef => skill({ category: 'spell', ...spec, access: cls('necromancer') });
@@ -22,7 +40,7 @@ const raise: SkillDef[] = [
 // Fear: break the enemy's rhythm.
 const fear: SkillDef[] = [
   n({ id: 'terrify', name: 'Terrify', theme: 'fear', rarity: 'common', cooldown: 5, target: foe('front'), fx: [delay(1)] }),
-  n({ id: 'dread', name: 'Dread', theme: 'fear', rarity: 'common', cooldown: 5, target: foe('highestHp'), fx: [debuff('attack', 1, 5)] }),
+  n({ id: 'dread', name: 'Dread', theme: 'fear', rarity: 'common', cooldown: 5, target: foe('highestHp'), fx: [debuff('attack', 0.8, 5), self(meter(0.2))] }),
   n({ id: 'howlOfTerror', name: 'Howl of Terror', theme: 'fear', rarity: 'common', cooldown: 7, target: foe('front', 'column'), fx: [slow(1, 4)] }),
   n({ id: 'nightmare', name: 'Nightmare', theme: 'fear', rarity: 'rare', cooldown: 4, target: foe('random'), fx: [delay(0.5), dmg(0.5, shadow())], synergy: { with: 'terrify', bonus: 0.3 } }),
   n({ id: 'horrify', name: 'Horrify', theme: 'fear', rarity: 'rare', cooldown: 8, target: foe('front', 'all'), fx: [debuff('attack', 1, 5)] }),
