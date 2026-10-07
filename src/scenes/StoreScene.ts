@@ -174,7 +174,7 @@ export class StoreScene implements Scene {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    drawBackground(ctx);
+    drawBackground(ctx, this.game.state.run?.level ?? 0);
     const state = this.game.state;
     const pointer = this.game.input.pointer;
     const blocked = this.list !== null;

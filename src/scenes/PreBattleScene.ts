@@ -45,7 +45,7 @@ export class PreBattleScene implements Scene {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    drawBackground(ctx);
+    drawBackground(ctx, this.game.state.run?.level ?? 0);
     const title = NODE_TITLE[pendingNode(this.game)?.type ?? ''] ?? TITLE;
     drawText(ctx, title, (NATIVE_WIDTH - textWidth(title)) / 2, 16, PALETTE.sand);
     this.drawEnemies(ctx);

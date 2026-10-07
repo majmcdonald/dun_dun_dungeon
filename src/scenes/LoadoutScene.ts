@@ -272,7 +272,7 @@ export class LoadoutScene implements Scene {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    drawBackground(ctx);
+    drawBackground(ctx, this.game.state.run?.level ?? 0);
     const m = this.member;
     const title = `LOADOUT: ${m.def.name.toUpperCase()}`;
     drawText(ctx, title, (NATIVE_WIDTH - textWidth(title)) / 2, 16, PALETTE.sand);

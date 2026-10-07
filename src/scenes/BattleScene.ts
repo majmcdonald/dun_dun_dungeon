@@ -341,7 +341,7 @@ export class BattleScene implements Scene {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    drawBackground(ctx);
+    drawBackground(ctx, this.game.state.run?.level ?? 0);
 
     const party = this.battle.combatants.filter((c) => c.side === 'party' && !isSummon(c));
     party.forEach((c) => this.drawCard(ctx, c));

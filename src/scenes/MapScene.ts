@@ -6,7 +6,7 @@ import type { GameContext, Scene } from '../engine/scene';
 import { enterNode, reviewReward } from '../run/flow';
 import { FLOORS, type MapNode, type NodeType } from '../run/map';
 import { currentNode, nextNodes, roomType, type RunState } from '../run/run';
-import { drawBackground } from '../ui/background';
+import { drawBackground, pathColor } from '../ui/background';
 import { drawText, textWidth } from '../ui/font';
 import { drawButton, drawFrame, drawPanel, inside, type Button, type Rect } from '../ui/widgets';
 import { PartyScene } from './PartyScene';
@@ -65,7 +65,7 @@ export class MapScene implements Scene {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    drawBackground(ctx);
+    drawBackground(ctx, this.game.state.run?.level ?? 0);
     const run = this.run;
     const current = currentNode(run);
     const floor = current ? current.floor + 1 : 0;
@@ -113,7 +113,7 @@ export class MapScene implements Scene {
         const to = byId.get(id)!;
         const walked = path.has(node.id) && path.has(id);
         const ahead = node.id === position && open.has(id);
-        const color = walked ? PALETTE.gold : ahead ? PALETTE.white : PALETTE.black;
+        const color = walked ? PALETTE.gold : ahead ? PALETTE.white : pathColor(this.run.level);
         drawDots(ctx, this.center(node), this.center(to), color);
       }
     }

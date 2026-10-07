@@ -45,7 +45,7 @@ export class RunEndScene implements Scene {
 
   render(ctx: CanvasRenderingContext2D): void {
     const { won, level, where, stats } = this.summary;
-    drawBackground(ctx);
+    drawBackground(ctx, level - 1);
     const title = won ? 'VICTORY' : 'RUN OVER';
     drawText(ctx, title, (NATIVE_WIDTH - textWidth(title, TITLE_SCALE)) / 2, 13, won ? PALETTE.gold : PALETTE.red, PALETTE.black, TITLE_SCALE);
 

@@ -86,7 +86,7 @@ export class RewardScene implements Scene {
   }
 
   render(ctx: CanvasRenderingContext2D): void {
-    drawBackground(ctx);
+    drawBackground(ctx, this.game.state.run?.level ?? 0);
     const treasure = this.reward.type === 'treasure';
     const title = treasure ? 'TREASURE' : 'VICTORY';
     drawText(ctx, title, (NATIVE_WIDTH - textWidth(title)) / 2, 8, PALETTE.gold);
