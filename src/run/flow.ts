@@ -58,7 +58,7 @@ export function winNode(game: GameContext, battleGold = 0): void {
   const payAs = type === 'event' ? 'epic' : type;
   if (game.state.profile) noteRoom(game.state.profile, type, run.level);
   const level = run.level;
-  const reward = rollReward(payAs, game.state.party, SKILL_LIBRARY, ITEM_LIBRARY, Math.random, battleGold);
+  const reward = rollReward(payAs, game.state.party, SKILL_LIBRARY, ITEM_LIBRARY, Math.random, battleGold, level);
   logEvent(run, 'reward', { type, gold: reward.gold, skills: reward.skills.map((s) => s.id), items: reward.items.map((i) => i.id) });
   recordWin(run, { ...node, type }, reward);
   if (run.level !== level) logEvent(run, 'act', { party: loadout(game.state.party), gold: run.gold });

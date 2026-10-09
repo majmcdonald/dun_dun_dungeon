@@ -20,7 +20,7 @@ Status: Phase 6 complete. Next: Phase 7 (audio).
 | Equipment | 5 slots (armor, helmet, boots, weapon, jewelry); rarity tiers Common/Rare/Epic/Legendary; enchanted = separate always-on passive (doesn't take a skill slot); sellable, skills are not |
 | Inventory | Unlimited; swap only between battles |
 | Map | Slay the Spire–style branching graph, fully visible upfront; node types: battle, epic monster (optional elite), store, event, treasure, boss; no rest sites |
-| Post-battle reward | Full heal, choose 1 of 3 skills, choose 1 of 2 equipment, automatic gold |
+| Post-battle reward | Full heal, choose 1 of 2 skills or 2 equipment, automatic gold |
 | Shop | Randomized stock, refreshes each visit |
 | Events | Text-choice vignettes, stat-based outcomes |
 | Economy | Gold: tens–hundreds, one pool, persists whole run |
@@ -101,7 +101,7 @@ Phase 3 expansion (class archetypes):
   - Rage (Barbarian): +1 per 1% of max HP lost (hits and self-damage), max 100 → Frenzy: his timers ×2 for 5s, then rage resets. Storm skills only work during Frenzy.
   - Souls (Necromancer): +1 whenever any unit dies (either side), max 5; soul spells spend 1–3.
   - Chi (Monk): +10 per hit he lands, max 100; his damage ×0.8 while filling. Full → Chi Burst: damage ×1.8 for 5s, then resets. Soul skills add chi and hold during Burst; True Self skills heal only during Burst.
-  - Familiar (Warlock): 5s channel to summon it at the start of every battle and to resummon it after it dies; his timers pause while channeling.
+  - Familiar (Warlock): channel to summon it at the start of every battle and to resummon it after it dies; his timers pause while channeling. Channel time is 5s × 100 / (100 + Magic); the familiar gets 2 extra HP per point of Magic.
 - New skill rules:
   - Event skills: the timer advances only on its event. Honor (Knight is hit) and Vengeance (an ally is hurt) gain 1s per event; Life runs while the party's total HP is below 35%; Sacrifice fires once, instantly, when the Knight falls.
   - Conditional skills (Storm, soul spells, Open Hand = only jewelry worn): the timer fills and waits until the condition holds, then fires.
@@ -122,7 +122,7 @@ Phase 4 design:
 - Name: Dun-Dun-Dungeon. Title screen (approved): game name on the wall, 3 save slots (NEW RUN, or CONTINUE with DELETE + confirm), DEBUG button.
 - Map screen (approved): floors left to right so the whole map fits; reachable rooms bob with a frame; walked path gold, open paths white, others black dots; hover shows the room type.
 - Encounters: every Battle, Epic Monster, and Boss node uses one of each enemy (Slime, Orc, Bat front; Archer, Shaman behind) until Phase 6 content.
-- After a won fight: full heal, then the reward screen: automatic gold (Battle 15–25, Epic 40–60, Boss 100, plus Gold skill bonuses); choose 1 of 3 skills (only skills at least one party member can use; Skip allowed); choose 1 of 2 items (only items someone in the party can wear). Rarity weights (Common / Rare / Epic / Legendary): skills and Battle items 80 / 14 / 5 / 1; Epic Monster and Treasure items 60 / 25 / 12 / 3; Boss items 0 / 50 / 35 / 15. Treasure nodes give a reward without a fight.
+- After a won fight: full heal, then the reward screen: automatic gold (Battle 15–25, Epic 40–60, Boss 100, plus Gold skill bonuses); choose 1 card from 2 skills (only skills at least one party member can use) and 2 items (only items someone in the party can wear); Skip allowed. Rarity weights (Common / Rare / Epic / Legendary): skills and Battle items 80 / 14 / 5 / 1; Epic Monster and Treasure items 60 / 25 / 12 / 3; Boss skills and items 0 / 50 / 35 / 15. In Act 2, every weight set moves 2 points to each better rarity from its lowest one (Common, or Rare for bosses), and 4 points each in Act 3; this also applies to Stores and Events. Treasure nodes give a reward without a fight.
 - Run flow: title screen (New Run / Continue / Debug) → roster picker → map → nodes → rewards. Beating the level 3 boss shows a victory screen; losing the whole party shows a Run Over screen.
 - Reward screen (approved): gold is banked and the room cleared as soon as it is won; the screen shows the gold won, the run's total, and "party fully healed". Picks can be changed until the next room is entered: CONTINUE with a pick opens the party screen with a rarity-colored "NEW:" note and a BACK button to the picks; with no picks it returns to the map. The last cleared room on the map reopens the reward ("REVIEW REWARDS"). Switching away from a pick that is equipped asks first (it will be unequipped); unchanged picks never move. Cards warn when the party already owns a copy ("ALREADY OWNED: EQUIPPED ON ... / N IN INVENTORY").
 - Run end (approved): Victory or Run Over screen with the party (silhouettes when fallen), where the run ended, the enemies that wiped the party ("SLAIN BY"), and stats: level reached, rooms cleared, fights won, Epic Monsters, bosses, gold earned, damage done, damage taken (full hits incl. absorbed; summons count as party). Dev previews: ?preview=victory and ?preview=defeat.

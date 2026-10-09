@@ -208,6 +208,9 @@ export interface SkillSlot {
 export interface Barrier {
   amount: number;
   remaining: number;
+  // Who cast it and with what, so absorbed damage can be credited (run log skill stats).
+  owner?: string;
+  source?: string;
 }
 
 // Debuffs are buffs with a negative amount; both refresh per source and stat rather than stack.

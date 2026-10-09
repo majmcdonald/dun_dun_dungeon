@@ -26,7 +26,7 @@ const CHANGE: Button = { x: 150, y: 142, w: 84, h: 18, label: 'CHANGE' };
 const CANCEL: Button = { x: 246, y: 142, w: 84, h: 18, label: 'CANCEL' };
 const CONTINUE: Button = { x: CARDS_X + 2 * (CARD_W + CARD_GAP), y: 222, w: CARD_W, h: 20, label: 'CONTINUE' };
 
-// After a won fight or a treasure: gold is already banked; optionally take 1 of 3 skills and 1 of 2 items.
+// After a won fight or a treasure: gold is already banked; optionally take 1 card from 2 skills and 2 items.
 // Reopening it (BACK from the party screen, or the last node on the map) shows the current picks.
 export class RewardScene implements Scene {
   private reward: LastReward;
@@ -36,7 +36,7 @@ export class RewardScene implements Scene {
   private item: EquipmentDef | null;
   // Rows whose equipped pick the player already agreed to give up.
   private released = { skill: false, item: false };
-  private confirm: { kind: 'skill' | 'item'; next: SkillDef | EquipmentDef | null; lines: string[] } | null = null;
+  private confirm: { skill: SkillDef | null; item: EquipmentDef | null; lines: string[] } | null = null;
 
   constructor(private game: GameContext) {
     this.reward = game.state.run!.lastReward!;
@@ -53,36 +53,40 @@ export class RewardScene implements Scene {
   update(): void {
     for (const click of this.game.input.consumeClicks()) {
       if (this.confirm) {
-        if (inside(click, CHANGE)) this.apply(this.confirm.kind, this.confirm.next);
+        if (inside(click, CHANGE)) this.apply(this.confirm.skill, this.confirm.item);
         if (inside(click, CHANGE) || inside(click, CANCEL)) this.confirm = null;
         continue;
       }
       if (inside(click, CONTINUE)) return choosePicks(this.game, this.skill?.id ?? null, this.item?.id ?? null);
       const skill = this.skills.find((_, i) => inside(click, skillRect(i)));
-      if (skill) this.choose('skill', this.skill === skill ? null : skill);
+      if (skill) this.choose(this.skill === skill ? null : skill, null);
       const item = this.items.find((_, i) => inside(click, itemRect(i)));
-      if (item) this.choose('item', this.item === item ? null : item);
+      if (item) this.choose(null, this.item === item ? null : item);
     }
   }
 
-  // Moving off a pick that a character has equipped asks first, since it will be unequipped.
-  private choose(kind: 'skill' | 'item', next: SkillDef | EquipmentDef | null): void {
-    const saved = kind === 'skill' ? this.reward.skill : this.reward.item;
-    const holder = saved && !this.released[kind] && next?.id !== saved ? pickHolder(this.game.state, kind, saved) : null;
-    if (!holder) return this.apply(kind, next);
-    const name = (kind === 'skill' ? SKILLS_BY_ID[saved!].name : ITEMS_BY_ID[saved!].name).toUpperCase();
+  // Only one card can be taken. Moving off a pick that a character has equipped asks first, since it will be unequipped.
+  private choose(skill: SkillDef | null, item: EquipmentDef | null): void {
+    const lost = (kind: 'skill' | 'item', next: string | undefined) => {
+      const saved = kind === 'skill' ? this.reward.skill : this.reward.item;
+      return saved && !this.released[kind] && next !== saved ? pickHolder(this.game.state, kind, saved) : null;
+    };
+    const skillHolder = lost('skill', skill?.id);
+    const holder = skillHolder ?? lost('item', item?.id);
+    if (!holder) return this.apply(skill, item);
+    const name = (skillHolder ? SKILLS_BY_ID[this.reward.skill!].name : ITEMS_BY_ID[this.reward.item!].name).toUpperCase();
     this.confirm = {
-      kind,
-      next,
+      skill,
+      item,
       lines: [`${holder.def.name.toUpperCase()} HAS ${name} EQUIPPED.`, 'CHANGING THIS PICK WILL UNEQUIP IT.'],
     };
   }
 
-  private apply(kind: 'skill' | 'item', next: SkillDef | EquipmentDef | null): void {
-    const saved = kind === 'skill' ? this.reward.skill : this.reward.item;
-    if (next?.id !== saved) this.released[kind] = true;
-    if (kind === 'skill') this.skill = next as SkillDef | null;
-    else this.item = next as EquipmentDef | null;
+  private apply(skill: SkillDef | null, item: EquipmentDef | null): void {
+    if (skill?.id !== this.reward.skill) this.released.skill = true;
+    if (item?.id !== this.reward.item) this.released.item = true;
+    this.skill = skill;
+    this.item = item;
   }
 
   render(ctx: CanvasRenderingContext2D): void {
@@ -103,13 +107,13 @@ export class RewardScene implements Scene {
 
     const pointer = this.game.input.pointer;
     const party = this.game.state.party;
-    drawText(ctx, 'CHOOSE A SKILL', CARDS_X, SKILL_TOP - 11, PALETTE.sand);
+    drawText(ctx, 'SKILLS', CARDS_X, SKILL_TOP - 11, PALETTE.sand);
     this.skills.forEach((s, i) => {
       const lines = [...skillLines(s), { text: `FOR: ${users(party, (m) => !skillAccessBlock(m, s))}`, color: PALETTE.cyan }, ...this.equippedNote('skill', s.id), ...this.ownedNote('skill', s.id)];
       drawCard(ctx, skillRect(i), lines, this.skill === s, inside(pointer, skillRect(i)));
     });
 
-    drawText(ctx, 'CHOOSE AN ITEM', CARDS_X, ITEM_TOP - 11, PALETTE.sand);
+    drawText(ctx, 'ITEMS', CARDS_X, ITEM_TOP - 11, PALETTE.sand);
     this.items.forEach((item, i) => {
       const r = itemRect(i);
       const lines = [
@@ -122,7 +126,7 @@ export class RewardScene implements Scene {
       drawItemIcon(ctx, item, r.x + 6, r.y + 5);
     });
 
-    const hint = ['CLICK A CARD TO TAKE IT.', 'LEAVE A ROW EMPTY', 'TO SKIP IT.'];
+    const hint = ['TAKE ONE CARD:', 'A SKILL OR AN ITEM.', 'TAKE NONE TO SKIP.'];
     hint.forEach((h, i) => drawText(ctx, h, CONTINUE.x, ITEM_TOP + 4 + i * 11, PALETTE.lightGray));
     drawButton(ctx, CONTINUE, inside(pointer, CONTINUE));
 

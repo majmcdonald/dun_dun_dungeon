@@ -7,7 +7,7 @@ import type { GameState } from '../game/state';
 import { logEvent } from './log';
 import type { MapNode } from './map';
 import { itemFromRef, withBoost } from './run';
-import { NORMAL_WEIGHTS, pickWeighted, RICH_WEIGHTS } from './rewards';
+import { actWeights, NORMAL_WEIGHTS, pickWeighted, RICH_WEIGHTS } from './rewards';
 
 export const STORE_SKILLS = 4;
 export const STORE_ITEMS = 2;
@@ -60,8 +60,8 @@ export function openStore(state: GameState, node: MapNode): void {
   const items = ITEM_LIBRARY.filter((i) => party.some((m) => !equipItemBlock(m, i)));
   run.store = {
     node: node.id,
-    skills: pickWeighted(skills, (s) => s.rarity, NORMAL_WEIGHTS, STORE_SKILLS, rng).map((s) => s.id),
-    items: pickWeighted(items, (i) => i.rarity, RICH_WEIGHTS, STORE_ITEMS, rng).map((i) => i.id),
+    skills: pickWeighted(skills, (s) => s.rarity, actWeights(NORMAL_WEIGHTS, run.level), STORE_SKILLS, rng).map((s) => s.id),
+    items: pickWeighted(items, (i) => i.rarity, actWeights(RICH_WEIGHTS, run.level), STORE_ITEMS, rng).map((i) => i.id),
     bought: [],
     repaired: false,
   };

@@ -8,7 +8,7 @@ import type { GameState } from '../game/state';
 import { STAT_LABEL } from '../ui/partyCard';
 import { logEvent } from './log';
 import type { MapNode } from './map';
-import { NORMAL_WEIGHTS, pickWeighted, RICH_WEIGHTS } from './rewards';
+import { actWeights, NORMAL_WEIGHTS, pickWeighted, RICH_WEIGHTS } from './rewards';
 
 export const MIN_CHANCE = 0.1;
 export const MAX_CHANCE = 0.95;
@@ -150,7 +150,7 @@ function apply(state: GameState, outcome: Exclude<Outcome, { kind: 'fight' }>, r
     }
     case 'skill': {
       const pool = SKILL_LIBRARY.filter((s) => state.party.some((m) => !skillAccessBlock(m, s)));
-      const weights = outcome.rarity ? only(outcome.rarity) : NORMAL_WEIGHTS;
+      const weights = outcome.rarity ? only(outcome.rarity) : actWeights(NORMAL_WEIGHTS, run.level);
       const [skill] = pickWeighted(pool, (s) => s.rarity, weights, 1, rng);
       if (!skill) return [];
       state.inventory.skills.push(skill);
@@ -158,7 +158,7 @@ function apply(state: GameState, outcome: Exclude<Outcome, { kind: 'fight' }>, r
     }
     case 'item': {
       const pool = ITEM_LIBRARY.filter((i) => state.party.some((m) => !equipItemBlock(m, i)));
-      const weights = outcome.rarity ? only(outcome.rarity) : RICH_WEIGHTS;
+      const weights = outcome.rarity ? only(outcome.rarity) : actWeights(RICH_WEIGHTS, run.level);
       const [item] = pickWeighted(pool, (i) => i.rarity, weights, 1, rng);
       if (!item) return [];
       state.inventory.items.push(item);

@@ -6,7 +6,7 @@ import { CLASSES } from '../content/classes';
 import { loadSlot, SAVE_SLOTS, type SlotInfo } from '../engine/save';
 import type { GameContext, Scene } from '../engine/scene';
 import { FLOORS, findNode } from '../run/map';
-import { downloadLogs, finishedLogs } from '../run/log';
+import { clearLogs, downloadLogs, finishedLogs } from '../run/log';
 import { deleteProfile, hasProfile, loadProfile, type Profile } from '../run/profile';
 import { loadRun, type SavedRun } from '../run/run';
 import { drawBackground } from '../ui/background';
@@ -23,9 +23,11 @@ const SLOT_W = 148;
 const SLOT_H = 150;
 const SLOT_GAP = 8;
 const SLOTS_TOP = 56;
-const DEBUG: Button = { x: NATIVE_WIDTH / 2 - 104, y: 238, w: 100, h: 20, label: 'DEBUG' };
+const DEBUG: Button = { x: NATIVE_WIDTH / 2 - 140, y: 238, w: 100, h: 20, label: 'DEBUG' };
 // Downloads the last few finished runs' logs as JSON.
-const LOGS: Button = { x: NATIVE_WIDTH / 2 + 4, y: 238, w: 100, h: 20, label: 'RUN LOGS' };
+const LOGS: Button = { x: NATIVE_WIDTH / 2 - 36, y: 238, w: 100, h: 20, label: 'RUN LOGS' };
+// Empties the kept logs (asks first), so the next download holds only newer runs.
+const CLEAR: Button = { x: NATIVE_WIDTH / 2 + 68, y: 238, w: 72, h: 20, label: 'CLEAR' };
 
 interface SlotView {
   rect: Rect;
@@ -42,6 +44,7 @@ interface SlotView {
 export class TitleScene implements Scene {
   private slots: SlotView[] = [];
   private confirmDelete: number | null = null;
+  private confirmClear = false;
   private keptLogs = 0;
   private sprites = new Map<string, HTMLCanvasElement>();
 
@@ -77,6 +80,15 @@ export class TitleScene implements Scene {
         downloadLogs();
         continue;
       }
+      if (inside(click, CLEAR) && this.keptLogs > 0) {
+        if (this.confirmClear) {
+          clearLogs();
+          this.refresh();
+        }
+        this.confirmClear = !this.confirmClear;
+        continue;
+      }
+      this.confirmClear = false;
       const index = this.slots.findIndex((s) => inside(click, s.rect));
       if (index < 0) {
         this.confirmDelete = null;
@@ -108,6 +120,7 @@ export class TitleScene implements Scene {
     this.slots.forEach((s, i) => this.drawSlot(ctx, s, i, pointer));
     drawButton(ctx, DEBUG, inside(pointer, DEBUG));
     drawButton(ctx, { ...LOGS, label: `RUN LOGS (${this.keptLogs})` }, this.keptLogs > 0 && inside(pointer, LOGS));
+    drawButton(ctx, { ...CLEAR, label: this.confirmClear ? 'SURE?' : 'CLEAR' }, this.confirmClear || (this.keptLogs > 0 && inside(pointer, CLEAR)));
   }
 
   private drawSlot(ctx: CanvasRenderingContext2D, s: SlotView, index: number, pointer: { x: number; y: number }): void {

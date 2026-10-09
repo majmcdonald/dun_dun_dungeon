@@ -301,6 +301,11 @@ export class BattleScene implements Scene {
       kos: heroes.filter((c) => c.hp <= 0).map((c) => c.def.id),
       focusClicks: this.focusClicks,
       party: loadout(this.game.state.party),
+      // Per hero and skill: casts, damage dealt (barrier hits included), healing done, and damage their barriers absorbed.
+      skills: [...this.battle.skillStats.values()],
+      ...(this.game.state.party.some((m) => m.def.familiar) && {
+        familiar: { ...this.battle.familiarStats, channelSeconds: Math.round(this.battle.familiarStats.channelSeconds * 10) / 10 },
+      }),
     });
   }
 

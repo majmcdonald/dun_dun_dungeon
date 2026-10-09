@@ -46,8 +46,12 @@ export const MECHANIC = {
   chiFilling: 0.8,
   chiBurst: 1.8,
   burstSeconds: 5,
+  // Familiar channel: channelSeconds at 0 Magic, halved at channelMagic Magic.
   channelSeconds: 5,
+  channelMagic: 100,
   familiarShare: 0.6,
+  // Extra familiar HP per point of the summoner's Magic, on top of familiarShare of their max HP.
+  familiarHpPerMagic: 2,
   transformedDamageTaken: 1.25,
   gloryStepSeconds: 5,
 } as const;
@@ -103,6 +107,10 @@ export function resistOf(c: Combatant, element: Element | undefined): number {
   return Math.min(MAX_RESIST, value);
 }
 
+export function channelTime(c: Combatant): number {
+  return (MECHANIC.channelSeconds * MECHANIC.channelMagic) / (MECHANIC.channelMagic + statOf(c, 'magic'));
+}
+
 export function hasTaunt(c: Combatant): boolean {
   return c.taunting > 0 || enchantments(c).some(({ ench }) => ench.kind === 'taunt');
 }
@@ -134,6 +142,15 @@ export interface BattleOptions {
   bestiary?: Record<string, CombatantDef>;
 }
 
+export interface SkillStat {
+  hero: string;
+  skill: string;
+  casts: number;
+  damage: number;
+  healing: number;
+  shielded: number;
+}
+
 export class Battle {
   readonly combatants: Combatant[];
   elapsed = 0;
@@ -141,6 +158,11 @@ export class Battle {
   focus: string | null = null;
   result: BattleResult | null = null;
   gold = 0;
+  // Warlock familiar activity this fight, for the run log.
+  familiarStats = { summons: 0, deaths: 0, channelSeconds: 0, hp: 0 };
+  // What each hero's skills (and gear enchantments) did this fight, for the run log. Summons count under
+  // their owner as "creature:skill".
+  skillStats = new Map<string, SkillStat>();
   private summonCount = 0;
   private spawnCount = 0;
   private started = false;
@@ -162,7 +184,7 @@ export class Battle {
       ...boosted.map((m, i) => heroCombatant(m, i, rng)),
       ...enemies.flatMap((def, i) => (def ? [createCombatant(def, def.skills, 'enemy', i, {}, rng)] : [])),
     ];
-    for (const c of this.combatants) if (c.def.familiar) c.channel = MECHANIC.channelSeconds;
+    for (const c of this.combatants) if (c.def.familiar) c.channel = channelTime(c);
     const fraction = options.party?.hpFraction;
     if (fraction !== undefined) {
       for (const c of this.combatants) if (c.side === 'party') c.hp = Math.max(1, Math.round(c.maxHp * fraction));
@@ -297,6 +319,7 @@ export class Battle {
       if (c.flight.remaining <= TIMER_EPSILON) c.flight = null;
     }
     if (c.channel > 0) {
+      this.familiarStats.channelSeconds += Math.min(dt, c.channel);
       c.channel -= dt;
       if (c.channel <= TIMER_EPSILON) {
         c.channel = 0;
@@ -382,6 +405,7 @@ export class Battle {
     const selfOnly = skill.effects.every((e) => e.self || e.onSummons);
     if (targets.length === 0 && !selfOnly) return;
     events.push({ type: 'skill', actor: actor.uid, skill: skill.id, targets: targets.map((t) => t.uid) });
+    this.credit(actor, skill.id, 'casts', 1);
     if (skill.category === 'spell') actor.castSpell = true;
     if (isDefensive(skill)) actor.castDefensive = true;
 
@@ -432,8 +456,8 @@ export class Battle {
           if (target.flight) power *= target.flight.damageTaken;
           const mitigation = statOf(target, effect.damageType === 'physical' ? 'defense' : 'resistance');
           const amount = mitigate(power, mitigation, resistOf(target, effect.element));
-          const total = this.applyDamage(actor, target, amount, events, { element: effect.element, direct: true });
-          if (effect.drain) this.heal(actor, actor, Math.round(total * effect.drain), events);
+          const total = this.applyDamage(actor, target, amount, events, { element: effect.element, direct: true, skill: source });
+          if (effect.drain) this.heal(actor, actor, Math.round(total * effect.drain), events, false, source);
           if (actor.def.mechanic === 'chi') this.gainChi(actor, MECHANIC.chiPerHit, events);
           if (direct) this.triggerOnHit(actor, target, events);
           this.triggerReactive(actor, target, total, events);
@@ -442,12 +466,12 @@ export class Battle {
       }
       case 'barrier': {
         const amount = Math.round(statOf(actor, effect.stat) * effect.scaling * mult);
-        target.barrier = { amount, remaining: effect.duration };
+        target.barrier = { amount, remaining: effect.duration, owner: actor.uid, source };
         events.push({ type: 'barrier', target: target.uid, amount });
         return;
       }
       case 'heal':
-        this.heal(actor, target, Math.round(statOf(actor, 'magic') * effect.scaling * mult), events);
+        this.heal(actor, target, Math.round(statOf(actor, 'magic') * effect.scaling * mult), events, false, source);
         return;
       case 'regen': {
         const amount = Math.round(statOf(actor, 'magic') * effect.scaling * mult);
@@ -538,7 +562,7 @@ export class Battle {
         for (const d of target.dots.filter((dot) => dot.element === 'poison')) {
           if (target.hp <= 0 || this.result) return;
           const amount = Math.max(1, Math.round(d.amount * (1 - resistOf(target, d.element))));
-          this.applyDamage(this.get(d.owner), target, amount, events, { element: d.element, direct: false, periodic: true });
+          this.applyDamage(this.get(d.owner), target, amount, events, { element: d.element, direct: false, periodic: true, skill: d.source });
         }
         return;
       case 'venom':
@@ -594,7 +618,7 @@ export class Battle {
     const def: CombatantDef = {
       ...template,
       stats: {
-        hp: scale(owner.maxHp),
+        hp: scale(owner.maxHp) + (familiar ? Math.round(MECHANIC.familiarHpPerMagic * statOf(owner, 'magic')) : 0),
         attack: scale(power),
         magic: scale(power),
         defense: scale(statOf(owner, 'defense')),
@@ -616,8 +640,26 @@ export class Battle {
     unit.uid = `summon-${++this.summonCount}`;
     unit.summoner = owner.uid;
     unit.familiar = familiar;
+    if (familiar) {
+      this.familiarStats.summons += 1;
+      this.familiarStats.hp = unit.maxHp;
+    }
     this.combatants.push(unit);
     events.push({ type: 'summon', summoner: owner.uid, unit: unit.uid });
+  }
+
+  // Party side only; a summon's numbers go to its owner.
+  private credit(actor: Combatant, skill: string, field: 'casts' | 'damage' | 'healing' | 'shielded', amount: number): void {
+    if (actor.side !== 'party' || amount <= 0) return;
+    const hero = actor.summoner ? this.get(actor.summoner) : actor;
+    const name = actor.summoner ? `${actor.def.id}:${skill}` : skill;
+    const key = `${hero.uid}|${name}`;
+    let stat = this.skillStats.get(key);
+    if (!stat) {
+      stat = { hero: hero.def.id, skill: name, casts: 0, damage: 0, healing: 0, shielded: 0 };
+      this.skillStats.set(key, stat);
+    }
+    stat[field] += amount;
   }
 
   private gainChi(monk: Combatant, amount: number, events: BattleEvent[]): void {
@@ -638,10 +680,11 @@ export class Battle {
     events.push({ type: 'status', target: barbarian.uid, status: 'frenzy' });
   }
 
-  private heal(source: Combatant, target: Combatant, raw: number, events: BattleEvent[], periodic = false): void {
+  private heal(source: Combatant, target: Combatant, raw: number, events: BattleEvent[], periodic = false, skill?: string): void {
     if (target.hp <= 0) return;
     const amount = Math.min(target.maxHp - target.hp, raw);
     target.hp += amount;
+    if (skill && target.side === source.side) this.credit(source, skill, 'healing', amount);
     events.push({ type: 'heal', source: source.uid, target: target.uid, amount, ...(periodic && { periodic }) });
     if (amount > 0) this.fireTrigger(target, 'whenHealed', events);
   }
@@ -658,7 +701,7 @@ export class Battle {
       if (this.result) return;
       if (ench.kind === 'thorns' && attacker.hp > 0) {
         const amount = Math.max(1, Math.round(total * ench.fraction));
-        this.applyDamage(target, attacker, amount, events, { direct: false });
+        this.applyDamage(target, attacker, amount, events, { direct: false, skill: source });
       }
       if (ench.kind === 'onHitTaken' && target.hp > 0 && this.rng() < ench.chance) {
         const aimAt = HOSTILE_KINDS.has(ench.effect.kind) ? attacker : target;
@@ -671,7 +714,7 @@ export class Battle {
     for (const c of this.alive()) {
       for (const r of c.regens) {
         const ticks = advance(r, dt);
-        for (let i = 0; i < ticks; i++) this.heal(this.get(r.owner), c, r.amount, events, true);
+        for (let i = 0; i < ticks; i++) this.heal(this.get(r.owner), c, r.amount, events, true, r.source);
       }
       c.regens = c.regens.filter((r) => r.remaining > TIMER_EPSILON);
 
@@ -680,7 +723,7 @@ export class Battle {
         for (let i = 0; i < ticks; i++) {
           if (c.hp <= 0 || this.result) break;
           const amount = Math.max(1, Math.round(d.amount * (1 - resistOf(c, d.element))));
-          this.applyDamage(this.get(d.owner), c, amount, events, { element: d.element, direct: false, periodic: true });
+          this.applyDamage(this.get(d.owner), c, amount, events, { element: d.element, direct: false, periodic: true, skill: d.source });
         }
       }
       c.dots = c.dots.filter((d) => d.remaining > TIMER_EPSILON);
@@ -723,7 +766,7 @@ export class Battle {
     target: Combatant,
     amount: number,
     events: BattleEvent[],
-    opts: { element?: Element; direct: boolean; periodic?: boolean },
+    opts: { element?: Element; direct: boolean; periodic?: boolean; skill?: string },
   ): number {
     const regen = target.def.regeneration;
     if (regen && opts.element && regen.blockedBy.includes(opts.element)) target.regenBlocked = regen.blockSeconds;
@@ -731,6 +774,8 @@ export class Battle {
     if (target.barrier) {
       absorbed = Math.min(target.barrier.amount, amount);
       target.barrier.amount -= absorbed;
+      const { owner, source: shield } = target.barrier;
+      if (owner && shield && source.side !== target.side) this.credit(this.get(owner), shield, 'shielded', absorbed);
       if (target.barrier.amount <= 0) {
         target.barrier = null;
         this.fireTrigger(target, 'barrierBreaks', events);
@@ -738,6 +783,7 @@ export class Battle {
     }
     const dealt = Math.min(target.hp, amount - absorbed);
     source.damageDealt += dealt;
+    if (opts.skill && source.side !== target.side) this.credit(source, opts.skill, 'damage', dealt + absorbed);
     if (opts.direct) target.lastAttacker = source.uid;
     events.push({
       type: 'damage',
@@ -787,7 +833,11 @@ export class Battle {
 
   private onDeath(target: Combatant, events: BattleEvent[], killer?: Combatant): void {
     events.push({ type: 'death', target: target.uid });
-    if (this.focus === target.uid) this.focus = null;
+    // The party stays on the same kind of enemy: the front-most one left, else the plain front target.
+    if (this.focus === target.uid) {
+      const same = this.alive('enemy').filter((c) => c !== target && c.def.id === target.def.id);
+      this.focus = frontMost(same)?.uid ?? null;
+    }
     this.breakEquipment(target, events);
     for (const c of this.alive()) {
       if (c.def.mechanic === 'souls') c.meter = Math.min(MECHANIC.soulsMax, c.meter + 1);
@@ -801,10 +851,13 @@ export class Battle {
     }
 
     if (target.familiar && target.summoner) {
+      this.familiarStats.deaths += 1;
       const owner = this.get(target.summoner);
-      if (owner.hp > 0) owner.channel = MECHANIC.channelSeconds;
+      if (owner.hp > 0) owner.channel = channelTime(owner);
     }
 
+    // Several deaths can land at once (an area hit); only the first one that settles the fight ends it.
+    if (this.result) return;
     if (this.alive('enemy').length === 0) this.result = 'victory';
     else if (this.members('party').length === 0) this.result = 'defeat';
     if (this.result) {

@@ -317,6 +317,23 @@ describe('equipment', () => {
   });
 });
 
+describe('skill stats', () => {
+  it('credits casts, damage, healing, and shielding to the hero and skill', () => {
+    const mend: SkillDef = { ...guard, id: 'mend', target: { side: 'ally', select: 'lowestHp', area: 'single' }, effects: [{ kind: 'heal', scaling: 1 }] };
+    const shield: SkillDef = { ...guard, id: 'shield', cooldown: 3 };
+    const party = [member(unit('a', { attack: 20, defense: 10 }, [slash, shield])), member(unit('b', { magic: 5 }, [mend]))];
+    const battle = new Battle(party, [unit('e', { hp: 100000, attack: 30 }, [hit('bash', 'front', 'single', 1)])], NO_JITTER);
+    runFor(battle, 10);
+    const stat = (skill: string) => [...battle.skillStats.values()].find((s) => s.skill === skill)!;
+    expect(stat('slash').hero).toBe('a');
+    expect(stat('slash').casts).toBeGreaterThan(1);
+    expect(stat('slash').damage).toBe(stat('slash').casts * 20);
+    expect(stat('mend')).toMatchObject({ hero: 'b', casts: 1, healing: 5 });
+    expect(stat('shield')).toMatchObject({ casts: 1, shielded: 10 });
+    expect([...battle.skillStats.values()].some((s) => s.skill === 'bash')).toBe(false);
+  });
+});
+
 describe('outcome', () => {
   it('reports victory and stops acting', () => {
     const battle = new Battle([member(unit('a', { attack: 50 }, [slash]))], [unit('e', { hp: 30 })], NO_JITTER);
@@ -324,6 +341,14 @@ describe('outcome', () => {
     expect(battle.result).toBe('victory');
     expect(events.at(-1)).toEqual({ type: 'end', result: 'victory' });
     expect(battle.tick(DT)).toEqual([]);
+  });
+
+  it('ends once when a kill trigger finishes off the last enemy', () => {
+    const finisher: SkillDef = { ...hit('finisher', 'front', 'single', 0), trigger: { kind: 'onKill' } };
+    const battle = new Battle([member(unit('a', { attack: 50 }, [slash, finisher]))], [unit('e1', { hp: 30 }), unit('e2', { hp: 30 })], NO_JITTER);
+    const events = runToEnd(battle);
+    expect(events.filter((e) => e.type === 'death')).toHaveLength(2);
+    expect(events.filter((e) => e.type === 'end')).toHaveLength(1);
   });
 
   it('reports defeat when the whole party dies', () => {

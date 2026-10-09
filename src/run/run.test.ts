@@ -6,7 +6,7 @@ import { seededRng } from '../engine/random';
 import { equipItemBlock, skillAccessBlock } from '../game/loadout';
 import { createState, recruit } from '../game/state';
 import { COLUMNS, FIRST_EPIC_FLOOR, FLOORS, generateMap, reachable, TREASURE_FLOOR, type RunMap } from './map';
-import { rollReward } from './rewards';
+import { actWeights, BOSS_WEIGHTS, NORMAL_WEIGHTS, RICH_WEIGHTS, rollReward } from './rewards';
 import {
   beginNode,
   clearNode,
@@ -211,11 +211,11 @@ describe('reward picks', () => {
 describe('rewards', () => {
   const party = ['knight', 'mage', 'cleric'].map((id) => recruit(CLASSES_BY_ID[id]));
 
-  it('offers 3 distinct skills someone can learn and 2 distinct items someone can wear', () => {
+  it('offers 2 distinct skills someone can learn and 2 distinct items someone can wear', () => {
     for (const seed of SEEDS) {
       const reward = rollReward('battle', party, SKILL_LIBRARY, ITEM_LIBRARY, seededRng(seed));
-      expect(reward.skills).toHaveLength(3);
-      expect(new Set(reward.skills).size).toBe(3);
+      expect(reward.skills).toHaveLength(2);
+      expect(new Set(reward.skills).size).toBe(2);
       expect(reward.items).toHaveLength(2);
       expect(new Set(reward.items).size).toBe(2);
       for (const s of reward.skills) expect(party.some((m) => !skillAccessBlock(m, s))).toBe(true);
@@ -248,6 +248,16 @@ describe('rewards', () => {
     expect(betterThanCommon('epic')).toBeGreaterThan(betterThanCommon('battle'));
     const bossItems = SEEDS.flatMap((seed) => rollReward('boss', party, SKILL_LIBRARY, ITEM_LIBRARY, seededRng(seed)).items);
     expect(bossItems.some((i) => i.rarity === 'common')).toBe(false);
+    const bossSkills = SEEDS.flatMap((seed) => rollReward('boss', party, SKILL_LIBRARY, ITEM_LIBRARY, seededRng(seed)).skills);
+    expect(bossSkills.some((s) => s.rarity === 'common')).toBe(false);
+  });
+
+  it('moves weight from the lowest rarity to the better ones in later acts', () => {
+    expect(actWeights(NORMAL_WEIGHTS, 0)).toEqual(NORMAL_WEIGHTS);
+    expect(actWeights(NORMAL_WEIGHTS, 1)).toEqual({ common: 74, rare: 16, epic: 7, legendary: 3 });
+    expect(actWeights(RICH_WEIGHTS, 2)).toEqual({ common: 48, rare: 29, epic: 16, legendary: 7 });
+    expect(actWeights(BOSS_WEIGHTS, 1)).toEqual({ common: 0, rare: 46, epic: 37, legendary: 17 });
+    expect(actWeights(BOSS_WEIGHTS, 2)).toEqual({ common: 0, rare: 42, epic: 39, legendary: 19 });
   });
 });
 

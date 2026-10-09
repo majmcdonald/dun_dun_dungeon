@@ -842,7 +842,7 @@ const blightedSkin = enemySkill('blightedSkin', 'Blighted Skin', 2, { side: 'ene
 export const LICH: CombatantDef = {
   id: 'lich',
   name: 'Lich',
-  stats: { hp: 662, attack: 36, magic: 182, defense: 10, resistance: 16 },
+  stats: { hp: 662, attack: 36, magic: 150, defense: 10, resistance: 16 },
   skills: [deathCoil, bonePrison, chillOfTheGrave],
   resist: { holy: -0.5, fire: -0.5, shadow: 0.5, ice: 0.5 },
   reassemble: 0.5,

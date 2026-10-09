@@ -10,8 +10,14 @@ export interface FinishedRunLog {
   finishedAt: string;
   slot: number;
   won: boolean;
+  // Every code version the run was played on, oldest first.
+  builds: string[];
   entries: LogEntry[];
 }
+
+declare const __BUILD__: string;
+// The code version this page was built from (see vite.config.ts).
+export const BUILD = typeof __BUILD__ === 'string' ? __BUILD__ : 'unknown';
 
 const STORAGE_KEY = 'autob.runlogs';
 export const KEPT_LOGS = 10;
@@ -19,7 +25,11 @@ export const KEPT_LOGS = 10;
 export function logEvent(run: RunState, kind: string, data: Record<string, unknown> = {}): void {
   const at = run.pending ?? run.position;
   const room = at ? Number(at.split('-')[0]) + 1 : 0;
-  run.log = [...(run.log ?? []), { kind, act: run.level + 1, room, ...data }];
+  const log = run.log ?? [];
+  // A 'build' entry marks where the run started on, or moved to, a different code version.
+  const lastBuild = [...log].reverse().find((e) => e.kind === 'build')?.sha;
+  const version = lastBuild === BUILD ? [] : [{ kind: 'build', act: run.level + 1, room, sha: BUILD }];
+  run.log = [...log, ...version, { kind, act: run.level + 1, room, ...data }];
 }
 
 // Each hero's class, skills, trigger, and gear ids.
@@ -43,11 +53,21 @@ export function finishedLogs(): FinishedRunLog[] {
 export function keepFinishedLog(state: GameState, won: boolean): void {
   const run = state.run;
   if (!run) return;
-  const entry: FinishedRunLog = { finishedAt: new Date().toISOString(), slot: run.slot, won, entries: run.log ?? [] };
+  const entries = run.log ?? [];
+  const builds = [...new Set(entries.filter((e) => e.kind === 'build').map((e) => String(e.sha)))];
+  const entry: FinishedRunLog = { finishedAt: new Date().toISOString(), slot: run.slot, won, builds, entries };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify([entry, ...finishedLogs()].slice(0, KEPT_LOGS)));
   } catch {
     // Storage full or unavailable; the log is lost, the game goes on.
+  }
+}
+
+export function clearLogs(): void {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Storage unavailable; nothing to clear.
   }
 }
 

@@ -93,16 +93,37 @@ describe('summons', () => {
 describe('familiar', () => {
   const warlock = unit('warlock', {}, [skill('bolt', [hit()], { cooldown: 1 })], { familiar: 'imp', mechanic: 'familiar' });
 
-  it('channels 5s to summon at the start, pausing the warlock', () => {
+  // 10 Magic: 5 * 100 / 110 ≈ 4.55s.
+  it('channels to summon at the start, faster with more Magic, pausing the warlock', () => {
     const battle = new Battle([member(warlock)], [unit('e')], NO_JITTER, { creatures: CREATURES });
-    const early = runFor(battle, 4.9);
+    expect(battle.get('party-0').channel).toBeCloseTo(4.55, 2);
+    const early = runFor(battle, 4.5);
     expect(fired(early, 'bolt')).toBe(0);
-    const later = runFor(battle, 1.2);
+    const later = runFor(battle, 1.1);
     expect(later.some((e) => e.type === 'summon')).toBe(true);
     expect(fired(later, 'bolt')).toBe(1);
   });
 
-  it('resummons for 5s after the familiar dies', () => {
+  it('gives the familiar extra HP from Magic', () => {
+    const strong = unit('warlock', { magic: 50 }, [], { familiar: 'imp', mechanic: 'familiar' });
+    const battle = new Battle([member(strong)], [unit('e')], NO_JITTER, { creatures: CREATURES });
+    runFor(battle, 5);
+    expect(battle.combatants.find((c) => c.familiar)!.maxHp).toBe(600 + 100);
+  });
+
+  it('counts familiar summons, deaths, and channel time', () => {
+    const battle = new Battle([member(warlock)], [unit('e')], NO_JITTER, { creatures: CREATURES });
+    runFor(battle, 5);
+    battle.combatants.find((c) => c.familiar)!.hp = 1;
+    battle.get('enemy-0').slots.push({ def: skill('snipe', [hit()], { target: { side: 'enemy', select: 'front', area: 'single' } }), timer: 1, position: 1, rate: 1 });
+    runFor(battle, 0.1);
+    expect(battle.familiarStats.summons).toBe(1);
+    expect(battle.familiarStats.deaths).toBe(1);
+    expect(battle.familiarStats.hp).toBe(600 + 20);
+    expect(battle.familiarStats.channelSeconds).toBeCloseTo(4.55 + 0.1, 1);
+  });
+
+  it('resummons after the familiar dies', () => {
     const battle = new Battle([member(warlock)], [unit('e')], NO_JITTER, { creatures: CREATURES });
     runFor(battle, 5.1);
     const imp = battle.combatants.find((c) => c.familiar)!;
@@ -625,6 +646,17 @@ describe('party focus target', () => {
     expect(battle.get('enemy-1').hp).toBe(0);
     expect(battle.focus).toBeNull();
     expect(battle.partyTarget()?.uid).toBe('enemy-0');
+  });
+
+  it('moves on to the next enemy of the same kind when the focused one dies', () => {
+    const party = [member(unit('a', { attack: 10 }, [skill('poke', [hit(1)])]))];
+    const enemies = [unit('front', { hp: 100000 }), unit('rat', { hp: 5, defense: 0 }), unit('rat', { hp: 100000 })];
+    const battle = new Battle(party, enemies, NO_JITTER);
+    battle.setFocus('enemy-1');
+    runFor(battle, 3);
+    expect(battle.get('enemy-1').hp).toBe(0);
+    expect(battle.focus).toBe('enemy-2');
+    expect(battle.partyTarget()?.uid).toBe('enemy-2');
   });
 
   it('ignores dead enemies and party members', () => {

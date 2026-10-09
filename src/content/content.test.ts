@@ -144,11 +144,12 @@ describe('summons', () => {
     expect(wolf?.def.id).toBe('wolf');
   });
 
-  it('the warlock summons his imp after a 5 second channel', () => {
+  // 28 Magic: 5 * 100 / 128 ≈ 3.9s.
+  it('the warlock summons his imp after a channel of about 4 seconds', () => {
     const warlock = CLASSES.find((c) => c.id === 'warlock')!;
     const target = { id: 'dummy', name: 'dummy', stats: { hp: 9999, attack: 0, magic: 0, defense: 0, resistance: 0 }, skills: [] };
     const battle = new Battle([recruit(warlock)], [target], () => 0, { creatures: CREATURES });
-    for (let i = 0; i < 4.9 * 60; i++) battle.tick(1 / 60);
+    for (let i = 0; i < 3.8 * 60; i++) battle.tick(1 / 60);
     expect(battle.combatants.some((c) => c.familiar)).toBe(false);
     for (let i = 0; i < 0.2 * 60; i++) battle.tick(1 / 60);
     expect(battle.combatants.find((c) => c.familiar)?.def.id).toBe('imp');
