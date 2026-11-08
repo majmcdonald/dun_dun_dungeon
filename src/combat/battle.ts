@@ -10,6 +10,7 @@ import type {
   Condition,
   Element,
   Enchantment,
+  EnemyBoost,
   EquipSlot,
   PartyMember,
   Selector,
@@ -151,6 +152,8 @@ export interface BattleOptions {
   creatures?: Record<string, CombatantDef>;
   // Enemy types that enemy abilities can call in (spawn effects).
   bestiary?: Record<string, CombatantDef>;
+  // Game++: every enemy in this fight is a little stronger.
+  enemyBoost?: EnemyBoost;
 }
 
 export interface SkillStat {
@@ -195,8 +198,12 @@ export class Battle {
     const boosted = bonus ? party.map((m) => ({ ...m, def: { ...m.def, stats: addStats(m.def.stats, bonus) } })) : party;
     this.combatants = [
       ...boosted.map((m, i) => heroCombatant(m, i, rng)),
-      ...enemies.flatMap((def, i) => (def ? [createCombatant(def, def.skills, 'enemy', i, {}, rng)] : [])),
+      ...enemies.flatMap((def, i) => (def ? [createCombatant(boostEnemy(def, options.enemyBoost), def.skills, 'enemy', i, {}, rng)] : [])),
     ];
+    const boost = options.enemyBoost;
+    if (boost?.kind === 'speed') {
+      for (const c of this.combatants) if (c.side === 'enemy') c.speed.push({ source: 'eliteBoost', value: 1 + boost.amount, remaining: Infinity });
+    }
     for (const c of this.combatants) if (c.def.familiar) c.channel = channelTime(c);
     const fraction = options.party?.hpFraction;
     if (fraction !== undefined) {
@@ -1057,6 +1064,19 @@ function createCombatant(
     flight: null,
     reassembled: false,
   };
+}
+
+function boostEnemy(def: CombatantDef, boost?: EnemyBoost): CombatantDef {
+  if (!boost || boost.kind === 'speed') return def;
+  const grow = (n: number) => Math.round(n * (1 + boost.amount));
+  const s = def.stats;
+  const stats =
+    boost.kind === 'hp'
+      ? { ...s, hp: grow(s.hp) }
+      : boost.kind === 'damage'
+        ? { ...s, attack: grow(s.attack), magic: grow(s.magic) }
+        : { ...s, defense: grow(s.defense), resistance: grow(s.resistance) };
+  return { ...def, stats };
 }
 
 function addStats(stats: Stats, bonus: Partial<Stats>): Stats {

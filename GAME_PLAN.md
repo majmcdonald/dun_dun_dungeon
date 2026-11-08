@@ -218,3 +218,9 @@ SFX (hits, skill activation, UI, victory/defeat) and music (map/battle/boss) acr
 
 **Phase 8 — Polish & Balance**
 Balancing pass 3: full-run playtesting, fixing outliers, dominant builds, and dead choices; bug fixing.
+
+## Game++ (opens when every class is unlocked)
+- Every run is Game++ once all classes are unlocked. Three keys: Shop Key (150 G in any store), Elite Key (each act marks one random Epic Monster on the map until the key is won; that fight's enemies get a random boost: +30% HP, +25% damage, +30% DEF/RES, or +10% speed), Treasure Key (offered by any Treasure instead of its skill/item cards).
+- Beating the Act 3 boss with all three keys opens The Dungeon Master (alone on the map). Without them the run is won as normal.
+- Dungeon Master: Crimson Feast, Inferno, Mark of Death, Glacial Tomb, plus Summon Elites (a random Act 2/3 Epic Monster). Beating him sets `profile.dungeonMaster`, which will open the epic challenges (design TBD).
+- Dungeon Master art: first draft (hooded crowned figure, staff with a cyan orb, key ring on the belt); stats are untuned.

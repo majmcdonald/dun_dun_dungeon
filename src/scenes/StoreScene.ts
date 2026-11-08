@@ -9,8 +9,9 @@ import type { GameContext, Scene } from '../engine/scene';
 import { equippedSkills } from '../game/loadout';
 import type { GameState } from '../game/state';
 import { completeNode } from '../run/flow';
+import { SHOP_KEY_PRICE } from '../run/plus';
 import { saveRun, type StoreVisit } from '../run/run';
-import { brokenItems, buy, ENCHANT_BOOSTS, enchant, enchantExtra, enchantPrice, previewExtra, extraEnchantPrice, itemPrice, repair, repairPrice, sell, sellPrice, skillPrice } from '../run/store';
+import { brokenItems, buy, buyKey, ENCHANT_BOOSTS, enchant, enchantExtra, enchantPrice, previewExtra, extraEnchantPrice, itemPrice, repair, repairPrice, sell, sellPrice, skillPrice } from '../run/store';
 import { drawBackground } from '../ui/background';
 import { compareColumns, drawCompare, type ComparePick } from '../ui/compare';
 import { itemLines, skillLines, wrap, type Line } from '../ui/describeLines';
@@ -25,10 +26,11 @@ const CARD_H = 72;
 const CARD_STEP = 78;
 const SKILLS_Y = 56;
 const ITEMS_Y = 144;
-const SERVICES: Rect = { x: 164, y: 144, w: 152, h: 72 };
-const SELL_BUTTON: Button = { x: 172, y: 158, w: 136, h: 16, label: 'SELL GEAR' };
-const REPAIR_BUTTON: Button = { x: 172, y: 177, w: 136, h: 16, label: 'REPAIR' };
-const ENCHANT_BUTTON: Button = { x: 172, y: 196, w: 136, h: 16, label: 'ENCHANT' };
+const SERVICES: Rect = { x: 164, y: 144, w: 152, h: 78 };
+const SELL_BUTTON: Button = { x: 172, y: 157, w: 136, h: 14, label: 'SELL GEAR' };
+const REPAIR_BUTTON: Button = { x: 172, y: 173, w: 136, h: 14, label: 'REPAIR' };
+const ENCHANT_BUTTON: Button = { x: 172, y: 189, w: 136, h: 14, label: 'ENCHANT' };
+const KEY_BUTTON: Button = { x: 172, y: 205, w: 136, h: 14, label: '' };
 const KEEPER_X = 367;
 const KEEPER_Y = 44;
 const COUNTER: Rect = { x: 326, y: 96, w: 146, h: 16 };
@@ -42,7 +44,7 @@ const BUY: Button = { x: 332, y: 214, w: 134, h: 18, label: 'BUY' };
 const LIST: Rect = { x: 60, y: 48, w: 360, h: 192 };
 const LIST_ROWS = 11;
 const ROW_H = 13;
-const LIST_ACTION: Button = { x: LIST.x + 8, y: LIST.y + LIST.h - 26, w: 160, h: 18, label: '' };
+const LIST_ACTION: Button = { x: LIST.x + 8, y: LIST.y + LIST.h - 26, w: 200, h: 18, label: '' };
 const STAT_BUTTON_W = 50;
 const STAT_BUTTON_STEP = 52;
 const PREVIEW: Rect = { x: 110, y: 64, w: 260, h: 150 };
@@ -110,6 +112,7 @@ export class StoreScene implements Scene {
       if (inside(click, SELL_BUTTON)) this.openList('sell');
       else if (inside(click, REPAIR_BUTTON)) this.openList('repair');
       else if (inside(click, ENCHANT_BUTTON)) this.openList('enchant');
+      else if (this.game.state.run!.plus && inside(click, KEY_BUTTON)) this.buyShopKey();
       else if (this.selected && inside(click, BUY)) this.buySelected();
       else {
         const hit = this.stock().find((s) => inside(click, s.rect));
@@ -131,6 +134,13 @@ export class StoreScene implements Scene {
     if (block) return this.say(block);
     saveRun(this.game.state);
     this.say(`BOUGHT ${(pick.kind === 'skill' ? pick.skill.name : pick.item.name).toUpperCase()}`, true);
+  }
+
+  private buyShopKey(): void {
+    const block = buyKey(this.game.state);
+    if (block) return this.say(block);
+    saveRun(this.game.state);
+    this.say('BOUGHT THE SHOP KEY', true);
   }
 
   private openList(kind: 'sell' | 'repair' | 'enchant'): void {
@@ -292,6 +302,10 @@ export class StoreScene implements Scene {
     const repairLabel = this.store.repaired ? 'REPAIR (USED)' : `REPAIR (${broken} BROKEN)`;
     drawButton(ctx, { ...REPAIR_BUTTON, label: repairLabel }, !blocked && inside(pointer, REPAIR_BUTTON));
     drawButton(ctx, ENCHANT_BUTTON, !blocked && inside(pointer, ENCHANT_BUTTON));
+    const run = this.game.state.run!;
+    if (!run.plus) return;
+    const label = run.keys.shop ? 'SHOP KEY (OWNED)' : `SHOP KEY ${SHOP_KEY_PRICE} G`;
+    drawButton(ctx, { ...KEY_BUTTON, label }, !blocked && !run.keys.shop && inside(pointer, KEY_BUTTON));
   }
 
   // The shopkeeper stands behind the counter, which hides him from the waist down.
@@ -365,7 +379,7 @@ export class StoreScene implements Scene {
     } else if (this.listPick) {
       const done = kind === 'enchant' && !!this.listPick.extra;
       const verb = kind === 'enchant' ? 'ENCHANT II (RANDOM)' : LIST_VERB[kind];
-      const action = { ...LIST_ACTION, w: kind === 'enchant' ? 200 : LIST_ACTION.w, label: done ? 'FULLY ENCHANTED' : `${verb} FOR ${this.listPrice(this.listPick)} G` };
+      const action = { ...LIST_ACTION, label: done ? 'FULLY ENCHANTED' : `${verb} FOR ${this.listPrice(this.listPick)} G` };
       drawButton(ctx, action, !done && inside(pointer, action));
     }
     drawButton(ctx, LIST_CLOSE, inside(pointer, LIST_CLOSE));

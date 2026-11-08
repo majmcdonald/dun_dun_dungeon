@@ -5,6 +5,7 @@ import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
 import { enterNode, reviewReward } from '../run/flow';
 import { FLOORS, type MapNode, type NodeType } from '../run/map';
+import { describeBoost, KEY_LABEL, KEY_TYPES } from '../run/plus';
 import { currentNode, nextNodes, roomType, type RunState } from '../run/run';
 import { drawBackground, pathColor } from '../ui/background';
 import { drawText, textWidth } from '../ui/font';
@@ -71,6 +72,7 @@ export class MapScene implements Scene {
     const floor = current ? current.floor + 1 : 0;
     drawText(ctx, `LEVEL ${run.level + 1}`, 8, 8, PALETTE.gold);
     drawText(ctx, `ROOM ${floor}/${FLOORS}`, 8, 22, PALETTE.lightGray);
+    if (run.plus) this.drawKeys(ctx, run);
     drawText(ctx, TITLE, (NATIVE_WIDTH - textWidth(TITLE)) / 2, 16, PALETTE.sand);
     const gold = `GOLD ${run.gold}`;
     drawText(ctx, gold, PARTY.x - 10 - textWidth(gold), 16, PALETTE.gold);
@@ -101,7 +103,10 @@ export class MapScene implements Scene {
   }
 
   private hoverLabel(node: MapNode): string {
-    if (node !== this.reviewable()) return NODE_LABEL[node.type];
+    if (node !== this.reviewable()) {
+      if (node.id === this.run.keyEpic?.node) return `EPIC MONSTER - ELITE KEY (${describeBoost(this.run.keyEpic.boost)})`;
+      return node.type === 'boss' && this.run.finale ? 'THE DUNGEON MASTER' : NODE_LABEL[node.type];
+    }
     return roomType(this.run, node) === 'store' ? 'REVISIT STORE' : 'REVIEW REWARDS';
   }
 
@@ -116,6 +121,18 @@ export class MapScene implements Scene {
         const color = walked ? PALETTE.gold : ahead ? PALETTE.white : pathColor(this.run.level);
         drawDots(ctx, this.center(node), this.center(to), color);
       }
+    }
+  }
+
+  // Game++: the three keys, lit once held.
+  private drawKeys(ctx: CanvasRenderingContext2D, run: RunState): void {
+    let x = 8;
+    drawText(ctx, 'GAME++', x, 36, PALETTE.magenta);
+    x += textWidth('GAME++') + 6;
+    for (const key of KEY_TYPES) {
+      const label = KEY_LABEL[key].split(' ')[0];
+      drawText(ctx, label, x, 36, run.keys[key] ? PALETTE.gold : PALETTE.slate);
+      x += textWidth(label) + 6;
     }
   }
 
@@ -138,6 +155,11 @@ export class MapScene implements Scene {
     if (here) drawFrame(ctx, frame, hover ? PALETTE.white : PALETTE.gold);
     else if (open && hover) drawFrame(ctx, frame, PALETTE.white);
     else if (open) drawFrame(ctx, frame, PALETTE.sand);
+    // Game++: the Epic Monster holding the Elite Key pulses red.
+    if (node.id === this.run.keyEpic?.node && !passed && !walked) {
+      const pulse = Math.sin(this.time * BOB_SPEED) > 0;
+      drawFrame(ctx, { x: frame.x - 2, y: frame.y - 2, w: frame.w + 4, h: frame.h + 4 }, pulse ? PALETTE.hotRed : PALETTE.gold);
+    }
   }
 
   private drawLabel(ctx: CanvasRenderingContext2D, label: string, pointer: { x: number; y: number }): void {

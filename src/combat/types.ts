@@ -316,3 +316,9 @@ export type BattleEvent =
   // A sturdy enchantment took the hit instead: the item stays, minus its extra enchantment.
   | { type: 'equipmentStripped'; target: string; slot: EquipSlot }
   | { type: 'end'; result: BattleResult };
+
+// Game++: the small power boost on the Elite Key epic's enemies.
+export interface EnemyBoost {
+  kind: 'hp' | 'damage' | 'defense' | 'speed';
+  amount: number;
+}

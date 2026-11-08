@@ -17,7 +17,7 @@ import type { MapNode } from './map';
 import { keepFinishedLog, loadout, logEvent } from './log';
 import { noteRoom, noteRunEnd, saveProfile } from './profile';
 import { rollReward } from './rewards';
-import { beginNode, clearNode, pendingNodeOf, recordWin, roomType, runSummary, saveRun, setRewardPicks } from './run';
+import { beginNode, clearNode, LEVELS, pendingNodeOf, recordWin, roomType, runSummary, saveRun, setRewardPicks } from './run';
 
 // Moves the run between screens: map → node → (fight) → reward → party → map. Every step is autosaved.
 // The run rules themselves live in run.ts.
@@ -56,11 +56,22 @@ export function winNode(game: GameContext, battleGold = 0): void {
   if (!run || !node) return;
   const type = roomType(run, node);
   const payAs = type === 'event' ? 'epic' : type;
-  if (game.state.profile) noteRoom(game.state.profile, type, run.level);
+  if (game.state.profile) noteRoom(game.state.profile, type, run.level, run.finale);
   const level = run.level;
   const reward = rollReward(payAs, game.state.party, SKILL_LIBRARY, ITEM_LIBRARY, Math.random, battleGold, level);
   logEvent(run, 'reward', { type, gold: reward.gold, skills: reward.skills.map((s) => s.id), items: reward.items.map((i) => i.id) });
+  // Game++: the marked Epic Monster drops the Elite Key; a Treasure offers the Treasure Key instead of its cards.
+  const eliteKey = run.plus && type === 'epic' && run.keyEpic?.node === node.id;
+  const treasureKeyOffer = run.plus && type === 'treasure' && !run.keys.treasure;
   recordWin(run, { ...node, type }, reward);
+  if (eliteKey) {
+    run.keys.elite = true;
+    run.keyEpic = null;
+    logEvent(run, 'key', { key: 'elite' });
+    if (run.lastReward) run.lastReward.key = 'elite';
+  }
+  if (treasureKeyOffer && run.lastReward) run.lastReward.keyOffer = true;
+  if (run.finale && type === 'boss' && run.level + 1 >= LEVELS) logEvent(run, 'finale', { gold: run.gold });
   if (run.level !== level) logEvent(run, 'act', { party: loadout(game.state.party), gold: run.gold });
   saveRun(game.state);
   if (run.result === 'won') return endRun(game);
@@ -80,8 +91,8 @@ export function completeNode(game: GameContext): void {
 }
 
 // Takes the chosen picks; anything new is shown on the party screen, otherwise straight back to the map.
-export function choosePicks(game: GameContext, skill: string | null, item: string | null): void {
-  setRewardPicks(game.state, skill, item);
+export function choosePicks(game: GameContext, skill: string | null, item: string | null, key = false): void {
+  setRewardPicks(game.state, skill, item, key);
   // Coming back from the party screen and confirming the same picks isn't a new choice.
   const log = game.state.run?.log ?? [];
   const sinceReward = log.slice(log.map((e) => e.kind).lastIndexOf('reward'));

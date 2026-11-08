@@ -61,7 +61,7 @@ export const TAG_TRIGGERS: SkillDef[] = [
   t('caster', { id: 'spellguard', name: 'Spellguard', category: 'spell', rarity: 'rare', cooldown: 6, trigger: { kind: 'whenHit' }, target: SELF, fx: [barrier(1, 4, 'resistance')] }),
   t('caster', { id: 'preparedSpell', name: 'Prepared Spell', category: 'spell', rarity: 'rare', cooldown: 6, trigger: { kind: 'battleStart' }, target: foe('front', 'row'), fx: [dmg(1, magic())] }),
   t('heavy', { id: 'ironSkin', name: 'Iron Skin', category: 'skill', rarity: 'common', cooldown: 5, trigger: { kind: 'barrierBreaks' }, target: SELF, fx: [buff('defense', 1, 5)] }),
-  t('heavy', { id: 'bulwarkReflex', name: 'Bulwark Reflex', category: 'skill', rarity: 'rare', cooldown: 6, trigger: { kind: 'allyHurt' }, target: SELF, fx: [taunt(0.5), barrier(0.5, 4)] }),
+  t('heavy', { id: 'bulwarkReflex', name: 'Bulwark Reflex', category: 'skill', rarity: 'rare', cooldown: 6, trigger: { kind: 'allyHurt' }, target: SELF, fx: [taunt(0.8), barrier(0.3, 4)] }),
   t('heavy', { id: 'ironWill', name: 'Iron Will', category: 'skill', rarity: 'epic', cooldown: 10, trigger: { kind: 'selfLow' }, target: SELF, fx: [barrier(0.7, 6), taunt(0.3)] }),
   t('ranged', { id: 'quickDraw', name: 'Quick Draw', category: 'skill', rarity: 'common', cooldown: 5, trigger: { kind: 'battleStart' }, target: foe('back'), fx: [dmg(1)] }),
   t('ranged', { id: 'retreatShot', name: 'Retreat Shot', category: 'skill', rarity: 'rare', cooldown: 4, trigger: { kind: 'whenHit' }, target: foe('attackedMe'), fx: [dmg(0.7), self(haste(0.3, 3))] }),

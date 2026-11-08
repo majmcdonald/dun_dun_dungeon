@@ -956,6 +956,27 @@ export const DEMON_LORD: CombatantDef = {
   fury: BOSS_FURY,
 };
 
+// Game++ finale. Four of the strongest abilities in the game, plus a call for a random Act 2 or 3 elite.
+const ELITES = ['frostGiant', 'chimera', 'hydra', 'lich', 'boneDragon', 'plagueLord'];
+const summonElites = enemySkill(
+  'summonElites',
+  'Summon Elites',
+  20,
+  self,
+  { kind: 'chaos', options: ELITES.map((enemy): SkillEffect => ({ kind: 'spawn', enemy, count: 1, cap: 1 })) },
+  true,
+);
+
+// Casts Crimson Feast, Inferno, Mark of Death, and Glacial Tomb, and calls elites to his side.
+export const DUNGEON_MASTER: CombatantDef = {
+  id: 'dungeonMaster',
+  name: 'Dungeon Master',
+  stats: { hp: 4500, attack: 24, magic: 24, defense: 16, resistance: 16 },
+  skills: [crimsonFeast, inferno, markOfDeath, glacialTomb, summonElites],
+  resist: { holy: 0.25, shadow: 0.25, fire: 0.25, ice: 0.25 },
+  fury: BOSS_FURY,
+};
+
 // Every enemy type, for pickers.
 export const ENEMIES: CombatantDef[] = [
   SLIME,
@@ -1007,6 +1028,7 @@ export const ENEMIES: CombatantDef[] = [
   BLOOD_COUNTESS,
   REAPER,
   DEMON_LORD,
+  DUNGEON_MASTER,
 ];
 export const ENEMIES_BY_ID: Record<string, CombatantDef> = Object.fromEntries(ENEMIES.map((e) => [e.id, e]));
 

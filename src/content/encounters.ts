@@ -113,3 +113,6 @@ export const ACTS: ActEncounters[] = [
     ],
   },
 ];
+
+// Game++: the fight after the Act 3 boss.
+export const FINALE: EncounterDef = { id: 'dungeonMaster', name: 'THE DUNGEON MASTER', enemies: [null, null, null, null, 'dungeonMaster'] };

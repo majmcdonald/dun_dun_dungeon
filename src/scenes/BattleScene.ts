@@ -13,7 +13,7 @@ import { spriteCanvas, TRANSPARENT, type SpriteDef } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
 import { Battle, channelTime, gridCell, isSummon, MECHANIC, TRIGGER_SLOT } from '../combat/battle';
 import { CREATURES } from '../content/creatures';
-import { EQUIP_SLOTS, type BattleEvent, type Combatant, type CombatantDef, type EquipSlot, type PartyMember } from '../combat/types';
+import { EQUIP_SLOTS, type BattleEvent, type Combatant, type CombatantDef, type EnemyBoost, type EquipSlot, type PartyMember } from '../combat/types';
 import { NATIVE_HEIGHT, NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
 import { drawBackground } from '../ui/background';
@@ -169,7 +169,7 @@ export class BattleScene implements Scene {
     // Wounded/blessed effects from events apply to this fight only.
     const party = this.game.state.run ? takeNextFight(this.game.state) : undefined;
     const enemies = this.encounter ?? currentEncounter(this.game.state);
-    this.battle = new Battle(this.game.state.party, enemies, Math.random, { creatures: CREATURES, party, bestiary: ENEMIES_BY_ID });
+    this.battle = new Battle(this.game.state.party, enemies, Math.random, { creatures: CREATURES, party, bestiary: ENEMIES_BY_ID, enemyBoost: this.eliteBoost() });
     this.anims.clear();
     this.floats = [];
     this.vfx = [];
@@ -178,6 +178,12 @@ export class BattleScene implements Scene {
     this.startParty = this.game.state.party;
     this.brokenLog = [];
     this.endedFor = 0;
+  }
+
+  // Game++: the Epic Monster holding the Elite Key fights harder.
+  private eliteBoost(): EnemyBoost | undefined {
+    const run = this.game.state.run;
+    return run?.keyEpic && run.pending === run.keyEpic.node && !this.encounter ? run.keyEpic.boost : undefined;
   }
 
   update(dt: number): void {

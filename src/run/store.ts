@@ -7,6 +7,7 @@ import type { GameState } from '../game/state';
 import { logEvent } from './log';
 import type { MapNode } from './map';
 import { itemFromRef, withBoost } from './run';
+import { SHOP_KEY_PRICE } from './plus';
 import { actWeights, NORMAL_WEIGHTS, pickWeighted, RICH_WEIGHTS } from './rewards';
 
 export const STORE_SKILLS = 4;
@@ -202,4 +203,16 @@ export function enchantExtra(state: GameState, item: EquipmentDef, rng?: () => n
   run.gold -= price;
   logEvent(run, 'enchant2', { id: item.id, price, extra: enchanted.extra });
   return enchanted;
+}
+
+// Game++: the Shop Key, once per run.
+export function buyKey(state: GameState): string | null {
+  const run = state.run!;
+  if (!run.plus) return 'NOT AVAILABLE';
+  if (run.keys.shop) return 'ALREADY OWNED';
+  if (run.gold < SHOP_KEY_PRICE) return 'NOT ENOUGH GOLD';
+  run.gold -= SHOP_KEY_PRICE;
+  run.keys.shop = true;
+  logEvent(run, 'key', { key: 'shop', price: SHOP_KEY_PRICE });
+  return null;
 }

@@ -1,5 +1,5 @@
 import type { PartyStart } from '../combat/battle';
-import type { Enchantment, EquipmentDef, EquipSlot, PartyMember, SkillDef } from '../combat/types';
+import type { EnemyBoost, Enchantment, EquipmentDef, EquipSlot, PartyMember, SkillDef } from '../combat/types';
 import { CLASSES_BY_ID, type ClassDef } from '../content/classes';
 import { ITEMS_BY_ID } from '../content/items';
 import { SKILLS_BY_ID } from '../content/skills';
@@ -11,6 +11,7 @@ import { equippedSkills } from '../game/loadout';
 import { recruit, type GameState } from '../game/state';
 import { findNode, FLOORS, generateMap, reachable, type MapNode, type NodeType, type RunMap } from './map';
 import type { EventVisit } from './events';
+import { hasAllKeys, noKeys, pickKeyEpic, type KeyType, type Keys } from './plus';
 import type { Reward } from './rewards';
 
 // A run is three acts; beating the Act 3 boss wins it.
@@ -47,6 +48,12 @@ export interface RunState {
   // The fight picked for the room being played, and every fight used this run (oldest first).
   encounter: { node: string; id: string } | null;
   usedEncounters: string[];
+  // Game++ (every class unlocked): keys gathered, the Epic Monster holding the Elite Key this act (with its
+  // enemy boost), and whether the Act 3 boss has been beaten with all keys, leaving the Dungeon Master.
+  plus: boolean;
+  keys: Keys;
+  keyEpic: { node: string; boost: EnemyBoost } | null;
+  finale: boolean;
 }
 
 export interface StoreVisit {
@@ -80,14 +87,19 @@ export interface LastReward {
   items: string[];
   skill: string | null;
   item: string | null;
+  // Game++: a key won outright (Elite), or a Treasure that offers the Treasure Key instead of the cards.
+  key?: KeyType;
+  keyOffer?: boolean;
+  keyTaken?: boolean;
 }
 
 // A fresh run: recruits with their starting skills, an empty inventory, and the level 1 map.
-export function startRun(state: GameState, slot: number, classes: ClassDef[], seed: number): void {
+export function startRun(state: GameState, slot: number, classes: ClassDef[], seed: number, plus = false): void {
   state.party = classes.map(recruit);
   state.inventory = { skills: [], items: [] };
-  state.run = { log: [], slot, seed, level: 0, map: levelMap(seed, 0), position: null, path: [], pending: null, gold: 0, result: null, lastReward: null, stats: { ...NO_STATS }, broken: [], store: null, event: null, seenEvents: [], nextFight: null, encounter: null, usedEncounters: [] };
-  logEvent(state.run, 'start', { seed, slot, party: loadout(state.party) });
+  state.run = { log: [], slot, seed, level: 0, map: levelMap(seed, 0), position: null, path: [], pending: null, gold: 0, result: null, lastReward: null, stats: { ...NO_STATS }, broken: [], store: null, event: null, seenEvents: [], nextFight: null, encounter: null, usedEncounters: [], plus, keys: noKeys(), keyEpic: null, finale: false };
+  pickKeyEpic(state.run);
+  logEvent(state.run, 'start', { seed, slot, party: loadout(state.party), plus });
 }
 
 function levelMap(seed: number, level: number): RunMap {
@@ -107,16 +119,31 @@ export function clearNode(run: RunState, id: string): void {
   if (!nextNodes(run).some((n) => n.id === id)) throw new Error(`Node ${id} is not reachable`);
   run.pending = null;
   run.stats.rooms += 1;
-  if (id !== run.map.boss.id || run.level + 1 >= LEVELS) {
+  if (id !== run.map.boss.id) {
     run.position = id;
     run.path.push(id);
-    if (id === run.map.boss.id) run.result = 'won';
+    return;
+  }
+  if (run.level + 1 >= LEVELS) {
+    // With every key, beating the Act 3 boss opens the Dungeon Master instead of ending the run.
+    if (run.plus && !run.finale && hasAllKeys(run.keys)) {
+      run.finale = true;
+      run.encounter = null;
+      run.map = { floors: [], boss: { ...run.map.boss } };
+      run.position = null;
+      run.path = [];
+      return;
+    }
+    run.position = id;
+    run.path.push(id);
+    run.result = 'won';
     return;
   }
   run.level += 1;
   run.map = levelMap(run.seed, run.level);
   run.position = null;
   run.path = [];
+  pickKeyEpic(run);
 }
 
 // Entering a node locks in the previous reward's picks.
@@ -159,9 +186,8 @@ export function recordWin(run: RunState, node: MapNode, reward: Reward): void {
   if (node.type !== 'treasure') run.stats.fights += 1;
   if (node.type === 'epic') run.stats.epics += 1;
   if (node.type === 'boss') run.stats.bosses += 1;
-  const finalBoss = node.type === 'boss' && run.level + 1 >= LEVELS;
   clearNode(run, node.id);
-  if (finalBoss) return;
+  if (run.result === 'won') return;
   run.lastReward = {
     node: node.id,
     type: node.type,
@@ -202,11 +228,16 @@ export function runSummary(state: GameState, slayers: string[] = []): RunSummary
   };
 }
 
-// Swaps the taken reward skill/item. Only changed picks move: the old one comes back out (from the inventory,
+// Swaps the taken reward skill/item (and the Treasure Key, which takes the place of both). Only changed picks move: the old one comes back out (from the inventory,
 // or from whoever equipped it) and the new one goes into the inventory.
-export function setRewardPicks(state: GameState, skill: string | null, item: string | null): void {
+export function setRewardPicks(state: GameState, skill: string | null, item: string | null, key = false): void {
   const reward = state.run?.lastReward;
   if (!reward) return;
+  if (reward.keyOffer && key !== !!reward.keyTaken) {
+    reward.keyTaken = key;
+    state.run!.keys.treasure = key;
+    if (key) logEvent(state.run!, 'key', { key: 'treasure' });
+  }
   if (skill !== reward.skill) {
     if (reward.skill) takeBackSkill(state, reward.skill);
     if (skill) state.inventory.skills.push(SKILLS_BY_ID[skill]);
@@ -337,6 +368,10 @@ export function fromSave(saved: SavedRun, state: GameState): void {
     nextFight: saved.run.nextFight ?? null,
     encounter: saved.run.encounter ?? null,
     usedEncounters: saved.run.usedEncounters ?? [],
+    plus: saved.run.plus ?? false,
+    keys: { ...noKeys(), ...saved.run.keys },
+    keyEpic: saved.run.keyEpic ?? null,
+    finale: saved.run.finale ?? false,
   };
   state.party = saved.party.map(
     (m): PartyMember => ({

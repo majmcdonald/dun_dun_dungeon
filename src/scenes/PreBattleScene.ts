@@ -10,6 +10,7 @@ import { cardIconOrigin, drawEquipmentTooltip, drawPartyCard, hoveredSlot, party
 import { drawButton, drawPanel, inside, type Button, type Rect } from '../ui/widgets';
 import { currentEncounter } from '../run/encounters';
 import { pendingNode } from '../run/flow';
+import { describeBoost } from '../run/plus';
 import { BattleScene } from './BattleScene';
 import { PartyScene } from './PartyScene';
 
@@ -17,6 +18,7 @@ const UPDATE: Button = { x: 106, y: 228, w: 128, h: 22, label: 'UPDATE PARTY' };
 const FIGHT: Button = { x: 246, y: 228, w: 128, h: 22, label: 'FIGHT' };
 const TITLE = 'PREPARE FOR BATTLE';
 const NODE_TITLE: Partial<Record<string, string>> = { epic: 'EPIC MONSTER AHEAD', boss: 'BOSS FIGHT' };
+const FINALE_TITLE = 'THE DUNGEON MASTER';
 const ENEMY_PANEL: Rect = { x: 10, y: 44, w: 460, h: 56 };
 const ENEMY_CHIP_W = 64;
 const CARDS_TOP = 106;
@@ -46,9 +48,14 @@ export class PreBattleScene implements Scene {
 
   render(ctx: CanvasRenderingContext2D): void {
     drawBackground(ctx, this.game.state.run?.level ?? 0);
-    const title = NODE_TITLE[pendingNode(this.game)?.type ?? ''] ?? TITLE;
+    const run = this.game.state.run;
+    const title = run?.finale && pendingNode(this.game)?.type === 'boss' ? FINALE_TITLE : (NODE_TITLE[pendingNode(this.game)?.type ?? ''] ?? TITLE);
     drawText(ctx, title, (NATIVE_WIDTH - textWidth(title)) / 2, 16, PALETTE.sand);
     this.drawEnemies(ctx);
+    if (run?.keyEpic && run.pending === run.keyEpic.node) {
+      const note = `HOLDS THE ELITE KEY - ENEMIES ${describeBoost(run.keyEpic.boost)}`;
+      drawText(ctx, note, (NATIVE_WIDTH - textWidth(note)) / 2, 30, PALETTE.gold);
+    }
 
     const party = this.game.state.party;
     party.forEach((m, i) => drawPartyCard(ctx, m, i, partyCardRect(i, CARDS_TOP), PALETTE.darkSlate));

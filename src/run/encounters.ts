@@ -1,5 +1,5 @@
 import type { CombatantDef } from '../combat/types';
-import { ACTS, type ActEncounters, type EncounterDef } from '../content/encounters';
+import { ACTS, FINALE, type ActEncounters, type EncounterDef } from '../content/encounters';
 import { ENEMIES_BY_ID, MAP_ENCOUNTER } from '../content/enemies';
 import { seededRng } from '../engine/random';
 import type { GameState } from '../game/state';
@@ -12,7 +12,8 @@ export function groupOf(node: MapNode): number {
   return Math.min(2, Math.floor(node.floor / ROOMS_PER_GROUP));
 }
 
-function poolFor(acts: ActEncounters[], level: number, node: MapNode): EncounterDef[] {
+function poolFor(acts: ActEncounters[], level: number, node: MapNode, finale: boolean): EncounterDef[] {
+  if (finale && node.type === 'boss') return [FINALE];
   const act = acts[Math.min(level, acts.length - 1)];
   if (node.type === 'epic') return act.epics;
   if (node.type === 'boss') return act.bosses;
@@ -24,7 +25,7 @@ function poolFor(acts: ActEncounters[], level: number, node: MapNode): Encounter
 // Epic Monsters cycle: once all of an act's have been met, they all become available again.
 export function pickEncounter(state: GameState, node: MapNode, acts: ActEncounters[] = ACTS): EncounterDef | null {
   const run = state.run!;
-  const pool = poolFor(acts, run.level, node);
+  const pool = poolFor(acts, run.level, node, run.finale);
   if (run.encounter?.node === node.id) return pool.find((e) => e.id === run.encounter!.id) ?? null;
   if (pool.length === 0) return null;
   const used = run.usedEncounters;
@@ -47,6 +48,7 @@ export function pickEncounter(state: GameState, node: MapNode, acts: ActEncounte
 }
 
 export function encounterById(id: string): EncounterDef | null {
+  if (id === FINALE.id) return FINALE;
   for (const act of ACTS) {
     for (const e of [...act.battles.flat(), ...act.epics, ...act.bosses]) if (e.id === id) return e;
   }

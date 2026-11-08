@@ -71,6 +71,7 @@ import { PLAGUE_LORD_SPRITE } from './plagueLord';
 import { BLOOD_COUNTESS_SPRITE } from './bloodCountess';
 import { REAPER_SPRITE } from './reaper';
 import { DEMON_LORD_SPRITE } from './demonLord';
+import { DUNGEON_MASTER_SPRITE } from './dungeonMaster';
 
 export const SPRITES: Record<string, SpriteDef> = {
   knight: KNIGHT_SPRITE,
@@ -145,4 +146,5 @@ export const SPRITES: Record<string, SpriteDef> = {
   bloodCountess: BLOOD_COUNTESS_SPRITE,
   reaper: REAPER_SPRITE,
   demonLord: DEMON_LORD_SPRITE,
+  dungeonMaster: DUNGEON_MASTER_SPRITE,
 };

@@ -22,6 +22,8 @@ export interface Profile {
   byClass: Record<string, Tally>;
   // Keyed by the party's class ids, sorted and joined with '+'.
   byParty: Record<string, Tally>;
+  // Game++: the Dungeon Master has been beaten, which opens the epic challenges.
+  dungeonMaster: boolean;
   // Unlocked since the run-end screen last showed them.
   newUnlocks: string[];
 }
@@ -57,6 +59,7 @@ export function newProfile(): Profile {
     bossLevels: [],
     byClass: {},
     byParty: {},
+    dungeonMaster: false,
     newUnlocks: [],
   };
 }
@@ -90,9 +93,10 @@ export function checkUnlocks(p: Profile, gold = 0): string[] {
 }
 
 // A won fight or opened room. `level` is the act the room was in.
-export function noteRoom(p: Profile, type: 'battle' | 'epic' | 'boss' | 'event' | 'store' | 'treasure', level: number): void {
+export function noteRoom(p: Profile, type: 'battle' | 'epic' | 'boss' | 'event' | 'store' | 'treasure', level: number, finale = false): void {
   if (type === 'epic') p.epics += 1;
   if (type === 'event') p.events += 1;
+  if (type === 'boss' && finale) p.dungeonMaster = true;
   if (type === 'boss') {
     p.bosses += 1;
     if (!p.bossLevels.includes(level)) p.bossLevels.push(level);
@@ -112,6 +116,11 @@ export function noteRunEnd(p: Profile, won: boolean, classIds: string[], level: 
   tally(p.byParty, partyKey(classIds));
   if (!p.best || level > p.best.level || (level === p.best.level && room > p.best.room)) p.best = { level, room };
   checkUnlocks(p);
+}
+
+// Game++ opens once every class is unlocked.
+export function allUnlocked(p: Profile): boolean {
+  return CLASSES.every((c) => p.unlocked.includes(c.id));
 }
 
 export function isUnlocked(p: Profile, classId: string): boolean {

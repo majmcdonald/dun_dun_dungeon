@@ -113,7 +113,8 @@ export function findNode(map: RunMap, id: string): MapNode | undefined {
 
 // Nodes the player may enter next: any floor-1 node at the start, otherwise the current node's connections.
 export function reachable(map: RunMap, position: string | null): MapNode[] {
-  if (position === null) return map.floors[0];
+  // The Dungeon Master's map is the boss alone.
+  if (position === null) return map.floors.length > 0 ? map.floors[0] : [map.boss];
   const current = findNode(map, position);
   return (current?.next ?? []).map((id) => findNode(map, id)!).filter(Boolean);
 }

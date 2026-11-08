@@ -13,7 +13,7 @@ const renderer = new Renderer(canvas);
 const input = new Input(canvas);
 const ctx = renderer.ctx;
 
-const REVIEW_ORDER = ['goblinKing', 'slimeKing', 'troll'];
+const REVIEW_ORDER = ['dungeonMaster', 'demonLord', 'reaper'];
 const ids = [...REVIEW_ORDER, ...Object.keys(SPRITES).filter((id) => !REVIEW_ORDER.includes(id))];
 const PAGE_TITLES = ['NEW - FOR REVIEW'];
 

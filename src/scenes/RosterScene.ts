@@ -7,7 +7,7 @@ import { CLASSES, type ClassDef } from '../content/classes';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
 import { describeEffect, describeTarget } from '../game/describe';
-import { isUnlocked, loadProfile, UNLOCKS, type Profile } from '../run/profile';
+import { allUnlocked, isUnlocked, loadProfile, UNLOCKS, type Profile } from '../run/profile';
 import { saveRun, startRun } from '../run/run';
 import { drawBackground } from '../ui/background';
 import { drawText, LINE_HEIGHT, textWidth } from '../ui/font';
@@ -68,7 +68,7 @@ export class RosterScene implements Scene {
   update(): void {
     for (const click of this.game.input.consumeClicks()) {
       if (this.picked.length === PARTY_SIZE && inside(click, BEGIN)) {
-        startRun(this.game.state, this.slot, this.picked, Math.floor(Math.random() * 2 ** 31));
+        startRun(this.game.state, this.slot, this.picked, Math.floor(Math.random() * 2 ** 31), allUnlocked(this.profile));
         saveRun(this.game.state);
         return this.game.scenes.switchTo(new MapScene(this.game));
       }
