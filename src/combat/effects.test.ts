@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Battle, statOf } from './battle';
+import { Battle, resistOf, speedOf, statOf } from './battle';
 import type { BattleEvent, CombatantDef, EquipmentDef, PartyMember, SkillDef, SkillEffect, Stats, Targeting } from './types';
 
 const DT = 1 / 60;
@@ -230,5 +230,82 @@ describe('enchantments', () => {
     );
     runFor(battle, 1);
     expect(statOf(battle.get('party-1'), 'attack')).toBe(30);
+  });
+  it('an extra enchantment works alongside the innate one', () => {
+    const gear: EquipmentDef = { ...item('gear', { kind: 'thorns', fraction: 0.5 }), extra: { kind: 'resist', element: 'fire', amount: 0.5 } };
+    const battle = new Battle([member(unit('p'), { jewelry: gear })], [unit('e')], NO_JITTER);
+    expect(resistOf(battle.get('party-0'), 'fire')).toBe(0.5);
+  });
+
+  it('cast enchantments strike a random enemy every interval', () => {
+    const bolt: EquipmentDef = {
+      ...item('bolt', undefined),
+      extra: { kind: 'cast', interval: 5, target: 'enemy', effect: { kind: 'damage', damageType: 'magic', stat: 'attack', bestStat: true, scaling: 1, element: 'fire' } },
+    };
+    const battle = new Battle([member(unit('p', { attack: 10, magic: 40 }), { jewelry: bolt })], [unit('e')], NO_JITTER);
+    expect(damageTo(runFor(battle, 4.9), 'enemy-0')).toHaveLength(0);
+    const hits = damageTo(runFor(battle, 0.3), 'enemy-0');
+    expect(hits).toHaveLength(1);
+    expect(hits[0].amount).toBe(40);
+  });
+
+  it('regeneration enchantments heal a share of max HP per second', () => {
+    const regen: EquipmentDef = { ...item('regen', undefined), extra: { kind: 'regen', perSecond: 0.02 } };
+    const battle = new Battle([member(unit('p'), { jewelry: regen })], [unit('e', {}, [skill('hit', [physical(100)])])], NO_JITTER);
+    runFor(battle, 1);
+    const before = battle.get('party-0').hp;
+    runFor(battle, 0.5);
+    // 2% of 1000 per second = 10 healed over half a second, less the next hit.
+    expect(before).toBeLessThan(1000);
+    expect(battle.get('party-0').hp).toBeGreaterThanOrEqual(before - 100 + 10);
+  });
+  const worn = (extra: EquipmentDef['extra']): EquipmentDef => ({ ...item('worn', undefined), extra });
+
+  it('echo makes trigger skills fire twice', () => {
+    const counter = skill('counter', [physical(5)], { trigger: { kind: 'whenHit' }, target: FOE, cooldown: 1 });
+    const battle = new Battle([member(unit('p', {}, [counter]), { jewelry: worn({ kind: 'echo' }) })], [unit('e', {}, [skill('hit', [physical(1)])])], NO_JITTER);
+    runFor(battle, 1.1);
+    expect(damageTo(runFor(new Battle([member(unit('p', {}, [counter]))], [unit('e', {}, [skill('hit', [physical(1)])])], NO_JITTER), 1.1), 'enemy-0').length * 2).toBe(
+      damageTo(runFor(new Battle([member(unit('p', {}, [counter]), { jewelry: worn({ kind: 'echo' }) })], [unit('e', {}, [skill('hit', [physical(1)])])], NO_JITTER), 1.1), 'enemy-0').length,
+    );
+  });
+
+  it('last stand restores HP once per battle', () => {
+    const battle = new Battle(
+      [member(unit('p', { hp: 100 }), { jewelry: worn({ kind: 'lastStand', fraction: 0.3 }) })],
+      [unit('e', {}, [skill('smash', [physical(1000)])])],
+      NO_JITTER,
+    );
+    runFor(battle, 1.1);
+    expect(battle.get('party-0').hp).toBe(30);
+    expect(battle.result).toBeNull();
+    runFor(battle, 1.5);
+    expect(battle.result).toBe('defeat');
+  });
+
+  it('desperate doubles damage at low HP', () => {
+    const strike = skill('strike', [physical(10)]);
+    const gear = worn({ kind: 'desperate', threshold: 0.25, multiplier: 2 });
+    const healthy = new Battle([member(unit('p', {}, [strike]), { jewelry: gear })], [unit('e')], NO_JITTER);
+    const hurt = new Battle([member(unit('p', {}, [strike]), { jewelry: gear })], [unit('e')], NO_JITTER);
+    hurt.get('party-0').hp = 200;
+    expect(damageTo(runFor(hurt, 1.1), 'enemy-0')[0].amount).toBe(2 * damageTo(runFor(healthy, 1.1), 'enemy-0')[0].amount);
+  });
+
+  it('haste speeds up skill recharge by its amount', () => {
+    const strike = skill('strike', [physical(1)], { cooldown: 10 });
+    const battle = new Battle([member(unit('p', {}, [strike]), { jewelry: worn({ kind: 'haste', amount: 0.1 }) })], [unit('e')], NO_JITTER);
+    expect(speedOf(battle.get('party-0'))).toBeCloseTo(1.1);
+  });
+  it('a sturdy enchantment is lost instead of the item breaking', () => {
+    const battle = new Battle(
+      [member(unit('p', { hp: 10 }), { jewelry: worn({ kind: 'sturdy' }) })],
+      [unit('e', {}, [skill('smash', [physical(1000)])])],
+      NO_JITTER,
+    );
+    const events = runFor(battle, 1.1);
+    expect(events.some((e) => e.type === 'equipmentStripped')).toBe(true);
+    expect(events.some((e) => e.type === 'equipmentBroken')).toBe(false);
+    expect(battle.get('party-0').equipment.jewelry?.extra).toBeUndefined();
   });
 });

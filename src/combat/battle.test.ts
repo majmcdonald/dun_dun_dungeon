@@ -332,6 +332,18 @@ describe('skill stats', () => {
     expect(stat('shield')).toMatchObject({ casts: 1, shielded: 10 });
     expect([...battle.skillStats.values()].some((s) => s.skill === 'bash')).toBe(false);
   });
+
+  it('credits the seconds a buff or debuff stays up, without double-counting a refresh', () => {
+    const rally: SkillDef = { ...guard, id: 'rally', cooldown: 2, effects: [{ kind: 'buff', stat: 'attack', amount: 5, duration: 4 }] };
+    const chill: SkillDef = { ...hit('chill', 'front', 'single', 2), effects: [{ kind: 'speed', factor: 0.5, duration: 1 }] };
+    const battle = new Battle([member(unit('a', {}, [rally, chill]))], [unit('e', { hp: 100000 })], NO_JITTER);
+    runFor(battle, 10);
+    const stat = (skill: string) => [...battle.skillStats.values()].find((s) => s.skill === skill)!;
+    expect(stat('rally').buffSeconds).toBeCloseTo(8, 0);
+    expect(stat('rally').debuffSeconds).toBe(0);
+    // Cast every 2s for 1s each; the last cast lands as the 10s run ends.
+    expect(stat('chill').debuffSeconds).toBeCloseTo(4, 0);
+  });
 });
 
 describe('outcome', () => {

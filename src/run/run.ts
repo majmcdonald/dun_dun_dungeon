@@ -1,5 +1,5 @@
 import type { PartyStart } from '../combat/battle';
-import type { EquipmentDef, EquipSlot, PartyMember, SkillDef } from '../combat/types';
+import type { Enchantment, EquipmentDef, EquipSlot, PartyMember, SkillDef } from '../combat/types';
 import { CLASSES_BY_ID, type ClassDef } from '../content/classes';
 import { ITEMS_BY_ID } from '../content/items';
 import { SKILLS_BY_ID } from '../content/skills';
@@ -259,17 +259,20 @@ function takeBackItem(state: GameState, id: string): void {
 
 // --- Saving: definitions are stored by id and looked up again on load.
 
-// Plain library items save as their id; store-enchanted copies also keep their boost.
-export type ItemRef = string | { id: string; boost: NonNullable<EquipmentDef['boost']> };
+// Plain library items save as their id; store-enchanted copies also keep their boost and extra enchantment.
+export type ItemRef = string | { id: string; boost: NonNullable<EquipmentDef['boost']>; extra?: Enchantment };
 
 export function itemRef(item: EquipmentDef): ItemRef {
-  return item.boost ? { id: item.id, boost: item.boost } : item.id;
+  if (!item.boost) return item.id;
+  return item.extra ? { id: item.id, boost: item.boost, extra: item.extra } : { id: item.id, boost: item.boost };
 }
 
 export function itemFromRef(ref: ItemRef): EquipmentDef | undefined {
   if (typeof ref === 'string') return ITEMS_BY_ID[ref];
   const base = ITEMS_BY_ID[ref.id];
-  return base && withBoost(base, ref.boost);
+  if (!base) return undefined;
+  const boosted = withBoost(base, ref.boost);
+  return ref.extra ? { ...boosted, extra: ref.extra } : boosted;
 }
 
 // A separate copy of the item with the bonus added to its stats.

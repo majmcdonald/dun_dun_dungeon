@@ -163,13 +163,22 @@ describe('meters', () => {
     expect(Math.max(...damageTo(later, 'enemy-0').map((d) => d.amount))).toBe(180);
   });
 
-  it('souls fill on any death and are spent by soul spells', () => {
+  it('souls fill on any death and unlock soul spells without being spent', () => {
     const reap = skill('reap', [hit()], { cooldown: 1, condition: { kind: 'souls', cost: 2 } });
     const necro = unit('necro', { attack: 999 }, [skill('kill', [hit()], { cooldown: 1 }), reap], { mechanic: 'souls' });
     const battle = new Battle([member(necro)], [unit('a', { hp: 1 }), unit('b', { hp: 1 }), unit('c')], NO_JITTER);
     const events = runFor(battle, 2.1);
     expect(fired(events, 'reap')).toBe(1);
-    expect(battle.get('party-0').meter).toBe(0);
+    expect(battle.get('party-0').meter).toBe(2);
+  });
+
+  it('soul spells hit 10% harder per soul above their need', () => {
+    const rend = skill('rend', [hit()], { cooldown: 1, condition: { kind: 'souls', cost: 1 } });
+    const necro = unit('necro', { attack: 100 }, [rend], { mechanic: 'souls' });
+    const battle = new Battle([member(necro)], [unit('e', { hp: 100000 })], NO_JITTER);
+    battle.get('party-0').meter = 4;
+    const events = runFor(battle, 1.1);
+    expect(damageTo(events, 'enemy-0').map((d) => d.amount)).toEqual([130]);
   });
 });
 

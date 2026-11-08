@@ -37,6 +37,7 @@ export function itemLines(item: EquipmentDef): Line[] {
   if (item.enchantment) lines.push({ text: describeEnchantment(item.enchantment), color: PALETTE.orange });
   if (item.requires) lines.push({ text: `REQUIRES ${item.requires.toUpperCase()}`, color: PALETTE.magenta });
   if (item.boost) lines.push({ text: `ENCHANTED: +${item.boost.amount} ${statLabel(item.boost.stat)}`, color: PALETTE.cyan });
+  if (item.extra) lines.push({ text: `ENCHANTED II: ${describeEnchantment(item.extra)}`, color: PALETTE.cyan });
   return lines;
 }
 

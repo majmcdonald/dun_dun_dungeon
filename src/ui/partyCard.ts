@@ -162,6 +162,7 @@ function tooltipLines(slot: EquipSlot, item: EquipmentDef | undefined): { text: 
     const label = STAT_LABEL.find(([k]) => k === item.boost!.stat)?.[1];
     lines.push({ text: `ENCHANTED: +${item.boost.amount} ${label}`, color: PALETTE.cyan });
   }
+  if (item.extra) lines.push({ text: `ENCHANTED II: ${describeEnchantment(item.extra)}`, color: PALETTE.cyan });
   return lines;
 }
 
@@ -172,7 +173,11 @@ export function drawEquipmentTooltip(
   item: EquipmentDef | undefined,
   anchor: { x: number; y: number },
 ): void {
-  const lines = tooltipLines(slot, item);
+  drawTooltip(ctx, tooltipLines(slot, item), anchor);
+}
+
+// A gold-bordered box of lines just below the anchor, kept on screen.
+export function drawTooltip(ctx: CanvasRenderingContext2D, lines: { text: string; color: string }[], anchor: { x: number; y: number }): void {
   const w = Math.max(...lines.map((l) => textWidth(l.text))) + 10;
   const h = lines.length * 10 + 6;
   let x = anchor.x;

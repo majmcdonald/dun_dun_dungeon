@@ -1,4 +1,4 @@
-import { RARITIES, type EquipmentDef, type Rarity, type SkillDef, type Stats } from '../combat/types';
+import { RARITIES, type Element, type Enchantment, type EquipmentDef, type Rarity, type SkillDef, type Stats } from '../combat/types';
 import { ITEM_LIBRARY, ITEMS_BY_ID } from '../content/items';
 import { SKILL_LIBRARY, SKILLS_BY_ID } from '../content/skills';
 import { seededRng } from '../engine/random';
@@ -21,13 +21,35 @@ const REPAIR_SHARE = 0.5;
 const ENCHANT_BASE = 50;
 // Each rarity step above Common adds half the base price.
 const ENCHANT_STEP = 0.5;
-// One random stat; HP counts 4 to 1, as in the gear budget.
-const ENCHANT_BOOSTS: { stat: keyof Stats; amount: number }[] = [
+// The player picks the stat; HP counts 4 to 1, as in the gear budget.
+export const ENCHANT_BOOSTS: { stat: keyof Stats; amount: number }[] = [
   { stat: 'hp', amount: 20 },
   { stat: 'attack', amount: 5 },
   { stat: 'magic', amount: 5 },
   { stat: 'defense', amount: 5 },
   { stat: 'resistance', amount: 5 },
+];
+// The second enchantment costs this much more than the first.
+const EXTRA_PRICE_FACTOR = 1.5;
+const ELEMENTS: Element[] = ['fire', 'ice', 'lightning', 'holy', 'shadow', 'poison'];
+
+// The second enchantment is one of these at random; each is a little stronger than a +5 stat.
+const EXTRA_ENCHANTS: ((element: Element) => Enchantment)[] = [
+  // Extra elemental damage on hit.
+  (element) => ({ kind: 'onHit', chance: 0.5, effect: { kind: 'damage', damageType: 'magic', stat: 'attack', bestStat: true, scaling: 0.5, element } }),
+  // A random spell every 5 seconds: a bolt at a random enemy.
+  (element) => ({ kind: 'cast', interval: 5, target: 'enemy', effect: { kind: 'damage', damageType: 'magic', stat: 'attack', bestStat: true, scaling: 1.2, element } }),
+  // Or a ward on the wearer.
+  () => ({ kind: 'cast', interval: 5, target: 'self', effect: { kind: 'barrier', stat: 'resistance', scaling: 2, duration: 4 } }),
+  () => ({ kind: 'regen', perSecond: 0.02 }),
+  (element) => ({ kind: 'resist', element, amount: 0.3 }),
+  () => ({ kind: 'thorns', fraction: 0.15 }),
+  () => ({ kind: 'amplify' }),
+  () => ({ kind: 'echo' }),
+  () => ({ kind: 'sturdy' }),
+  () => ({ kind: 'lastStand', fraction: 0.3 }),
+  () => ({ kind: 'desperate', threshold: 0.25, multiplier: 2 }),
+  () => ({ kind: 'haste', amount: 0.1 }),
 ];
 
 export function skillPrice(skill: SkillDef): number {
@@ -48,6 +70,11 @@ export function repairPrice(item: EquipmentDef): number {
 
 export function enchantPrice(item: EquipmentDef): number {
   return Math.round(ENCHANT_BASE * (1 + RARITIES.indexOf(item.rarity) * ENCHANT_STEP));
+}
+
+// Second enchantment: half again the first one's price.
+export function extraEnchantPrice(item: EquipmentDef): number {
+  return Math.round(enchantPrice(item) * EXTRA_PRICE_FACTOR);
 }
 
 // Opens (or reopens) a store node. Stock is seeded by the run and the node, so it never rerolls.
@@ -115,22 +142,64 @@ export function repair(state: GameState, index: number): string | null {
   return null;
 }
 
-// Gives one piece of gear (in the inventory or equipped) a random stat boost; each piece can be enchanted once.
+// Swaps an owned piece of gear (in the inventory or equipped) for an upgraded copy. False if the party doesn't own it.
+function replaceGear(state: GameState, item: EquipmentDef, next: EquipmentDef): boolean {
+  const index = state.inventory.items.indexOf(item);
+  if (index >= 0) {
+    state.inventory.items[index] = next;
+    return true;
+  }
+  const holder = state.party.find((m) => m.equipment[item.slot] === item);
+  if (!holder) return false;
+  state.party = state.party.map((m) => (m === holder ? { ...m, equipment: { ...m.equipment, [item.slot]: next } } : m));
+  return true;
+}
+
+// First enchantment: the chosen stat boost; each piece can have it once.
 // Returns the enchanted copy, or a reason it can't be done.
-export function enchant(state: GameState, item: EquipmentDef, rng: () => number = Math.random): EquipmentDef | string {
+export function enchant(state: GameState, item: EquipmentDef, stat: keyof Stats): EquipmentDef | string {
   const run = state.run!;
   if (item.boost) return 'ALREADY ENCHANTED';
+  const boost = ENCHANT_BOOSTS.find((b) => b.stat === stat);
+  if (!boost) return 'UNKNOWN STAT';
   const price = enchantPrice(item);
   if (run.gold < price) return 'NOT ENOUGH GOLD';
-  const enchanted = withBoost(item, ENCHANT_BOOSTS[Math.floor(rng() * ENCHANT_BOOSTS.length)]);
-  const index = state.inventory.items.indexOf(item);
-  if (index >= 0) state.inventory.items[index] = enchanted;
-  else {
-    const holder = state.party.find((m) => m.equipment[item.slot] === item);
-    if (!holder) return 'NOT OWNED';
-    state.party = state.party.map((m) => (m === holder ? { ...m, equipment: { ...m.equipment, [item.slot]: enchanted } } : m));
-  }
+  const enchanted = withBoost(item, boost);
+  if (!replaceGear(state, item, enchanted)) return 'NOT OWNED';
   run.gold -= price;
   logEvent(run, 'enchant', { id: item.id, price, boost: enchanted.boost });
+  return enchanted;
+}
+
+// The roll is fixed per run and piece of gear, so backing out of a preview can't be used to reroll.
+function extraRng(state: GameState, item: EquipmentDef): () => number {
+  const key = `${item.id}:${item.boost?.stat}`;
+  let hash = 0;
+  for (const ch of key) hash = (Math.imul(hash, 31) + ch.charCodeAt(0)) | 0;
+  return seededRng(state.run!.seed * 977 + hash);
+}
+
+// What the gear would become with its second enchantment, without paying or changing anything.
+export function previewExtra(state: GameState, item: EquipmentDef, rng: () => number = extraRng(state, item)): EquipmentDef | string {
+  if (!item.boost) return 'ENCHANT IT ONCE FIRST';
+  if (item.extra) return 'ALREADY ENCHANTED TWICE';
+  const element = ELEMENTS[Math.floor(rng() * ELEMENTS.length)];
+  const extra = EXTRA_ENCHANTS[Math.floor(rng() * EXTRA_ENCHANTS.length)](element);
+  // Amplify folds into the stat bonus itself: the extra points are added now and the boost reads doubled.
+  return extra.kind === 'amplify'
+    ? { ...item, extra, stats: { ...item.stats, [item.boost.stat]: (item.stats[item.boost.stat] ?? 0) + item.boost.amount }, boost: { ...item.boost, amount: item.boost.amount * 2 } }
+    : { ...item, extra };
+}
+
+// Second enchantment: a random extra passive, only on gear that already has the first.
+export function enchantExtra(state: GameState, item: EquipmentDef, rng?: () => number): EquipmentDef | string {
+  const run = state.run!;
+  const enchanted = previewExtra(state, item, rng);
+  if (typeof enchanted === 'string') return enchanted;
+  const price = extraEnchantPrice(item);
+  if (run.gold < price) return 'NOT ENOUGH GOLD';
+  if (!replaceGear(state, item, enchanted)) return 'NOT OWNED';
+  run.gold -= price;
+  logEvent(run, 'enchant2', { id: item.id, price, extra: enchanted.extra });
   return enchanted;
 }

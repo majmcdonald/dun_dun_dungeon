@@ -1,17 +1,18 @@
 import { PALETTE } from '../art/palette';
 import { spriteCanvas } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
-import type { EquipmentDef, PartyMember, SkillDef } from '../combat/types';
+import type { EquipmentDef, Stats } from '../combat/types';
 import { ITEMS_BY_ID } from '../content/items';
 import { SKILLS_BY_ID } from '../content/skills';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
-import { equipItemBlock, equippedSkills, skillAccessBlock } from '../game/loadout';
+import { equippedSkills } from '../game/loadout';
 import type { GameState } from '../game/state';
 import { completeNode } from '../run/flow';
 import { saveRun, type StoreVisit } from '../run/run';
-import { brokenItems, buy, enchant, enchantPrice, itemPrice, repair, repairPrice, sell, sellPrice, skillPrice } from '../run/store';
+import { brokenItems, buy, ENCHANT_BOOSTS, enchant, enchantExtra, enchantPrice, previewExtra, extraEnchantPrice, itemPrice, repair, repairPrice, sell, sellPrice, skillPrice } from '../run/store';
 import { drawBackground } from '../ui/background';
+import { compareColumns, drawCompare, type ComparePick } from '../ui/compare';
 import { itemLines, skillLines, wrap, type Line } from '../ui/describeLines';
 import { drawText, textWidth } from '../ui/font';
 import { drawItemIcon, STAT_LABEL } from '../ui/partyCard';
@@ -32,18 +33,27 @@ const KEEPER_X = 367;
 const KEEPER_Y = 44;
 const COUNTER: Rect = { x: 326, y: 96, w: 146, h: 16 };
 const DETAIL: Rect = { x: 326, y: 116, w: 146, h: 120 };
+// A long description grows the detail panel upward over the shopkeeper, up to just below the gold line.
+const DETAIL_MIN_Y = 28;
+const DETAIL_ROW = 9;
+// The compare popup stays left of the detail panel.
+const COMPARE_AREA: Rect = { x: 2, y: 28, w: 320, h: 240 };
 const BUY: Button = { x: 332, y: 214, w: 134, h: 18, label: 'BUY' };
 const LIST: Rect = { x: 60, y: 48, w: 360, h: 192 };
 const LIST_ROWS = 11;
 const ROW_H = 13;
 const LIST_ACTION: Button = { x: LIST.x + 8, y: LIST.y + LIST.h - 26, w: 160, h: 18, label: '' };
+const STAT_BUTTON_W = 50;
+const STAT_BUTTON_STEP = 52;
+const PREVIEW: Rect = { x: 110, y: 64, w: 260, h: 150 };
+const PREVIEW_ACCEPT: Button = { x: PREVIEW.x + (PREVIEW.w - 140) / 2, y: PREVIEW.y + PREVIEW.h - 26, w: 140, h: 18, label: '' };
 const LIST_CLOSE: Button = { x: LIST.x + LIST.w - 88, y: LIST.y + LIST.h - 26, w: 80, h: 18, label: 'CLOSE' };
 const MESSAGE_TIME = 2;
-const LIST_TITLE = { sell: 'SELL GEAR (UNEQUIPPED ONLY)', repair: 'REPAIR BROKEN GEAR (ONE PER VISIT)', enchant: 'ENCHANT GEAR (+1 RANDOM STAT, ONCE EACH)' };
+const LIST_TITLE = { sell: 'SELL GEAR (UNEQUIPPED ONLY)', repair: 'REPAIR BROKEN GEAR (ONE PER VISIT)', enchant: 'ENCHANT GEAR (PICK A STAT, THEN A RANDOM 2ND)' };
 const LIST_EMPTY = { sell: 'NO UNEQUIPPED GEAR.', repair: 'NOTHING HAS BROKEN.', enchant: 'NO GEAR TO ENCHANT.' };
 const LIST_VERB = { sell: 'SELL', repair: 'REPAIR', enchant: 'ENCHANT' };
 
-type Pick = { kind: 'skill'; skill: SkillDef } | { kind: 'item'; item: EquipmentDef };
+type Pick = ComparePick;
 
 // A Store node: buy from this visit's stock, sell unequipped gear, and repair one broken piece.
 export class StoreScene implements Scene {
@@ -51,6 +61,8 @@ export class StoreScene implements Scene {
   private selected: Pick | null = null;
   private list: 'sell' | 'repair' | 'enchant' | null = null;
   private listPick: EquipmentDef | null = null;
+  // The result of ENCHANT II, shown for the player to accept before anything is paid.
+  private preview: EquipmentDef | null = null;
   private scroll = 0;
   private message = '';
   private messageAge = MESSAGE_TIME;
@@ -141,23 +153,49 @@ export class StoreScene implements Scene {
   private listPrice(item: EquipmentDef): number {
     if (this.list === 'sell') return sellPrice(item);
     if (this.list === 'repair') return repairPrice(item);
-    return enchantPrice(item);
+    return item.boost ? extraEnchantPrice(item) : enchantPrice(item);
+  }
+
+  // A fresh piece of gear in the enchant list asks which stat to boost.
+  private statButtons(): (Button & { stat: keyof Stats })[] {
+    return ENCHANT_BOOSTS.map((b, i) => ({
+      x: LIST.x + 8 + i * STAT_BUTTON_STEP,
+      y: LIST_ACTION.y,
+      w: STAT_BUTTON_W,
+      h: LIST_ACTION.h,
+      label: `+${b.amount} ${statLabel(b.stat)}`,
+      stat: b.stat,
+    }));
+  }
+
+  private choosingStat(): boolean {
+    return this.list === 'enchant' && !!this.listPick && !this.listPick.boost;
   }
 
   private clickList(click: { x: number; y: number }): void {
+    if (this.preview) return this.clickPreview(click);
     if (inside(click, LIST_CLOSE)) {
       this.list = null;
       return;
     }
-    if (this.listPick && inside(click, LIST_ACTION)) {
+    if (this.choosingStat()) {
+      const chosen = this.statButtons().find((b) => inside(click, b));
+      if (chosen) {
+        const result = enchant(this.game.state, this.listPick!, chosen.stat);
+        if (typeof result === 'string') return this.say(result);
+        saveRun(this.game.state);
+        this.say(`${result.name.toUpperCase()}: +${result.boost!.amount} ${statLabel(result.boost!.stat)}`, true);
+        this.listPick = result;
+        return;
+      }
+    } else if (this.listPick && inside(click, LIST_ACTION)) {
       const state = this.game.state;
       const name = this.listPick.name.toUpperCase();
       if (this.list === 'enchant') {
-        const result = enchant(state, this.listPick);
+        const result = previewExtra(state, this.listPick);
         if (typeof result === 'string') return this.say(result);
-        saveRun(state);
-        this.say(`${name}: +${result.boost!.amount} ${statLabel(result.boost!.stat)}`, true);
-        this.listPick = null;
+        if (state.run!.gold < this.listPrice(this.listPick)) return this.say('NOT ENOUGH GOLD');
+        this.preview = result;
         return;
       }
       const block = this.list === 'sell' ? sell(state, this.listPick) : repair(state, this.listItems().indexOf(this.listPick));
@@ -173,6 +211,27 @@ export class StoreScene implements Scene {
     if (row !== undefined && items[this.scroll + row]) this.listPick = items[this.scroll + row];
   }
 
+  private clickPreview(click: { x: number; y: number }): void {
+    if (!inside(click, PREVIEW_ACCEPT)) return;
+    const state = this.game.state;
+    const result = enchantExtra(state, this.listPick!);
+    this.preview = null;
+    if (typeof result === 'string') return this.say(result);
+    saveRun(state);
+    this.listPick = result;
+  }
+
+  private drawPreview(ctx: CanvasRenderingContext2D, pointer: { x: number; y: number }): void {
+    const item = this.preview!;
+    drawPanel(ctx, PREVIEW, PALETTE.gold);
+    drawText(ctx, 'ENCHANT II RESULT', PREVIEW.x + 8, PREVIEW.y + 6, PALETTE.sand);
+    const maxChars = Math.floor((PREVIEW.w - 16) / 6);
+    const rows = itemLines(item).flatMap((line) => wrap(line.text, maxChars).map((text) => ({ text, color: line.color })));
+    rows.slice(0, 10).forEach((row, i) => drawText(ctx, row.text, PREVIEW.x + 8, PREVIEW.y + 20 + i * DETAIL_ROW, row.color));
+    const accept = { ...PREVIEW_ACCEPT, label: `ACCEPT FOR ${this.listPrice(this.listPick!)} G` };
+    drawButton(ctx, accept, inside(pointer, accept));
+  }
+
   render(ctx: CanvasRenderingContext2D): void {
     drawBackground(ctx, this.game.state.run?.level ?? 0);
     const state = this.game.state;
@@ -185,20 +244,22 @@ export class StoreScene implements Scene {
 
     drawText(ctx, 'SKILLS', 8, SKILLS_Y - 10, PALETTE.sand);
     drawText(ctx, 'ITEMS', 8, ITEMS_Y - 10, PALETTE.sand);
-    let hovered: Pick | null = null;
+    let hovered: { pick: Pick; rect: Rect } | null = null;
     for (const { pick, rect } of this.stock()) {
       const hover = !blocked && inside(pointer, rect);
-      if (hover) hovered = pick;
+      if (hover) hovered = { pick, rect };
       this.drawCard(ctx, pick, rect, hover);
     }
     this.drawServices(ctx, pointer, blocked);
     this.drawKeeper(ctx);
-    this.drawDetail(ctx, hovered ?? this.selected, pointer, blocked);
+    this.drawDetail(ctx, hovered?.pick ?? this.selected, pointer, blocked);
 
     if (this.messageAge < MESSAGE_TIME) drawText(ctx, this.message, 8, 226, this.good ? PALETTE.green : PALETTE.hotRed);
     else drawText(ctx, 'CLICK A CARD, THEN BUY.', 8, 226, PALETTE.slate);
+    if (hovered) drawCompare(ctx, compareColumns(state.party, hovered.pick), hovered.rect, COMPARE_AREA);
 
     if (this.list) this.drawList(ctx, pointer);
+    if (this.preview) this.drawPreview(ctx, pointer);
   }
 
   private drawCard(ctx: CanvasRenderingContext2D, pick: Pick, r: Rect, hover: boolean): void {
@@ -249,32 +310,25 @@ export class StoreScene implements Scene {
   }
 
   private drawDetail(ctx: CanvasRenderingContext2D, pick: Pick | null, pointer: { x: number; y: number }, blocked: boolean): void {
-    drawPanel(ctx, DETAIL, PALETTE.darkSlate);
     if (!pick) {
+      drawPanel(ctx, DETAIL, PALETTE.darkSlate);
       drawText(ctx, 'HOVER A CARD', DETAIL.x + 6, DETAIL.y + 6, PALETTE.slate);
       drawText(ctx, 'FOR DETAILS.', DETAIL.x + 6, DETAIL.y + 15, PALETTE.slate);
       return;
     }
     const state = this.game.state;
-    const party = state.party;
-    const lines: Line[] =
-      pick.kind === 'skill'
-        ? [...skillLines(pick.skill), { text: `FOR: ${users(party, (m) => !skillAccessBlock(m, pick.skill))}`, color: PALETTE.cyan }]
-        : [
-            ...itemLines(pick.item).filter((l) => !l.text.startsWith('REQUIRES')),
-            { text: `FOR: ${users(party, (m) => !equipItemBlock(m, pick.item))}`, color: PALETTE.cyan },
-          ];
+    const lines: Line[] = pick.kind === 'skill' ? skillLines(pick.skill) : itemLines(pick.item).filter((l) => !l.text.startsWith('REQUIRES'));
     const owned = ownedText(state, pick);
     if (owned) lines.push({ text: owned, color: PALETTE.orange });
     const maxChars = Math.floor((DETAIL.w - 12) / 6);
-    let y = DETAIL.y + 6;
-    for (const line of lines) {
-      for (const text of wrap(line.text, maxChars)) {
-        if (y > BUY.y - 10) break;
-        drawText(ctx, text, DETAIL.x + 6, y, line.color);
-        y += 9;
-      }
-    }
+    const rows = lines.flatMap((line) => wrap(line.text, maxChars).map((text) => ({ text, color: line.color })));
+    const fitFrom = (top: number) => Math.floor((BUY.y - 10 - top - 6) / DETAIL_ROW) + 1;
+    const top = Math.max(DETAIL_MIN_Y, DETAIL.y - Math.max(0, rows.length - fitFrom(DETAIL.y)) * DETAIL_ROW);
+    drawPanel(ctx, { ...DETAIL, y: top, h: DETAIL.y + DETAIL.h - top }, PALETTE.darkSlate);
+    const fit = fitFrom(top);
+    // Anything that still doesn't fit is cut, with a marker so it isn't silently lost.
+    const shown = rows.length > fit ? [...rows.slice(0, fit - 1), { text: '...', color: PALETTE.slate }] : rows;
+    shown.forEach((row, i) => drawText(ctx, row.text, DETAIL.x + 6, top + 6 + i * DETAIL_ROW, row.color));
     if (pick !== this.selected) return;
     const id = pick.kind === 'skill' ? pick.skill.id : pick.item.id;
     const price = pick.kind === 'skill' ? skillPrice(pick.skill) : itemPrice(pick.item);
@@ -298,17 +352,20 @@ export class StoreScene implements Scene {
       drawItemIcon(ctx, item, r.x + 3, r.y + 2);
       drawText(ctx, item.name.toUpperCase(), r.x + 16, r.y + 3, RARITY_COLOR[item.rarity]);
       const owner = this.game.state.party.find((m) => m.equipment[item.slot] === item);
-      const note = [owner && `ON ${owner.def.name.toUpperCase()}`, item.boost && `+${item.boost.amount} ${statLabel(item.boost.stat)}`]
+      const note = [owner && `ON ${owner.def.name.toUpperCase()}`, item.boost && `+${item.boost.amount} ${statLabel(item.boost.stat)}`, item.extra && 'II']
         .filter(Boolean)
         .join('  ');
       drawText(ctx, note, r.x + 150, r.y + 3, item.boost ? PALETTE.cyan : PALETTE.slate);
-      const enchanted = kind === 'enchant' && item.boost;
-      const price = enchanted ? 'ENCHANTED' : `${this.listPrice(item)} G`;
-      drawText(ctx, price, r.x + r.w - 4 - textWidth(price), r.y + 3, enchanted ? PALETTE.slate : PALETTE.gold);
+      const maxed = kind === 'enchant' && !!item.extra;
+      const price = maxed ? 'MAXED' : `${this.listPrice(item)} G`;
+      drawText(ctx, price, r.x + r.w - 4 - textWidth(price), r.y + 3, maxed ? PALETTE.slate : PALETTE.gold);
     }
-    if (this.listPick) {
-      const done = kind === 'enchant' && !!this.listPick.boost;
-      const action = { ...LIST_ACTION, label: done ? 'ALREADY ENCHANTED' : `${LIST_VERB[kind]} FOR ${this.listPrice(this.listPick)} G` };
+    if (this.choosingStat()) {
+      for (const b of this.statButtons()) drawButton(ctx, b, inside(pointer, b));
+    } else if (this.listPick) {
+      const done = kind === 'enchant' && !!this.listPick.extra;
+      const verb = kind === 'enchant' ? 'ENCHANT II (RANDOM)' : LIST_VERB[kind];
+      const action = { ...LIST_ACTION, w: kind === 'enchant' ? 200 : LIST_ACTION.w, label: done ? 'FULLY ENCHANTED' : `${verb} FOR ${this.listPrice(this.listPick)} G` };
       drawButton(ctx, action, !done && inside(pointer, action));
     }
     drawButton(ctx, LIST_CLOSE, inside(pointer, LIST_CLOSE));
@@ -318,12 +375,6 @@ export class StoreScene implements Scene {
 
 function listRow(i: number): Rect {
   return { x: LIST.x + 6, y: LIST.y + 18 + i * ROW_H, w: LIST.w - 12, h: ROW_H - 1 };
-}
-
-// Who in the party could use it: "ANYONE" when everyone can.
-function users(party: PartyMember[], can: (m: PartyMember) => boolean): string {
-  const names = party.filter(can).map((m) => m.def.name.toUpperCase());
-  return names.length === party.length ? 'ANYONE' : names.join(', ');
 }
 
 // Copies the party already has: equipped (and on whom) or in the inventory.

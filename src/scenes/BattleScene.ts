@@ -11,14 +11,14 @@ import {
 import { PALETTE } from '../art/palette';
 import { spriteCanvas, TRANSPARENT, type SpriteDef } from '../art/sprite';
 import { SPRITES } from '../art/sprites';
-import { Battle, gridCell, isSummon, MECHANIC, TRIGGER_SLOT } from '../combat/battle';
+import { Battle, channelTime, gridCell, isSummon, MECHANIC, TRIGGER_SLOT } from '../combat/battle';
 import { CREATURES } from '../content/creatures';
-import { EQUIP_SLOTS, type BattleEvent, type Combatant, type CombatantDef, type EquipSlot } from '../combat/types';
+import { EQUIP_SLOTS, type BattleEvent, type Combatant, type CombatantDef, type EquipSlot, type PartyMember } from '../combat/types';
 import { NATIVE_HEIGHT, NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
 import { drawBackground } from '../ui/background';
 import { CHAR_ADVANCE, drawText, textWidth } from '../ui/font';
-import { drawEquipmentIcons, drawEquipmentTooltip, hoveredSlot, ICON_STEP, skillColor } from '../ui/partyCard';
+import { drawEquipmentIcons, drawEquipmentTooltip, drawTooltip, hoveredSlot, ICON_STEP, skillColor, STAT_LABEL } from '../ui/partyCard';
 import { dotVfxId, VFX } from '../vfx/effects';
 import { loseRun, winNode } from '../run/flow';
 import { ENEMIES_BY_ID } from '../content/enemies';
@@ -124,6 +124,9 @@ export class BattleScene implements Scene {
   private vfx: ActiveVfx[] = [];
   private notices: Notice[] = [];
   private brokenThisBattle = new Map<string, Set<EquipSlot>>();
+  // For the run log: the party as it entered the fight, and the gear that broke during it.
+  private startParty: PartyMember[] = [];
+  private brokenLog: { class: string; item: string }[] = [];
   private vfxSeed = 0;
   private endedFor = 0;
   private sprites = new Map<string, SpriteSet>();
@@ -172,6 +175,8 @@ export class BattleScene implements Scene {
     this.vfx = [];
     this.notices = [];
     this.brokenThisBattle.clear();
+    this.startParty = this.game.state.party;
+    this.brokenLog = [];
     this.endedFor = 0;
   }
 
@@ -274,6 +279,17 @@ export class BattleScene implements Scene {
         this.brokenThisBattle.get(event.target)!.add(event.slot);
         this.notices.push({ target: event.target, text: `${item?.name ?? event.slot} BROKE`, age: 0 });
         if (item && state.run) state.run.broken.push(itemRef(item));
+        if (item) this.brokenLog.push({ class: member.def.id, item: item.id });
+        break;
+      }
+      case 'equipmentStripped': {
+        const state = this.game.state;
+        const member = state.party[this.battle.get(event.target).position];
+        const item = member.equipment[event.slot];
+        if (!item) break;
+        const { extra: _lost, ...stripped } = item;
+        state.party = state.party.map((m) => (m === member ? { ...m, equipment: { ...m.equipment, [event.slot]: stripped } } : m));
+        this.notices.push({ target: event.target, text: `${item.name} LOST ITS ENCHANT II`, age: 0 });
         break;
       }
       case 'end':
@@ -300,9 +316,15 @@ export class BattleScene implements Scene {
       hpLost: maxHp === 0 ? 0 : Math.round((1 - hpLeft / maxHp) * 100) / 100,
       kos: heroes.filter((c) => c.hp <= 0).map((c) => c.def.id),
       focusClicks: this.focusClicks,
-      party: loadout(this.game.state.party),
-      // Per hero and skill: casts, damage dealt (barrier hits included), healing done, and damage their barriers absorbed.
-      skills: [...this.battle.skillStats.values()],
+      party: loadout(this.startParty),
+      broken: this.brokenLog,
+      // Per hero and skill: casts, damage dealt (barrier hits included), healing done, damage their barriers absorbed,
+      // and target-seconds their buffs and debuffs stayed up.
+      skills: [...this.battle.skillStats.values()].map((s) => ({
+        ...s,
+        buffSeconds: Math.round(s.buffSeconds * 10) / 10,
+        debuffSeconds: Math.round(s.debuffSeconds * 10) / 10,
+      })),
       ...(this.game.state.party.some((m) => m.def.familiar) && {
         familiar: { ...this.battle.familiarStats, channelSeconds: Math.round(this.battle.familiarStats.channelSeconds * 10) / 10 },
       }),
@@ -367,8 +389,58 @@ export class BattleScene implements Scene {
     const pointer = this.game.input.pointer;
     for (const c of party) {
       const slot = hoveredSlot(pointer, cardIconOrigin(c));
-      if (slot) drawEquipmentTooltip(ctx, slot, c.equipment[slot], pointer);
+      if (slot) return drawEquipmentTooltip(ctx, slot, c.equipment[slot], pointer);
     }
+    const hovered = this.hovered(pointer);
+    if (hovered) drawTooltip(ctx, this.statusLines(hovered), pointer);
+  }
+
+  // The living unit under the pointer: its sprite, or a hero's card.
+  private hovered(pointer: { x: number; y: number }): Combatant | null {
+    const alive = this.battle.combatants.filter((c) => c.hp > 0 && this.anim(c.uid).hidden <= 0);
+    const onSprite = alive.find((c) => {
+      const set = this.spriteSet(c);
+      const o = this.spriteOrigin(c);
+      return inside(pointer, { x: o.x, y: o.y, w: set.width, h: set.height });
+    });
+    if (onSprite) return onSprite;
+    return alive.find((c) => c.side === 'party' && !isSummon(c) && inside(pointer, { x: CARD_X, y: ROW_TOPS[c.position] + CARD_OFFSET_Y, w: CARD_W, h: CARD_H })) ?? null;
+  }
+
+  // Everything currently affecting a unit, with time left.
+  private statusLines(c: Combatant): { text: string; color: string }[] {
+    const secs = (s: number) => `${Math.max(0, s).toFixed(1)}S`;
+    const label = (stat: string) => STAT_LABEL.find(([k]) => k === stat)?.[1] ?? stat.toUpperCase();
+    const lines: { text: string; color: string }[] = [{ text: `${c.def.name.toUpperCase()}  ${c.hp}/${c.maxHp} HP`, color: PALETTE.white }];
+    const add = (text: string, color: string) => lines.push({ text, color });
+    if (c.barrier) add(`BARRIER ${c.barrier.amount} (${secs(c.barrier.remaining)})`, PALETTE.cyan);
+    for (const b of c.buffs) add(`${b.amount > 0 ? '+' : ''}${b.amount} ${label(b.stat)} (${secs(b.remaining)})`, b.amount > 0 ? PALETTE.green : PALETTE.red);
+    for (const s of c.speed) add(`${s.value > 1 ? 'HASTE' : 'SLOW'} X${s.value.toFixed(2)} (${secs(s.remaining)})`, s.value > 1 ? PALETTE.green : PALETTE.red);
+    for (const d of c.dots) add(`${(d.element ?? 'bleed').toUpperCase()} ${d.amount}/S (${secs(d.remaining)})`, PALETTE.orange);
+    for (const r of c.regens) add(`REGEN ${r.amount}/S (${secs(r.remaining)})`, PALETTE.green);
+    if (c.taunting > 0) add(`TAUNTING (${secs(c.taunting)})`, PALETTE.yellow);
+    if (c.transformed > 0) add(`POLYMORPHED (${secs(c.transformed)})`, PALETTE.magenta);
+    if (c.shapeshift) add(`SHAPESHIFTED +${Math.round(c.shapeshift.bonus * 100)}% (${secs(c.shapeshift.remaining)})`, PALETTE.green);
+    if (c.flight) add(`FLYING (${secs(c.flight.remaining)})`, PALETTE.sand);
+    if (c.channel > 0) add(`SUMMONING (${secs(c.channel)})`, PALETTE.magenta);
+    if (c.regenBlocked > 0) add(`REGENERATION BLOCKED (${secs(c.regenBlocked)})`, PALETTE.red);
+    switch (c.def.mechanic) {
+      case 'rage':
+        add(c.burst > 0 ? `FRENZY (${secs(c.burst)})` : `RAGE ${Math.floor(c.meter)}/${MECHANIC.rageMax}`, PALETTE.red);
+        break;
+      case 'chi':
+        add(c.burst > 0 ? `CHI BURST (${secs(c.burst)})` : `CHI ${Math.floor(c.meter)}/${MECHANIC.chiMax}`, PALETTE.cyan);
+        break;
+      case 'souls':
+        add(`SOULS ${c.meter}/${MECHANIC.soulsMax}`, PALETTE.magenta);
+        break;
+      default:
+        if (c.meter > 0) add(`VENOM X${c.meter}`, PALETTE.green);
+    }
+    const fury = c.def.fury;
+    if (fury && this.battle.elapsed >= fury.after) add('FURIOUS', PALETTE.hotRed);
+    if (lines.length === 1) add('NO EFFECTS', PALETTE.slate);
+    return lines;
   }
 
   private spriteSet(c: Combatant): SpriteSet {
@@ -449,7 +521,7 @@ export class BattleScene implements Scene {
   // Class mechanic under the sprite: rage and chi bars, soul pips, or the familiar's summoning progress.
   private drawMeter(ctx: CanvasRenderingContext2D, c: Combatant, x: number, y: number): void {
     if (c.def.familiar && c.channel > 0) {
-      drawBar(ctx, x, y, 32, 3, 1 - c.channel / MECHANIC.channelSeconds, PALETTE.magenta);
+      drawBar(ctx, x, y, 32, 3, 1 - c.channel / channelTime(c), PALETTE.magenta);
       return;
     }
     const blink = Math.floor(this.battle.elapsed / FRENZY_BLINK) % 2 === 0;

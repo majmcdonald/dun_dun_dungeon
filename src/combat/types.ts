@@ -50,6 +50,8 @@ type BaseEffect =
       element?: Element;
       hits?: number;
       drain?: number;
+      // Scales from whichever of the user's ATK and MAG is higher (gear enchantments, which don't know the wearer).
+      bestStat?: boolean;
       // Zealot: multiplier bonus against enemies that have cast a spell, penalty against everyone else.
       vsCasters?: { bonus: number; penalty: number };
     }
@@ -170,7 +172,23 @@ export type Enchantment =
   | { kind: 'onHitTaken'; chance: number; effect: SkillEffect }
   | { kind: 'onAllyDeath'; effect: SkillEffect }
   | { kind: 'taunt' }
-  | { kind: 'resist'; element: Element; amount: number };
+  | { kind: 'resist'; element: Element; amount: number }
+  // Heals this share of max HP each second.
+  | { kind: 'regen'; perSecond: number }
+  // Every `interval` seconds, applies the effect to a random enemy or to the wearer.
+  | { kind: 'cast'; interval: number; target: 'enemy' | 'self'; effect: SkillEffect }
+  // Store enchantment II only: doubles the first enchantment's stat bonus (applied when bought).
+  | { kind: 'amplify' }
+  // The wearer's trigger skill fires twice each time.
+  | { kind: 'echo' }
+  // When the item would break, this enchantment is lost instead.
+  | { kind: 'sturdy' }
+  // Once per battle, at 0 HP the wearer comes back with this share of max HP.
+  | { kind: 'lastStand'; fraction: number }
+  // At or below this share of max HP, the wearer's damaging attacks are multiplied.
+  | { kind: 'desperate'; threshold: number; multiplier: number }
+  // Skills recharge this much faster.
+  | { kind: 'haste'; amount: number };
 
 export interface EquipmentDef {
   id: string;
@@ -182,6 +200,8 @@ export interface EquipmentDef {
   enchantment?: Enchantment;
   // Set when a store has enchanted this copy: the bonus is already included in `stats`.
   boost?: { stat: keyof Stats; amount: number };
+  // Set by a second store enchantment: a random extra passive, active alongside `enchantment`.
+  extra?: Enchantment;
 }
 
 export type Equipment = Partial<Record<EquipSlot, EquipmentDef>>;
@@ -214,11 +234,18 @@ export interface Barrier {
 }
 
 // Debuffs are buffs with a negative amount; both refresh per source and stat rather than stack.
+// Who cast it, so the run log can credit the time it stays up.
+export interface Caster {
+  uid: string;
+  skill: string;
+}
+
 export interface Buff {
   source: string;
   stat: StatKey;
   amount: number;
   remaining: number;
+  caster?: Caster;
 }
 
 export interface Ticking {
@@ -234,6 +261,7 @@ export interface Timed {
   source: string;
   value: number;
   remaining: number;
+  caster?: Caster;
 }
 
 export interface Combatant {
@@ -265,6 +293,9 @@ export interface Combatant {
   // Seconds left before passive regeneration resumes, and healing built up below one whole point.
   regenBlocked: number;
   regenCarry: number;
+  // Seconds since each `cast` enchantment last fired, by the item that carries it.
+  gearTimers: Record<string, number>;
+  lastStandUsed: boolean;
   flight: { remaining: number; damageTaken: number; damageDealt: number } | null;
   reassembled: boolean;
 }
@@ -282,4 +313,6 @@ export type BattleEvent =
   | { type: 'gold'; amount: number }
   | { type: 'death'; target: string }
   | { type: 'equipmentBroken'; target: string; slot: EquipSlot; item: string }
+  // A sturdy enchantment took the hit instead: the item stays, minus its extra enchantment.
+  | { type: 'equipmentStripped'; target: string; slot: EquipSlot }
   | { type: 'end'; result: BattleResult };

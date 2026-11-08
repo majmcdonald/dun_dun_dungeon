@@ -1,13 +1,14 @@
 import { PALETTE } from '../art/palette';
-import type { EquipmentDef, PartyMember, SkillDef } from '../combat/types';
+import type { EquipmentDef, SkillDef } from '../combat/types';
 import { NATIVE_WIDTH } from '../engine/renderer';
 import type { GameContext, Scene } from '../engine/scene';
-import { equipItemBlock, equippedSkills, skillAccessBlock } from '../game/loadout';
+import { equippedSkills } from '../game/loadout';
 import { ITEMS_BY_ID } from '../content/items';
 import { SKILLS_BY_ID } from '../content/skills';
 import { choosePicks } from '../run/flow';
 import { pickHolder, type LastReward } from '../run/run';
 import { drawBackground } from '../ui/background';
+import { compareColumns, drawCompare } from '../ui/compare';
 import { itemLines, skillLines, wrap, type Line } from '../ui/describeLines';
 import { drawText, textWidth } from '../ui/font';
 import { drawItemIcon } from '../ui/partyCard';
@@ -106,10 +107,9 @@ export class RewardScene implements Scene {
     }
 
     const pointer = this.game.input.pointer;
-    const party = this.game.state.party;
     drawText(ctx, 'SKILLS', CARDS_X, SKILL_TOP - 11, PALETTE.sand);
     this.skills.forEach((s, i) => {
-      const lines = [...skillLines(s), { text: `FOR: ${users(party, (m) => !skillAccessBlock(m, s))}`, color: PALETTE.cyan }, ...this.equippedNote('skill', s.id), ...this.ownedNote('skill', s.id)];
+      const lines = [...skillLines(s), ...this.equippedNote('skill', s.id), ...this.ownedNote('skill', s.id)];
       drawCard(ctx, skillRect(i), lines, this.skill === s, inside(pointer, skillRect(i)));
     });
 
@@ -118,7 +118,6 @@ export class RewardScene implements Scene {
       const r = itemRect(i);
       const lines = [
         ...itemLines(item).filter((l) => !l.text.startsWith('REQUIRES')),
-        { text: `FOR: ${users(party, (m) => !equipItemBlock(m, item))}`, color: PALETTE.cyan },
         ...this.equippedNote('item', item.id),
         ...this.ownedNote('item', item.id),
       ];
@@ -130,11 +129,19 @@ export class RewardScene implements Scene {
     hint.forEach((h, i) => drawText(ctx, h, CONTINUE.x, ITEM_TOP + 4 + i * 11, PALETTE.lightGray));
     drawButton(ctx, CONTINUE, inside(pointer, CONTINUE));
 
-    if (!this.confirm) return;
+    if (!this.confirm) return this.drawHoverCompare(ctx, pointer);
     drawPanel(ctx, DIALOG, PALETTE.gold);
     this.confirm.lines.forEach((line, i) => drawText(ctx, line, (NATIVE_WIDTH - textWidth(line)) / 2, DIALOG.y + 12 + i * 12, PALETTE.white));
     drawButton(ctx, CHANGE, inside(pointer, CHANGE));
     drawButton(ctx, CANCEL, inside(pointer, CANCEL));
+  }
+
+  private drawHoverCompare(ctx: CanvasRenderingContext2D, pointer: { x: number; y: number }): void {
+    const party = this.game.state.party;
+    const skill = this.skills.findIndex((_, i) => inside(pointer, skillRect(i)));
+    if (skill >= 0) return drawCompare(ctx, compareColumns(party, { kind: 'skill', skill: this.skills[skill] }), skillRect(skill));
+    const item = this.items.findIndex((_, i) => inside(pointer, itemRect(i)));
+    if (item >= 0) drawCompare(ctx, compareColumns(party, { kind: 'item', item: this.items[item] }), itemRect(item));
   }
 
   // Warns about copies the party already has, other than the one this reward gave: in the inventory, or on whom.
@@ -173,12 +180,6 @@ function skillRect(i: number): Rect {
 
 function itemRect(i: number): Rect {
   return { x: CARDS_X + i * (CARD_W + CARD_GAP), y: ITEM_TOP, w: CARD_W, h: ITEM_H };
-}
-
-// Who in the party could use it: "ANYONE" when everyone can.
-function users(party: PartyMember[], can: (m: PartyMember) => boolean): string {
-  const names = party.filter(can).map((m) => m.def.name.toUpperCase());
-  return names.length === party.length ? 'ANYONE' : names.join(', ');
 }
 
 // The first line starts after `indent` pixels (room for an icon); text stops at the card's bottom edge.

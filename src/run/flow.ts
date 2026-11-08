@@ -82,7 +82,12 @@ export function completeNode(game: GameContext): void {
 // Takes the chosen picks; anything new is shown on the party screen, otherwise straight back to the map.
 export function choosePicks(game: GameContext, skill: string | null, item: string | null): void {
   setRewardPicks(game.state, skill, item);
-  if (game.state.run) logEvent(game.state.run, 'picks', { skill, item });
+  // Coming back from the party screen and confirming the same picks isn't a new choice.
+  const log = game.state.run?.log ?? [];
+  const sinceReward = log.slice(log.map((e) => e.kind).lastIndexOf('reward'));
+  const last = [...sinceReward].reverse().find((e) => e.kind === 'picks');
+  const same = last && last.skill === skill && last.item === item;
+  if (game.state.run && !same) logEvent(game.state.run, 'picks', { skill, item });
   saveRun(game.state);
   game.scenes.switchTo(skill || item ? new PartyScene(game) : new MapScene(game));
 }

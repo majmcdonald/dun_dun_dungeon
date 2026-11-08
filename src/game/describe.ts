@@ -101,7 +101,7 @@ export function describeCondition(c: Condition): string {
     case 'frenzy':
       return 'ONLY DURING FRENZY';
     case 'souls':
-      return `SPENDS ${c.cost} SOUL${c.cost > 1 ? 'S' : ''}`;
+      return `NEEDS ${c.cost} SOUL${c.cost > 1 ? 'S' : ''}, +10% PER EXTRA SOUL`;
     case 'onlyJewelry':
       return 'ONLY WEARING JEWELRY ALONE';
     case 'chiBurst':
@@ -129,6 +129,22 @@ export function describeEnchantment(e: Enchantment): string {
       return `WHEN HIT (${pct(e.chance)}): ${describeEffect(e.effect)}`;
     case 'onAllyDeath':
       return `ALLY FALLS: ${describeEffect(e.effect)}`;
+    case 'regen':
+      return `REGEN ${pct(e.perSecond)} MAX HP PER SECOND`;
+    case 'amplify':
+      return 'DOUBLED ENCHANT STAT';
+    case 'echo':
+      return 'TRIGGER SKILLS FIRE TWICE';
+    case 'sturdy':
+      return 'WHEN IT WOULD BREAK, LOSES THIS INSTEAD';
+    case 'lastStand':
+      return `AT 0 HP, RESTORE ${pct(e.fraction)} HP (ONCE PER BATTLE)`;
+    case 'desperate':
+      return `AT ${pct(e.threshold)} HP OR LESS, ATTACKS DEAL x${e.multiplier} DAMAGE`;
+    case 'haste':
+      return `SKILLS ${pct(e.amount)} FASTER`;
+    case 'cast':
+      return `EVERY ${e.interval}S (${e.target === 'self' ? 'SELF' : 'RANDOM ENEMY'}): ${describeEffect(e.effect)}`;
   }
 }
 

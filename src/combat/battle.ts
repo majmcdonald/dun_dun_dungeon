@@ -3,6 +3,8 @@ import type {
   Area,
   BattleEvent,
   BattleResult,
+  Buff,
+  Caster,
   Combatant,
   CombatantDef,
   Condition,
@@ -41,6 +43,8 @@ export const MECHANIC = {
   frenzySeconds: 5,
   frenzySpeed: 2,
   soulsMax: 5,
+  // Souls are never spent: a soul skill needs its count, and gets this much stronger per soul above it.
+  soulBonus: 0.1,
   chiMax: 100,
   chiPerHit: 10,
   chiFilling: 0.8,
@@ -95,7 +99,7 @@ export function statOf(c: Combatant, key: StatKey): number {
 
 function enchantments(c: Combatant): { source: string; ench: Enchantment }[] {
   return Object.values(c.equipment).flatMap((item) =>
-    item?.enchantment ? [{ source: item.id, ench: item.enchantment }] : [],
+    [item?.enchantment, item?.extra].flatMap((ench) => (item && ench ? [{ source: item.id, ench }] : [])),
   );
 }
 
@@ -115,8 +119,15 @@ export function hasTaunt(c: Combatant): boolean {
   return c.taunting > 0 || enchantments(c).some(({ ench }) => ench.kind === 'taunt');
 }
 
+// Haste enchantments on worn gear, as a recharge multiplier.
+function gearHaste(c: Combatant): number {
+  let factor = 1;
+  for (const { ench } of enchantments(c)) if (ench.kind === 'haste') factor *= 1 + ench.amount;
+  return factor;
+}
+
 export function speedOf(c: Combatant): number {
-  let factor = c.speed.reduce((f, s) => f * s.value, 1);
+  let factor = c.speed.reduce((f, s) => f * s.value, 1) * gearHaste(c);
   if (c.def.mechanic === 'rage' && c.burst > 0) factor *= MECHANIC.frenzySpeed;
   return factor;
 }
@@ -149,6 +160,8 @@ export interface SkillStat {
   damage: number;
   healing: number;
   shielded: number;
+  buffSeconds: number;
+  debuffSeconds: number;
 }
 
 export class Battle {
@@ -202,6 +215,7 @@ export class Battle {
     }
     for (const c of this.alive()) this.tickStatuses(c, dt, events);
     this.tickPeriodic(dt, events);
+    this.tickGearCasts(dt, events);
     this.tickFury(dt, events);
 
     for (const actor of [...this.combatants]) {
@@ -213,7 +227,7 @@ export class Battle {
         if (actor.shapeshift && !skill.form) continue;
         // Triggers recharge in real time and fire only on their event (see fireTrigger).
         if (skill.trigger) {
-          slot.timer = Math.min(skill.cooldown, slot.timer + dt);
+          slot.timer = Math.min(skill.cooldown, slot.timer + dt * gearHaste(actor));
           continue;
         }
         slot.timer += dt * rate * slot.rate;
@@ -223,7 +237,6 @@ export class Battle {
           continue;
         }
         slot.timer -= skill.cooldown;
-        if (skill.condition?.kind === 'souls') actor.meter -= skill.condition.cost;
         this.useSkill(actor, skill, events);
       }
     }
@@ -294,6 +307,7 @@ export class Battle {
       if (c.hp <= 0 && event !== 'onDefeat') return;
       slot.timer = 0;
       this.useSkill(c, slot.def, events);
+      if (!this.result && enchantments(c).some(({ ench }) => ench.kind === 'echo')) this.useSkill(c, slot.def, events);
     }
   }
 
@@ -303,6 +317,8 @@ export class Battle {
       c.barrier.remaining -= dt;
       if (c.barrier.remaining <= TIMER_EPSILON) c.barrier = null;
     }
+    for (const b of c.buffs) this.creditUptime(b, b.amount > 0, dt);
+    for (const s of c.speed) this.creditUptime(s, s.value > 1, dt);
     for (const b of c.buffs) b.remaining -= dt;
     c.buffs = c.buffs.filter((b) => b.remaining > TIMER_EPSILON);
     for (const s of c.speed) s.remaining -= dt;
@@ -412,6 +428,7 @@ export class Battle {
     let mult = skill.synergy && actor.slots.some((s) => s.def.id === skill.synergy!.with) ? 1 + skill.synergy.bonus : 1;
     if (skill.glory) mult *= 1 + skill.glory * Math.floor(this.elapsed / MECHANIC.gloryStepSeconds);
     if (skill.form && actor.shapeshift) mult *= 1 + actor.shapeshift.bonus;
+    if (skill.condition?.kind === 'souls') mult *= 1 + MECHANIC.soulBonus * Math.max(0, actor.meter - skill.condition.cost);
 
     for (const effect of skill.effects.filter((e) => e.self)) {
       if (this.result) return;
@@ -448,8 +465,12 @@ export class Battle {
       case 'damage': {
         for (let hit = 0; hit < (effect.hits ?? 1); hit++) {
           if (target.hp <= 0 || this.result) return;
-          let power = statOf(actor, effect.stat) * effect.scaling * mult;
+          const stat = effect.bestStat && statOf(actor, 'magic') > statOf(actor, 'attack') ? 'magic' : effect.stat;
+          let power = statOf(actor, stat) * effect.scaling * mult;
           if (actor.def.mechanic === 'chi') power *= actor.burst > 0 ? MECHANIC.chiBurst : MECHANIC.chiFilling;
+          for (const { ench } of enchantments(actor)) {
+            if (ench.kind === 'desperate' && actor.hp / actor.maxHp <= ench.threshold) power *= ench.multiplier;
+          }
           if (effect.vsCasters) power *= target.castSpell ? 1 + effect.vsCasters.bonus : 1 - effect.vsCasters.penalty;
           if (target.transformed > 0) power *= MECHANIC.transformedDamageTaken;
           if (actor.flight) power *= actor.flight.damageDealt;
@@ -489,17 +510,17 @@ export class Battle {
       case 'debuff': {
         const sign = effect.kind === 'buff' ? 1 : -1;
         const from = effect.stack ? this.stackSource(source) : source;
-        this.setBuff(target, from, effect.stat, sign * Math.round(effect.amount * mult), effect.duration, events);
+        this.setBuff(target, from, effect.stat, sign * Math.round(effect.amount * mult), effect.duration, events, { uid: actor.uid, skill: source });
         return;
       }
       case 'siphon': {
         const amount = Math.round(effect.amount * mult);
-        this.setBuff(target, source, effect.stat, -amount, effect.duration, events);
-        this.setBuff(actor, source, effect.stat, amount, effect.duration, events);
+        this.setBuff(target, source, effect.stat, -amount, effect.duration, events, { uid: actor.uid, skill: source });
+        this.setBuff(actor, source, effect.stat, amount, effect.duration, events, { uid: actor.uid, skill: source });
         return;
       }
       case 'speed':
-        target.speed = refreshTimed(target.speed, { source: effect.stack ? this.stackSource(source) : source, value: effect.factor, remaining: effect.duration });
+        target.speed = refreshTimed(target.speed, { source: effect.stack ? this.stackSource(source) : source, value: effect.factor, remaining: effect.duration, caster: { uid: actor.uid, skill: source } });
         events.push({ type: 'status', target: target.uid, status: effect.factor < 1 ? 'slow' : 'haste' });
         return;
       case 'transform':
@@ -518,7 +539,7 @@ export class Battle {
         const stolen = target.buffs.find((b) => b.amount > 0);
         if (!stolen) return;
         target.buffs = target.buffs.filter((b) => b !== stolen);
-        this.setBuff(actor, `stolen:${stolen.source}`, stolen.stat, stolen.amount, stolen.remaining, events);
+        this.setBuff(actor, `stolen:${stolen.source}`, stolen.stat, stolen.amount, stolen.remaining, events, { uid: actor.uid, skill: source });
         events.push({ type: 'status', target: target.uid, status: 'steal' });
         return;
       }
@@ -587,9 +608,9 @@ export class Battle {
     return `${source}#${this.stacks}`;
   }
 
-  private setBuff(target: Combatant, source: string, stat: StatKey, amount: number, duration: number, events: BattleEvent[]): void {
+  private setBuff(target: Combatant, source: string, stat: StatKey, amount: number, duration: number, events: BattleEvent[], caster?: Caster): void {
     target.buffs = target.buffs.filter((b) => b.source !== source || b.stat !== stat);
-    target.buffs.push({ source, stat, amount, remaining: duration });
+    target.buffs.push({ source, stat, amount, remaining: duration, caster });
     events.push({ type: 'buff', target: target.uid, stat, amount });
   }
 
@@ -649,17 +670,24 @@ export class Battle {
   }
 
   // Party side only; a summon's numbers go to its owner.
-  private credit(actor: Combatant, skill: string, field: 'casts' | 'damage' | 'healing' | 'shielded', amount: number): void {
+  private credit(actor: Combatant, skill: string, field: Exclude<keyof SkillStat, 'hero' | 'skill'>, amount: number): void {
     if (actor.side !== 'party' || amount <= 0) return;
     const hero = actor.summoner ? this.get(actor.summoner) : actor;
     const name = actor.summoner ? `${actor.def.id}:${skill}` : skill;
     const key = `${hero.uid}|${name}`;
     let stat = this.skillStats.get(key);
     if (!stat) {
-      stat = { hero: hero.def.id, skill: name, casts: 0, damage: 0, healing: 0, shielded: 0 };
+      stat = { hero: hero.def.id, skill: name, casts: 0, damage: 0, healing: 0, shielded: 0, buffSeconds: 0, debuffSeconds: 0 };
       this.skillStats.set(key, stat);
     }
     stat[field] += amount;
+  }
+
+  // Seconds a party-cast buff or debuff stays on one target; two targets for 5s count as 10.
+  private creditUptime(effect: Buff | Timed, helps: boolean, dt: number): void {
+    if (!effect.caster) return;
+    const caster = this.get(effect.caster.uid);
+    this.credit(caster, effect.caster.skill, helps ? 'buffSeconds' : 'debuffSeconds', Math.min(dt, effect.remaining));
   }
 
   private gainChi(monk: Combatant, amount: number, events: BattleEvent[]): void {
@@ -747,12 +775,33 @@ export class Battle {
     }
   }
 
+  // Gear that casts on a timer: the effect lands on a random enemy, or on the wearer.
+  private tickGearCasts(dt: number, events: BattleEvent[]): void {
+    for (const c of this.alive()) {
+      for (const { source, ench } of enchantments(c)) {
+        if (ench.kind !== 'cast') continue;
+        const timer = (c.gearTimers[source] ?? 0) + dt;
+        if (timer + TIMER_EPSILON < ench.interval) {
+          c.gearTimers[source] = timer;
+          continue;
+        }
+        c.gearTimers[source] = timer - ench.interval;
+        const foes = this.alive(c.side === 'party' ? 'enemy' : 'party');
+        const target = ench.target === 'self' ? c : foes[Math.floor(this.rng() * foes.length)];
+        if (target && !this.result) this.applyEffect(c, source, ench.effect, target, 1, events, false);
+      }
+      if (this.result) return;
+    }
+  }
+
   // Passive regeneration heals in whole points as they build up, unless a blocking element hit it recently.
   private tickRegeneration(c: Combatant, dt: number, events: BattleEvent[]): void {
     const regen = c.def.regeneration;
     c.regenBlocked = Math.max(0, c.regenBlocked - dt);
-    if (!regen || c.regenBlocked > 0 || c.hp >= c.maxHp) return;
-    c.regenCarry += c.maxHp * regen.perSecond * dt;
+    let rate = regen && c.regenBlocked <= 0 ? regen.perSecond : 0;
+    for (const { ench } of enchantments(c)) if (ench.kind === 'regen') rate += ench.perSecond;
+    if (rate <= 0 || c.hp >= c.maxHp) return;
+    c.regenCarry += c.maxHp * rate * dt;
     const amount = Math.min(Math.floor(c.regenCarry), c.maxHp - c.hp);
     if (amount < 1) return;
     c.regenCarry -= amount;
@@ -824,6 +873,16 @@ export class Battle {
       events.push({ type: 'status', target: target.uid, status: 'reassemble' });
       return;
     }
+    if (target.hp <= 0 && !target.lastStandUsed) {
+      const stand = enchantments(target).find(({ ench }) => ench.kind === 'lastStand')?.ench;
+      if (stand?.kind === 'lastStand') {
+        target.lastStandUsed = true;
+        target.hp = Math.max(1, Math.round(target.maxHp * stand.fraction));
+        target.dots = [];
+        events.push({ type: 'status', target: target.uid, status: 'reassemble' });
+        return;
+      }
+    }
     if (target.hp <= 0) return this.onDeath(target, events, source);
     if (!selfInflicted) {
       this.fireTrigger(target, 'whenHit', events);
@@ -878,6 +937,12 @@ export class Battle {
     if (worn.length === 0) return;
     const slot: EquipSlot = worn[Math.floor(this.rng() * worn.length)];
     const item = target.equipment[slot]!;
+    if (item.extra?.kind === 'sturdy') {
+      const { extra: _lost, ...stripped } = item;
+      target.equipment[slot] = stripped;
+      events.push({ type: 'equipmentStripped', target: target.uid, slot });
+      return;
+    }
     delete target.equipment[slot];
     events.push({ type: 'equipmentBroken', target: target.uid, slot, item: item.id });
   }
@@ -986,6 +1051,8 @@ function createCombatant(
     meter: 0,
     burst: 0,
     regenBlocked: 0,
+    gearTimers: {},
+    lastStandUsed: false,
     regenCarry: 0,
     flight: null,
     reassembled: false,
